@@ -1,10 +1,13 @@
 {
+  "$schema": "https://rork.com/schema/rork.json",
   "apps": [
     {
       "name": "Mood-E",
       "path": "ios",
-      "framework": "swift"
+      "framework": "swift",
+      "settings": {
+        "displayName": "Mood-E"
+      }
     }
-  ],
-  "$schema": "https://rork.com/schema/rork.json"
+  ]
 }
