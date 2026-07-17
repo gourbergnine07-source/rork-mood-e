@@ -59,6 +59,7 @@ final class CinemaViewModel {
     private(set) var state: State = .idle
     private(set) var cinemasState: CinemasState = .idle
     private(set) var regionCode: String = "IT"
+    private(set) var isRefreshing = false
 
     /// Italian display name of the region (e.g. "Italia").
     var regionName: String {
@@ -70,15 +71,51 @@ final class CinemaViewModel {
         return false
     }
 
+    private func cacheKey(for region: String) -> String {
+        "nowPlaying.\(region)"
+    }
+
+    /// Loads now-playing movies: serves the local cache when fresh (< 6h),
+    /// otherwise shows cached data instantly and refreshes in background.
     @MainActor
-    func load(region: String) async {
+    func load(region: String, forceRefresh: Bool = false) async {
         regionCode = region
-        state = .loading
+
+        if !forceRefresh, let disk = TMDBCache.load([TMDBMovie].self, forKey: cacheKey(for: region)) {
+            state = .loaded(disk.value)
+            if disk.isFresh { return }
+        } else if !hasLoaded {
+            state = .loading
+        }
+
+        await refresh(region: region)
+    }
+
+    /// Silent refresh triggered when the app returns to the foreground:
+    /// hits the API only if the cached data is older than 6 hours.
+    func refreshIfStale() async {
+        guard hasLoaded else { return }
+        if let disk = TMDBCache.load([TMDBMovie].self, forKey: cacheKey(for: regionCode)), disk.isFresh {
+            return
+        }
+        guard !isRefreshing else { return }
+        await refresh(region: regionCode)
+    }
+
+    private func refresh(region: String) async {
+        isRefreshing = true
+        defer { isRefreshing = false }
+
         do {
             let movies = try await TMDBService.nowPlayingMovies(region: region)
+            TMDBCache.save(movies, forKey: cacheKey(for: region))
             state = .loaded(movies)
         } catch {
-            state = .failed("Non riusciamo a caricare i film in sala. Controlla la connessione e riprova.")
+            if case .loaded = state {
+                // Keep showing cached data when a background refresh fails.
+            } else {
+                state = .failed("Non riusciamo a caricare i film in sala. Controlla la connessione e riprova.")
+            }
         }
     }
 

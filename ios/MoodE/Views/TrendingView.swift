@@ -10,6 +10,7 @@ struct TrendingView: View {
     @State private var viewModel = TrendingViewModel()
     @State private var trailerPlayback = TrailerPlayback()
     @Environment(MovieLibrary.self) private var library
+    @Environment(\.scenePhase) private var scenePhase
 
     private let columns = [
         GridItem(.flexible(), spacing: 14),
@@ -35,6 +36,10 @@ struct TrendingView: View {
                 await viewModel.load()
             }
         }
+        .onChange(of: scenePhase) { _, newPhase in
+            guard newPhase == .active else { return }
+            Task { await viewModel.refreshIfStale() }
+        }
     }
 
     // MARK: - Content
@@ -52,14 +57,17 @@ struct TrendingView: View {
     }
 
     private var loadingView: some View {
-        VStack(spacing: 16) {
-            ProgressView()
-                .controlSize(.large)
-                .tint(Theme.tabTrending)
-            Text("Carico i film di tendenza…")
-                .font(.subheadline)
-                .foregroundStyle(Theme.inkSoft)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                windowSelector
+
+                SkeletonPosterGrid()
+                    .padding(.horizontal, 24)
+            }
+            .padding(.top, 8)
+            .padding(.bottom, 32)
         }
+        .scrollIndicators(.hidden)
     }
 
     private func errorView(_ message: String) -> some View {

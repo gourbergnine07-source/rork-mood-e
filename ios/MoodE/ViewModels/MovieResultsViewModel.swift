@@ -6,6 +6,13 @@
 import Foundation
 import Observation
 
+/// Snapshot of a results batch persisted in the local cache.
+nonisolated struct RecommendationsSnapshot: Codable {
+    let movies: [TMDBMovie]
+    let page: Int
+    let totalPages: Int
+}
+
 /// Loads mood-based movie recommendations from TMDB for the results screen,
 /// with support for fresh batches via discover pagination.
 /// Movies already marked as watched are excluded; extra pages are fetched
@@ -33,10 +40,43 @@ final class MovieResultsViewModel {
     /// Safety cap on extra page fetches per batch.
     private let maxPageFetches = 4
 
+    private static func cacheKey(for selection: MoodSelection) -> String {
+        "recommendations.\(String(describing: selection.mood)).\(String(describing: selection.goal)).\(String(describing: selection.era))"
+    }
+
     /// Fetches the first batch of recommendations for the given flow selection.
-    func load(selection: MoodSelection, excluding excludedIds: Set<Int> = []) async {
-        state = .loading
+    /// Serves the local cache when fresh (< 6h); otherwise shows cached data
+    /// instantly and refreshes in background.
+    func load(selection: MoodSelection, excluding excludedIds: Set<Int> = [], forceRefresh: Bool = false) async {
+        if !forceRefresh,
+           let disk = TMDBCache.load(RecommendationsSnapshot.self, forKey: Self.cacheKey(for: selection)) {
+            let movies = disk.value.movies.filter { !excludedIds.contains($0.id) }
+            if !movies.isEmpty {
+                currentPage = disk.value.page
+                totalPages = disk.value.totalPages
+                state = .loaded(movies)
+                if disk.isFresh { return }
+            }
+        }
+
+        if case .loaded = state {
+            // Cached batch already on screen: refresh silently.
+        } else {
+            state = .loading
+        }
         currentPage = 1
+        await fetch(selection: selection, startPage: 1, excluding: excludedIds)
+    }
+
+    /// Silent refresh triggered when the app returns to the foreground:
+    /// hits the API only if the cached batch is older than 6 hours.
+    func refreshIfStale(selection: MoodSelection, excluding excludedIds: Set<Int> = []) async {
+        guard !isRefreshing else { return }
+        if let disk = TMDBCache.load(RecommendationsSnapshot.self, forKey: Self.cacheKey(for: selection)),
+           disk.isFresh {
+            return
+        }
+        guard case .loaded = state else { return }
         await fetch(selection: selection, startPage: 1, excluding: excludedIds)
     }
 
@@ -76,9 +116,18 @@ final class MovieResultsViewModel {
                 page = currentPage + 1
             } while true
 
-            state = .loaded(Array(collected.prefix(batchSize)))
+            let batch = Array(collected.prefix(batchSize))
+            state = .loaded(batch)
             batchId += 1
+            TMDBCache.save(
+                RecommendationsSnapshot(movies: batch, page: currentPage, totalPages: totalPages),
+                forKey: Self.cacheKey(for: selection)
+            )
         } catch {
+            if case .loaded(let current) = state, !current.isEmpty {
+                // Keep showing the current batch when a refresh fails.
+                return
+            }
             let message = (error as? TMDBError)?.errorDescription
                 ?? "Qualcosa è andato storto. Controlla la connessione e riprova."
             state = .failed(message)

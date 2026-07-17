@@ -12,6 +12,7 @@ struct MovieResultsView: View {
     @State private var viewModel = MovieResultsViewModel()
     @State private var trailerPlayback = TrailerPlayback()
     @Environment(MovieLibrary.self) private var library
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         ZStack {
@@ -39,20 +40,32 @@ struct MovieResultsView: View {
         .task {
             await viewModel.load(selection: selection, excluding: library.watchedIds)
         }
+        .onChange(of: scenePhase) { _, newPhase in
+            guard newPhase == .active else { return }
+            Task { await viewModel.refreshIfStale(selection: selection, excluding: library.watchedIds) }
+        }
         .trailerPlayer(trailerPlayback)
     }
 
     // MARK: - States
 
     private var loadingView: some View {
-        VStack(spacing: 16) {
-            ProgressView()
-                .controlSize(.large)
-                .tint(Theme.primary)
-            Text("Sto cercando il film perfetto per te…")
-                .font(.subheadline)
-                .foregroundStyle(Theme.inkSoft)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                recapChips
+
+                Text("Sto cercando il film perfetto per te…")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.inkSoft)
+                    .padding(.horizontal, 24)
+
+                SkeletonResultsList()
+                    .padding(.horizontal, 24)
+            }
+            .padding(.top, 12)
+            .padding(.bottom, 32)
         }
+        .scrollIndicators(.hidden)
     }
 
     private func errorView(_ message: String) -> some View {
@@ -68,7 +81,7 @@ struct MovieResultsView: View {
                 .foregroundStyle(Theme.inkSoft)
                 .multilineTextAlignment(.center)
             Button {
-                Task { await viewModel.load(selection: selection, excluding: library.watchedIds) }
+                Task { await viewModel.load(selection: selection, excluding: library.watchedIds, forceRefresh: true) }
             } label: {
                 Label("Riprova", systemImage: "arrow.clockwise")
                     .font(.headline)

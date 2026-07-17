@@ -16,6 +16,7 @@ struct CinemaView: View {
     @State private var selectedGenreId: Int?
     @State private var trailerPlayback = TrailerPlayback()
     @Environment(\.openURL) private var openURL
+    @Environment(\.scenePhase) private var scenePhase
 
     private let columns = [
         GridItem(.flexible(), spacing: 14),
@@ -45,13 +46,17 @@ struct CinemaView: View {
                 await loadMovies()
             }
         }
+        .onChange(of: scenePhase) { _, newPhase in
+            guard newPhase == .active else { return }
+            Task { await viewModel.refreshIfStale() }
+        }
     }
 
     // MARK: - Loading
 
-    private func loadMovies() async {
+    private func loadMovies(forceRefresh: Bool = false) async {
         let region = await resolveRegion()
-        await viewModel.load(region: region)
+        await viewModel.load(region: region, forceRefresh: forceRefresh)
         await loadNearbyCinemas()
     }
 
@@ -153,14 +158,25 @@ struct CinemaView: View {
     // MARK: - States
 
     private var loadingView: some View {
-        VStack(spacing: 16) {
-            ProgressView()
-                .controlSize(.large)
-                .tint(Theme.tabCinema)
-            Text("Trovo i film in sala nella tua zona…")
-                .font(.subheadline)
-                .foregroundStyle(Theme.inkSoft)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                HStack(spacing: 8) {
+                    Image(systemName: "ticket.fill")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Theme.tabCinema)
+                    Text("Trovo i film in sala nella tua zona…")
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.inkSoft)
+                }
+                .padding(.horizontal, 24)
+
+                SkeletonPosterGrid(showsChipsRow: true)
+                    .padding(.horizontal, 24)
+            }
+            .padding(.top, 8)
+            .padding(.bottom, 32)
         }
+        .scrollIndicators(.hidden)
     }
 
     private func errorView(_ message: String) -> some View {
@@ -176,7 +192,7 @@ struct CinemaView: View {
                 .foregroundStyle(Theme.inkSoft)
                 .multilineTextAlignment(.center)
             Button {
-                Task { await loadMovies() }
+                Task { await loadMovies(forceRefresh: true) }
             } label: {
                 Label("Riprova", systemImage: "arrow.clockwise")
                     .font(.headline)
@@ -234,7 +250,7 @@ struct CinemaView: View {
         }
         .scrollIndicators(.hidden)
         .refreshable {
-            await loadMovies()
+            await loadMovies(forceRefresh: true)
         }
     }
 

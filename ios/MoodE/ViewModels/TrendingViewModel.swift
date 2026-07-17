@@ -6,7 +6,8 @@
 import Foundation
 import Observation
 
-/// Loads and caches TMDB trending movies for the Tendenze tab.
+/// Loads TMDB trending movies for the Tendenze tab, backed by a
+/// 6-hour local cache and silent background refreshes on app open.
 @Observable
 final class TrendingViewModel {
     enum State {
@@ -17,35 +18,70 @@ final class TrendingViewModel {
     }
 
     private(set) var state: State = .idle
+    private(set) var isRefreshing = false
     var window: TrendingWindow = .week
 
-    /// Cache per window so switching the selector is instant after first load.
-    private var cache: [TrendingWindow: [TMDBMovie]] = [:]
+    /// In-memory cache per window so switching the selector is instant.
+    private var memoryCache: [TrendingWindow: [TMDBMovie]] = [:]
 
-    /// Loads trending movies for the current window, using the cache when available.
+    private func cacheKey(for window: TrendingWindow) -> String {
+        "trending.\(window.rawValue)"
+    }
+
+    /// Loads trending movies: serves the local cache when fresh (< 6h),
+    /// otherwise shows cached data instantly and refreshes in background.
     func load(forceRefresh: Bool = false) async {
         let window = self.window
 
-        if !forceRefresh, let cached = cache[window] {
-            state = .loaded(cached)
-            return
+        if !forceRefresh {
+            if let cached = memoryCache[window] {
+                state = .loaded(cached)
+                return
+            }
+            if let disk = TMDBCache.load([TMDBMovie].self, forKey: cacheKey(for: window)) {
+                memoryCache[window] = disk.value
+                state = .loaded(disk.value)
+                if disk.isFresh { return }
+                await refresh(window: window)
+                return
+            }
         }
 
-        if cache[window] == nil {
+        if memoryCache[window] == nil {
             state = .loading
         }
+        await refresh(window: window)
+    }
+
+    /// Silent refresh triggered when the app returns to the foreground:
+    /// hits the API only if the cached data is older than 6 hours.
+    func refreshIfStale() async {
+        let window = self.window
+        if let disk = TMDBCache.load([TMDBMovie].self, forKey: cacheKey(for: window)), disk.isFresh {
+            return
+        }
+        guard !isRefreshing else { return }
+        await refresh(window: window)
+    }
+
+    private func refresh(window: TrendingWindow) async {
+        isRefreshing = true
+        defer { isRefreshing = false }
 
         do {
             let movies = try await TMDBService.trendingMovies(window: window)
-            cache[window] = movies
+            memoryCache[window] = movies
+            TMDBCache.save(movies, forKey: cacheKey(for: window))
             guard self.window == window else { return }
             state = .loaded(movies)
         } catch {
             guard self.window == window else { return }
-            if let cached = cache[window] {
+            if let cached = memoryCache[window] {
                 state = .loaded(cached)
             } else {
-                state = .failed(error.localizedDescription)
+                let message = (error as? TMDBError)?.errorDescription
+                    ?? "Qualcosa è andato storto. Controlla la connessione e riprova."
+                state = .failed(message)
             }
         }
     }
