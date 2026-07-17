@@ -7,8 +7,16 @@ import SwiftUI
 import WebKit
 
 /// Embedded YouTube player for official trailers.
+///
+/// Loads the embed inside an HTML page with a valid https baseURL so the
+/// request carries a proper referer/origin — without it YouTube rejects the
+/// player with "Error 153: video player configuration error".
 struct TrailerWebView: UIViewRepresentable {
-    let url: URL
+    let videoKey: String
+    var autoplay: Bool = false
+
+    /// Origin sent to the YouTube iframe player; must be a real https page.
+    private static let embedOrigin = "https://rork.app"
 
     func makeUIView(context: Context) -> WKWebView {
         let configuration = WKWebViewConfiguration()
@@ -19,14 +27,34 @@ struct TrailerWebView: UIViewRepresentable {
         webView.scrollView.isScrollEnabled = false
         webView.isOpaque = false
         webView.backgroundColor = .black
-        webView.load(URLRequest(url: url))
+        webView.scrollView.backgroundColor = .black
+        webView.loadHTMLString(embedHTML, baseURL: URL(string: Self.embedOrigin))
         return webView
     }
 
-    func updateUIView(_ webView: WKWebView, context: Context) {
-        if webView.url == nil {
-            webView.load(URLRequest(url: url))
-        }
+    func updateUIView(_ webView: WKWebView, context: Context) {}
+
+    private var embedHTML: String {
+        let autoplayValue = autoplay ? "1" : "0"
+        return """
+        <!DOCTYPE html>
+        <html>
+        <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+        <style>
+        html, body { margin: 0; padding: 0; background: #000; height: 100%; overflow: hidden; }
+        iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+        </style>
+        </head>
+        <body>
+        <iframe
+            src="https://www.youtube.com/embed/\(videoKey)?playsinline=1&rel=0&autoplay=\(autoplayValue)&origin=\(Self.embedOrigin)"
+            allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+            allowfullscreen>
+        </iframe>
+        </body>
+        </html>
+        """
     }
 }
 
@@ -46,14 +74,10 @@ struct TrailerPlayerSheet: View {
 
                 Spacer()
 
-                if let url = trailer.autoplayEmbedURL ?? trailer.embedURL {
-                    TrailerWebView(url: url)
-                        .aspectRatio(16 / 9, contentMode: .fit)
-                        .clipShape(.rect(cornerRadius: 14))
-                        .padding(.horizontal, 12)
-                } else {
-                    unavailableView
-                }
+                TrailerWebView(videoKey: trailer.key, autoplay: true)
+                    .aspectRatio(16 / 9, contentMode: .fit)
+                    .clipShape(.rect(cornerRadius: 14))
+                    .padding(.horizontal, 12)
 
                 Spacer()
             }
