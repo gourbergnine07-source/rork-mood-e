@@ -9,6 +9,7 @@ import SwiftUI
 struct TrendingView: View {
     @State private var viewModel = TrendingViewModel()
     @State private var trailerPlayback = TrailerPlayback()
+    @Environment(MovieLibrary.self) private var library
 
     private let columns = [
         GridItem(.flexible(), spacing: 14),
@@ -46,7 +47,7 @@ struct TrendingView: View {
         case .failed(let message):
             errorView(message)
         case .loaded(let movies):
-            moviesGrid(movies)
+            moviesGrid(movies.filter { !library.watchedIds.contains($0.id) })
         }
     }
 
@@ -98,10 +99,11 @@ struct TrendingView: View {
                     emptyState
                 } else {
                     LazyVGrid(columns: columns, spacing: 18) {
-                        ForEach(movies) { movie in
+                        ForEach(Array(movies.enumerated()), id: \.element.id) { index, movie in
                             NavigationLink(value: movie) {
                                 TrendingCard(
                                     movie: movie,
+                                    rank: index + 1,
                                     isLoadingTrailer: trailerPlayback.loadingMovieId == movie.id,
                                     onPlayTrailer: { trailerPlayback.play(movie) }
                                 )
@@ -195,11 +197,22 @@ struct WindowSelectorChip: View {
     }
 }
 
-/// Grid card for a trending movie: poster, title and TMDB rating.
+/// Grid card for a trending movie: poster with rank badge, title and TMDB rating.
 struct TrendingCard: View {
     let movie: TMDBMovie
+    var rank: Int? = nil
     var isLoadingTrailer: Bool = false
     var onPlayTrailer: (() -> Void)? = nil
+
+    /// Gold, silver and bronze for the podium; amber-orange for everyone else.
+    private var rankColor: Color {
+        switch rank {
+        case 1: return Color(red: 0.85, green: 0.65, blue: 0.13)
+        case 2: return Color(red: 0.55, green: 0.57, blue: 0.62)
+        case 3: return Color(red: 0.72, green: 0.45, blue: 0.20)
+        default: return Theme.tabTrending
+        }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -274,6 +287,30 @@ struct TrendingCard: View {
                 )
                 .padding(6)
             }
+            .overlay(alignment: .topLeading) {
+                if let rank {
+                    rankBadge(rank)
+                        .padding(6)
+                }
+            }
+    }
+
+    private func rankBadge(_ rank: Int) -> some View {
+        HStack(spacing: 2) {
+            if rank <= 3 {
+                Image(systemName: "crown.fill")
+                    .font(.system(size: 9, weight: .bold))
+            }
+            Text("\(rank)\u{00B0}")
+                .font(.caption.weight(.heavy))
+                .monospacedDigit()
+        }
+        .foregroundStyle(.white)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(rankColor.opacity(0.92), in: .capsule)
+        .shadow(color: .black.opacity(0.25), radius: 3, y: 1)
+        .accessibilityLabel("Posizione \(rank) in classifica")
     }
 
     private var posterFallback: some View {
