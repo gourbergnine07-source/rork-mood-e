@@ -62,6 +62,35 @@ nonisolated struct TMDBMovie: Codable, Identifiable, Hashable {
         guard let backdropPath else { return nil }
         return URL(string: "https://image.tmdb.org/t/p/w780\(backdropPath)")
     }
+
+    /// Message with title and key info used by the system share sheet.
+    var shareMessage: String {
+        var lines: [String] = []
+
+        var headline = "\u{1F3AC} \(title)"
+        if let releaseYear {
+            headline += " (\(releaseYear))"
+        }
+        lines.append(headline)
+
+        if voteAverage > 0 {
+            lines.append("\u{2B50} \(String(format: "%.1f", voteAverage))/10 su TMDB")
+        }
+
+        if !genreNames.isEmpty {
+            lines.append(genreNames.prefix(3).joined(separator: " \u{00B7} "))
+        }
+
+        if !overview.isEmpty {
+            let snippet = overview.count > 180
+                ? String(overview.prefix(180)).trimmingCharacters(in: .whitespacesAndNewlines) + "\u{2026}"
+                : overview
+            lines.append(snippet)
+        }
+
+        lines.append("https://www.themoviedb.org/movie/\(id)")
+        return lines.joined(separator: "\n")
+    }
 }
 
 /// Italian display names for TMDB movie genre IDs.

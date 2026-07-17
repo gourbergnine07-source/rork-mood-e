@@ -328,6 +328,12 @@ struct MovieCard: View {
                     library.toggleSeen(movie)
                 }
             }
+
+            MovieShareButton(
+                movieTitle: movie.title,
+                message: movie.shareMessage,
+                tint: Theme.primary
+            )
         }
     }
 

@@ -118,6 +118,12 @@ struct LibraryEntryRow: View {
             }
             .buttonStyle(.plain)
 
+            MovieShareButton(
+                movieTitle: entry.title,
+                message: shareMessage,
+                tint: Theme.tabList
+            )
+
             if let onMarkWatched {
                 quickWatchedButton(onMarkWatched)
             } else {
@@ -130,6 +136,11 @@ struct LibraryEntryRow: View {
             RoundedRectangle(cornerRadius: 22)
                 .stroke(Theme.tabList.opacity(0.12), lineWidth: 1)
         )
+    }
+
+    /// Share text for a saved movie: title plus its TMDB page.
+    private var shareMessage: String {
+        "\u{1F3AC} \(entry.title)\nhttps://www.themoviedb.org/movie/\(entry.id)"
     }
 
     private var dateLabel: some View {

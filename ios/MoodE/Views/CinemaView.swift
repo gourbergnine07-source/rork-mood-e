@@ -672,6 +672,14 @@ struct NowPlayingCard: View {
                 RoundedRectangle(cornerRadius: 16)
                     .stroke(Theme.tabCinema.opacity(0.10), lineWidth: 1)
             )
+            .overlay(alignment: .topTrailing) {
+                MovieShareButton(
+                    movieTitle: movie.title,
+                    message: movie.shareMessage,
+                    style: .posterOverlay
+                )
+                .padding(6)
+            }
     }
 
     private var posterFallback: some View {
