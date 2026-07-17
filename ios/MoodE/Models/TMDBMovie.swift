@@ -38,6 +38,19 @@ nonisolated struct TMDBMovie: Codable, Identifiable, Hashable {
         return String(releaseDate.prefix(4))
     }
 
+    /// Release date formatted in Italian (e.g. "12 giugno 2026").
+    var formattedReleaseDate: String? {
+        guard let releaseDate else { return nil }
+        let parser = DateFormatter()
+        parser.dateFormat = "yyyy-MM-dd"
+        parser.locale = Locale(identifier: "en_US_POSIX")
+        guard let date = parser.date(from: releaseDate) else { return nil }
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "it_IT")
+        formatter.dateFormat = "d MMMM yyyy"
+        return formatter.string(from: date)
+    }
+
     /// Full URL for the poster image (w500).
     var posterURL: URL? {
         guard let posterPath else { return nil }
