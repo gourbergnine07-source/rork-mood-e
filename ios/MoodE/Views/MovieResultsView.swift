@@ -31,6 +31,9 @@ struct MovieResultsView: View {
         .navigationTitle("Il tuo film")
         .toolbarTitleDisplayMode(.inline)
         .tint(Theme.primary)
+        .navigationDestination(for: TMDBMovie.self) { movie in
+            MovieDetailView(movie: movie)
+        }
         .task {
             await viewModel.load(selection: selection)
         }
@@ -104,7 +107,10 @@ struct MovieResultsView: View {
 
                 LazyVStack(spacing: 14) {
                     ForEach(movies) { movie in
-                        MovieCard(movie: movie)
+                        NavigationLink(value: movie) {
+                            MovieCard(movie: movie)
+                        }
+                        .buttonStyle(PressableCardStyle())
                     }
                 }
                 .padding(.horizontal, 24)

@@ -88,6 +88,15 @@ enum TMDBService {
         return response.results
     }
 
+    /// Full movie detail with cast and videos in a single call.
+    static func movieDetail(id: Int) async throws -> TMDBMovieDetail {
+        let queryItems = [
+            URLQueryItem(name: "append_to_response", value: "credits,videos"),
+            URLQueryItem(name: "include_video_language", value: "it,en")
+        ]
+        return try await request(path: "/movie/\(id)", queryItems: queryItems)
+    }
+
     // MARK: - Core request
 
     private static func request<T: Decodable>(path: String, queryItems: [URLQueryItem]) async throws -> T {
