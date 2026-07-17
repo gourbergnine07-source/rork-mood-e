@@ -13,6 +13,7 @@ struct CinemaView: View {
     @State private var viewModel = CinemaViewModel()
     @State private var skippedPermission = false
     @State private var cinemaSearchText = ""
+    @State private var selectedGenreId: Int?
     @Environment(\.openURL) private var openURL
 
     private let columns = [
@@ -200,15 +201,24 @@ struct CinemaView: View {
                 if movies.isEmpty {
                     emptyState
                 } else {
-                    LazyVGrid(columns: columns, spacing: 18) {
-                        ForEach(movies) { movie in
-                            NavigationLink(value: movie) {
-                                NowPlayingCard(movie: movie)
+                    genreChips(for: movies)
+
+                    let filteredMovies = filteredByGenre(movies)
+
+                    if filteredMovies.isEmpty {
+                        noGenreResultsCard
+                    } else {
+                        LazyVGrid(columns: columns, spacing: 18) {
+                            ForEach(filteredMovies) { movie in
+                                NavigationLink(value: movie) {
+                                    NowPlayingCard(movie: movie)
+                                }
+                                .buttonStyle(PressableCardStyle())
                             }
-                            .buttonStyle(PressableCardStyle())
                         }
+                        .padding(.horizontal, 24)
+                        .animation(.spring(duration: 0.3), value: filteredMovies)
                     }
-                    .padding(.horizontal, 24)
                 }
 
                 nearbyCinemasSection
@@ -220,6 +230,75 @@ struct CinemaView: View {
         .refreshable {
             await loadMovies()
         }
+    }
+
+    // MARK: - Genre filter
+
+    /// Genres present in the loaded movies, sorted alphabetically by Italian name.
+    private func availableGenres(in movies: [TMDBMovie]) -> [(id: Int, name: String)] {
+        var counts: [Int: Int] = [:]
+        for movie in movies {
+            for genreId in movie.genreIds ?? [] {
+                counts[genreId, default: 0] += 1
+            }
+        }
+        return counts.keys
+            .compactMap { id -> (id: Int, name: String)? in
+                guard let name = TMDBGenreCatalog.italianName(for: id) else { return nil }
+                return (id: id, name: name)
+            }
+            .sorted { $0.name < $1.name }
+    }
+
+    private func filteredByGenre(_ movies: [TMDBMovie]) -> [TMDBMovie] {
+        guard let selectedGenreId else { return movies }
+        return movies.filter { ($0.genreIds ?? []).contains(selectedGenreId) }
+    }
+
+    private func genreChips(for movies: [TMDBMovie]) -> some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: 8) {
+                GenreChip(
+                    label: "Tutti",
+                    icon: "sparkles",
+                    isSelected: selectedGenreId == nil
+                ) {
+                    selectedGenreId = nil
+                }
+
+                ForEach(availableGenres(in: movies), id: \.id) { genre in
+                    GenreChip(
+                        label: genre.name,
+                        icon: nil,
+                        isSelected: selectedGenreId == genre.id
+                    ) {
+                        selectedGenreId = selectedGenreId == genre.id ? nil : genre.id
+                    }
+                }
+            }
+        }
+        .contentMargins(.horizontal, 24)
+        .scrollIndicators(.hidden)
+    }
+
+    private var noGenreResultsCard: some View {
+        VStack(spacing: 10) {
+            Text("🎬")
+                .font(.system(size: 36))
+            Text("Nessun film in sala per questo genere")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Theme.ink)
+            Button("Mostra tutti") {
+                withAnimation(.spring(duration: 0.3)) {
+                    selectedGenreId = nil
+                }
+            }
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(Theme.tabCinema)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 28)
+        .padding(.horizontal, 24)
     }
 
     private var regionHeader: some View {
@@ -428,6 +507,43 @@ struct CinemaView: View {
             RoundedRectangle(cornerRadius: 20)
                 .stroke(Theme.tabCinema.opacity(0.12), lineWidth: 1)
         )
+    }
+}
+
+/// Pill-shaped chip for the genre quick filter above the now-playing grid.
+struct GenreChip: View {
+    let label: String
+    let icon: String?
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 5) {
+                if let icon {
+                    Image(systemName: icon)
+                        .font(.system(size: 11, weight: .semibold))
+                }
+                Text(label)
+                    .font(.subheadline.weight(isSelected ? .bold : .medium))
+            }
+            .foregroundStyle(isSelected ? .white : Theme.tabCinema)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(
+                isSelected ? Theme.tabCinema : Theme.tabCinema.opacity(0.10),
+                in: .capsule
+            )
+            .overlay(
+                Capsule()
+                    .stroke(Theme.tabCinema.opacity(isSelected ? 0 : 0.25), lineWidth: 1)
+            )
+        }
+        .buttonStyle(PressableCardStyle())
+        .sensoryFeedback(.selection, trigger: isSelected)
+        .animation(.spring(duration: 0.25), value: isSelected)
+        .accessibilityLabel("Filtra per genere \(label)")
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 
