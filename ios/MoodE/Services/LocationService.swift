@@ -14,6 +14,7 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
     private let manager = CLLocationManager()
 
     private(set) var authorizationStatus: CLAuthorizationStatus = .notDetermined
+    private(set) var lastLocation: CLLocation?
 
     override init() {
         super.init()
@@ -41,24 +42,33 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
         }
     }
 
-    /// Resolves the ISO country code (e.g. "IT") from the current position.
-    /// Returns nil if the position or the reverse geocoding fails.
-    func resolveCountryCode() async -> String? {
+    /// Resolves the current position, caching it for reuse (e.g. nearby cinema search).
+    func resolveLocation() async -> CLLocation? {
         guard isAuthorized else { return nil }
+        if let lastLocation { return lastLocation }
 
         do {
-            var found: CLLocation?
             var attempts = 0
             for try await update in CLLocationUpdate.liveUpdates() {
                 attempts += 1
                 if let location = update.location {
-                    found = location
-                    break
+                    lastLocation = location
+                    return location
                 }
                 if attempts >= 8 { break }
             }
+        } catch {
+            print("LocationService: failed to resolve location: \(error.localizedDescription)")
+        }
+        return nil
+    }
 
-            guard let location = found else { return nil }
+    /// Resolves the ISO country code (e.g. "IT") from the current position.
+    /// Returns nil if the position or the reverse geocoding fails.
+    func resolveCountryCode() async -> String? {
+        guard let location = await resolveLocation() else { return nil }
+
+        do {
             let placemarks = try await CLGeocoder().reverseGeocodeLocation(location)
             return placemarks.first?.isoCountryCode
         } catch {

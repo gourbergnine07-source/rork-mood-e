@@ -48,6 +48,14 @@ struct CinemaView: View {
     private func loadMovies() async {
         let region = await resolveRegion()
         await viewModel.load(region: region)
+        await loadNearbyCinemas()
+    }
+
+    /// Loads nearby cinema names via Apple Maps when location is available.
+    private func loadNearbyCinemas() async {
+        guard locationService.isAuthorized,
+              let location = await locationService.resolveLocation() else { return }
+        await viewModel.loadNearbyCinemas(around: location)
     }
 
     /// Country from the user's position when authorized, otherwise device locale.
@@ -272,39 +280,135 @@ struct CinemaView: View {
         .padding(.horizontal, 24)
     }
 
-    /// Placeholder for the upcoming nearby-cinemas showtimes feature.
+    /// Nearby cinemas found via Apple Maps, with a note that showtimes are coming.
     private var nearbyCinemasSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Cinema vicino a te")
-                .font(.title3.weight(.bold))
-                .foregroundStyle(Theme.ink)
+            HStack(spacing: 8) {
+                Image(systemName: "mappin.and.ellipse")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Theme.tabCinema)
+                Text("Cinema vicino a te")
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(Theme.ink)
+            }
 
-            HStack(spacing: 14) {
-                ZStack {
-                    Circle()
-                        .fill(Theme.tabCinema.opacity(0.12))
-                        .frame(width: 52, height: 52)
-                    Image(systemName: "mappin.and.ellipse")
-                        .font(.system(size: 22))
-                        .foregroundStyle(Theme.tabCinema)
+            switch viewModel.cinemasState {
+            case .loading:
+                HStack(spacing: 12) {
+                    ProgressView()
+                        .tint(Theme.tabCinema)
+                    Text("Cerco i cinema nella tua zona…")
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.inkSoft)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(16)
+                .background(.white.opacity(0.65), in: .rect(cornerRadius: 20))
+
+            case .loaded(let cinemas):
+                VStack(spacing: 10) {
+                    ForEach(cinemas) { cinema in
+                        NearbyCinemaRow(cinema: cinema)
+                    }
                 }
 
-                Text("Presto potrai vedere gli orari degli spettacoli nei cinema vicino a te")
-                    .font(.subheadline)
-                    .foregroundStyle(Theme.inkSoft)
-                    .lineSpacing(2)
+                showtimesComingNote
 
-                Spacer(minLength: 0)
+            case .idle, .unavailable:
+                fallbackCinemaCard
             }
-            .padding(16)
-            .background(.white.opacity(0.65), in: .rect(cornerRadius: 20))
-            .overlay(
-                RoundedRectangle(cornerRadius: 20)
-                    .stroke(Theme.tabCinema.opacity(0.12), lineWidth: 1)
-            )
         }
         .padding(.horizontal, 24)
         .padding(.top, 8)
+    }
+
+    private var showtimesComingNote: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "clock.badge.questionmark")
+                .font(.system(size: 14))
+                .foregroundStyle(Theme.tabCinema)
+            Text("Presto potrai vedere anche gli orari degli spettacoli")
+                .font(.caption)
+                .foregroundStyle(Theme.inkSoft)
+        }
+        .padding(.top, 2)
+    }
+
+    private var fallbackCinemaCard: some View {
+        HStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(Theme.tabCinema.opacity(0.12))
+                    .frame(width: 52, height: 52)
+                Image(systemName: "mappin.and.ellipse")
+                    .font(.system(size: 22))
+                    .foregroundStyle(Theme.tabCinema)
+            }
+
+            Text(locationService.isAuthorized
+                 ? "Nessun cinema trovato nella tua zona. Presto potrai vedere anche gli orari degli spettacoli."
+                 : "Attiva la posizione per vedere i cinema vicino a te e, presto, gli orari degli spettacoli.")
+                .font(.subheadline)
+                .foregroundStyle(Theme.inkSoft)
+                .lineSpacing(2)
+
+            Spacer(minLength: 0)
+        }
+        .padding(16)
+        .background(.white.opacity(0.65), in: .rect(cornerRadius: 20))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(Theme.tabCinema.opacity(0.12), lineWidth: 1)
+        )
+    }
+}
+
+/// Row showing a nearby cinema: name, address and distance chip.
+struct NearbyCinemaRow: View {
+    let cinema: NearbyCinema
+
+    var body: some View {
+        HStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Theme.tabCinema.opacity(0.12))
+                    .frame(width: 44, height: 44)
+                Image(systemName: "popcorn.fill")
+                    .font(.system(size: 18))
+                    .foregroundStyle(Theme.tabCinema)
+            }
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(cinema.name)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.ink)
+                    .lineLimit(1)
+
+                if let address = cinema.address {
+                    Text(address)
+                        .font(.caption)
+                        .foregroundStyle(Theme.inkSoft)
+                        .lineLimit(1)
+                }
+            }
+
+            Spacer(minLength: 8)
+
+            if let distance = cinema.formattedDistance {
+                Text(distance)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Theme.tabCinema)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Theme.tabCinema.opacity(0.12), in: .capsule)
+            }
+        }
+        .padding(12)
+        .background(.white.opacity(0.65), in: .rect(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Theme.tabCinema.opacity(0.10), lineWidth: 1)
+        )
     }
 }
 
