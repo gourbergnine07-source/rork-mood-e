@@ -62,6 +62,22 @@ struct RecommendationQuery {
     var allowsHorror: Bool = false
 }
 
+/// Time window supported by the TMDB trending endpoint.
+nonisolated enum TrendingWindow: String, CaseIterable, Identifiable {
+    case week
+    case day
+
+    var id: String { rawValue }
+
+    /// Italian label shown in the Tendenze selector.
+    var label: String {
+        switch self {
+        case .week: return "Questa settimana"
+        case .day: return "Oggi"
+        }
+    }
+}
+
 /// Networking service for The Movie Database (api.themoviedb.org/3).
 enum TMDBService {
     private static let baseURL = "https://api.themoviedb.org/3"
@@ -102,9 +118,12 @@ enum TMDBService {
         return try await request(path: "/discover/movie", queryItems: queryItems)
     }
 
-    /// Trending movies of the week.
-    static func trendingMovies() async throws -> [TMDBMovie] {
-        let response: TMDBMovieListResponse = try await request(path: "/trending/movie/week", queryItems: [])
+    /// Trending movies for the requested time window (week or day).
+    static func trendingMovies(window: TrendingWindow = .week) async throws -> [TMDBMovie] {
+        let response: TMDBMovieListResponse = try await request(
+            path: "/trending/movie/\(window.rawValue)",
+            queryItems: []
+        )
         return response.results
     }
 
