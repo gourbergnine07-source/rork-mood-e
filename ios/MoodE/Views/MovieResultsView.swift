@@ -238,6 +238,11 @@ struct MovieCard: View {
     var isLoadingTrailer: Bool = false
     var onPlayTrailer: (() -> Void)? = nil
 
+    @Environment(MovieLibrary.self) private var library
+
+    private var isInWatchlist: Bool { library.isInWatchlist(movie.id) }
+    private var isSeen: Bool { library.isSeen(movie.id) }
+
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
             poster
@@ -279,9 +284,12 @@ struct MovieCard: View {
                     Text(movie.overview)
                         .font(.footnote)
                         .foregroundStyle(Theme.inkSoft)
-                        .lineLimit(4)
+                        .lineLimit(3)
                         .lineSpacing(2)
                 }
+
+                quickActions
+                    .padding(.top, 2)
             }
 
             Spacer(minLength: 0)
@@ -292,6 +300,35 @@ struct MovieCard: View {
             RoundedRectangle(cornerRadius: 22)
                 .stroke(Theme.primary.opacity(0.10), lineWidth: 1)
         )
+        .sensoryFeedback(.impact(weight: .medium), trigger: isInWatchlist)
+        .sensoryFeedback(.success, trigger: isSeen)
+    }
+
+    /// Quick save / seen toggles usable directly from the results list.
+    private var quickActions: some View {
+        HStack(spacing: 8) {
+            QuickActionChip(
+                title: isInWatchlist ? "Salvato" : "Salva",
+                icon: isInWatchlist ? "bookmark.fill" : "bookmark",
+                tint: Theme.primary,
+                isActive: isInWatchlist
+            ) {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+                    library.toggleWatchlist(movie)
+                }
+            }
+
+            QuickActionChip(
+                title: isSeen ? "Visto" : "Già visto",
+                icon: isSeen ? "checkmark.circle.fill" : "checkmark.circle",
+                tint: Theme.seenGreen,
+                isActive: isSeen
+            ) {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+                    library.toggleSeen(movie)
+                }
+            }
+        }
     }
 
     private var poster: some View {
@@ -355,6 +392,41 @@ struct MovieCard: View {
         Image(systemName: "film")
             .font(.system(size: 26))
             .foregroundStyle(Theme.primary.opacity(0.4))
+    }
+}
+
+/// Compact toggle chip for quick library actions on a results card.
+struct QuickActionChip: View {
+    let title: String
+    let icon: String
+    let tint: Color
+    let isActive: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 5) {
+                Image(systemName: icon)
+                    .font(.system(size: 12, weight: .semibold))
+                    .contentTransition(.symbolEffect(.replace))
+                Text(title)
+                    .font(.caption.weight(.semibold))
+                    .lineLimit(1)
+            }
+            .foregroundStyle(isActive ? .white : tint)
+            .padding(.horizontal, 11)
+            .frame(height: 32)
+            .background(
+                isActive ? tint : tint.opacity(0.10),
+                in: .capsule
+            )
+            .overlay(
+                Capsule().stroke(tint.opacity(isActive ? 0 : 0.35), lineWidth: 1)
+            )
+            .contentShape(.capsule)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(title)
     }
 }
 
