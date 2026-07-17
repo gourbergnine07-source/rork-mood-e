@@ -115,6 +115,14 @@ enum TMDBService {
         return response.results
     }
 
+    /// Videos (trailers) only — lightweight call for quick access from result cards.
+    static func movieVideos(id: Int) async throws -> TMDBVideoList {
+        let queryItems = [
+            URLQueryItem(name: "include_video_language", value: "it,en")
+        ]
+        return try await request(path: "/movie/\(id)/videos", queryItems: queryItems)
+    }
+
     /// Full movie detail with cast and videos in a single call.
     static func movieDetail(id: Int) async throws -> TMDBMovieDetail {
         let queryItems = [

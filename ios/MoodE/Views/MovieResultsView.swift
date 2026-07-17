@@ -10,6 +10,9 @@ struct MovieResultsView: View {
     let selection: MoodSelection
 
     @State private var viewModel = MovieResultsViewModel()
+    @State private var trailerSelection: TrailerSelection?
+    @State private var loadingTrailerMovieId: Int?
+    @State private var showsTrailerUnavailable = false
     @Environment(MovieLibrary.self) private var library
 
     var body: some View {
@@ -37,6 +40,33 @@ struct MovieResultsView: View {
         }
         .task {
             await viewModel.load(selection: selection, excluding: library.watchedIds)
+        }
+        .sheet(item: $trailerSelection) { selection in
+            TrailerPlayerSheet(trailer: selection.trailer, movieTitle: selection.movieTitle)
+        }
+        .alert("Trailer non disponibile", isPresented: $showsTrailerUnavailable) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Non abbiamo trovato un trailer per questo film.")
+        }
+    }
+
+    /// Fetches the best trailer for a movie and opens the player sheet.
+    private func playTrailer(for movie: TMDBMovie) {
+        guard loadingTrailerMovieId == nil else { return }
+        loadingTrailerMovieId = movie.id
+        Task {
+            defer { loadingTrailerMovieId = nil }
+            do {
+                let videos = try await TMDBService.movieVideos(id: movie.id)
+                if let trailer = videos.bestTrailer {
+                    trailerSelection = TrailerSelection(movieTitle: movie.title, trailer: trailer)
+                } else {
+                    showsTrailerUnavailable = true
+                }
+            } catch {
+                showsTrailerUnavailable = true
+            }
         }
     }
 
@@ -111,11 +141,16 @@ struct MovieResultsView: View {
                     LazyVStack(spacing: 14) {
                         ForEach(movies) { movie in
                             NavigationLink(value: movie) {
-                                MovieCard(movie: movie)
+                                MovieCard(
+                                    movie: movie,
+                                    isLoadingTrailer: loadingTrailerMovieId == movie.id,
+                                    onPlayTrailer: { playTrailer(for: movie) }
+                                )
                             }
                             .buttonStyle(PressableCardStyle())
                         }
                     }
+                    .sensoryFeedback(.impact(weight: .medium), trigger: loadingTrailerMovieId)
                     .padding(.horizontal, 24)
 
                     newBatchButton
@@ -189,9 +224,19 @@ struct MovieResultsView: View {
     }
 }
 
+/// Trailer ready to be played from a results card.
+struct TrailerSelection: Identifiable {
+    let movieTitle: String
+    let trailer: TMDBVideo
+
+    var id: String { trailer.id }
+}
+
 /// Card showing a single movie with poster, rating and overview.
 struct MovieCard: View {
     let movie: TMDBMovie
+    var isLoadingTrailer: Bool = false
+    var onPlayTrailer: (() -> Void)? = nil
 
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
@@ -273,6 +318,37 @@ struct MovieCard: View {
                 }
             }
             .clipShape(.rect(cornerRadius: 14))
+            .overlay(alignment: .bottomLeading) {
+                if let onPlayTrailer {
+                    Button(action: onPlayTrailer) {
+                        ZStack {
+                            Circle()
+                                .fill(.black.opacity(0.5))
+                                .background(.ultraThinMaterial, in: .circle)
+
+                            if isLoadingTrailer {
+                                ProgressView()
+                                    .tint(.white)
+                                    .controlSize(.small)
+                            } else {
+                                Image(systemName: "play.fill")
+                                    .font(.system(size: 13, weight: .bold))
+                                    .foregroundStyle(.white)
+                                    .offset(x: 1)
+                            }
+                        }
+                        .frame(width: 34, height: 34)
+                        .overlay(
+                            Circle().stroke(.white.opacity(0.55), lineWidth: 1)
+                        )
+                        .shadow(color: .black.opacity(0.3), radius: 6, y: 3)
+                        .padding(6)
+                        .contentShape(.rect)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Guarda il trailer")
+                }
+            }
     }
 
     private var posterFallback: some View {

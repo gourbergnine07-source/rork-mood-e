@@ -56,11 +56,7 @@ nonisolated struct TMDBMovieDetail: Codable {
 
     /// Best official YouTube trailer, falling back to any YouTube video.
     var trailer: TMDBVideo? {
-        let youtube = videos.results.filter { $0.site == "YouTube" }
-        let trailers = youtube.filter { $0.type == "Trailer" }
-        return trailers.first(where: { $0.official })
-            ?? trailers.first
-            ?? youtube.first
+        videos.bestTrailer
     }
 }
 
@@ -97,6 +93,15 @@ nonisolated struct TMDBCastMember: Codable, Identifiable, Hashable {
 /// Videos payload (trailers, teasers, clips).
 nonisolated struct TMDBVideoList: Codable {
     let results: [TMDBVideo]
+
+    /// Best official YouTube trailer, falling back to any YouTube video.
+    var bestTrailer: TMDBVideo? {
+        let youtube = results.filter { $0.site == "YouTube" }
+        let trailers = youtube.filter { $0.type == "Trailer" }
+        return trailers.first(where: { $0.official })
+            ?? trailers.first
+            ?? youtube.first
+    }
 }
 
 /// Video attached to a movie (YouTube trailers etc.).
