@@ -6,14 +6,19 @@
 import SwiftUI
 
 /// Grid card with emoji + icon used in the guided flow steps.
+/// When `animatesEmoji` is true, the card enters with a staggered pop
+/// and the emoji gently floats in a continuous loop.
 struct SelectableCard: View {
     let emoji: String
     let icon: String
     let title: String
     let isSelected: Bool
+    var animatesEmoji: Bool = false
+    var animationIndex: Int = 0
     let action: () -> Void
 
-    @State private var isPressed: Bool = false
+    @State private var hasAppeared: Bool = false
+    @State private var isFloating: Bool = false
 
     var body: some View {
         Button(action: action) {
@@ -21,6 +26,8 @@ struct SelectableCard: View {
                 ZStack(alignment: .topTrailing) {
                     Text(emoji)
                         .font(.system(size: 38))
+                        .scaleEffect(isFloating ? 1.08 : 1.0)
+                        .offset(y: isFloating ? -3 : 2)
                     Image(systemName: icon)
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(isSelected ? .white : Theme.primary)
@@ -57,6 +64,31 @@ struct SelectableCard: View {
         .buttonStyle(PressableCardStyle())
         .sensoryFeedback(.selection, trigger: isSelected)
         .animation(.spring(response: 0.35, dampingFraction: 0.7), value: isSelected)
+        .opacity(hasAppeared ? 1 : 0)
+        .scaleEffect(hasAppeared ? 1 : 0.6)
+        .onAppear { startAnimations() }
+    }
+
+    private func startAnimations() {
+        guard animatesEmoji else {
+            hasAppeared = true
+            return
+        }
+
+        withAnimation(
+            .spring(response: 0.5, dampingFraction: 0.65)
+            .delay(Double(animationIndex) * 0.06)
+        ) {
+            hasAppeared = true
+        }
+
+        withAnimation(
+            .easeInOut(duration: 1.6)
+            .repeatForever(autoreverses: true)
+            .delay(Double(animationIndex) * 0.18)
+        ) {
+            isFloating = true
+        }
     }
 }
 

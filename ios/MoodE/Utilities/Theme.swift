@@ -5,12 +5,12 @@
 
 import SwiftUI
 
-/// Warm, emotional color palette for Mood-E.
+/// Emotional color palette for Mood-E: soft azure background with warm accents.
 enum Theme {
-    /// Warm cream app background.
-    static let background = Color(red: 1.0, green: 0.965, blue: 0.925)
-    /// Slightly deeper warm tone for cards and surfaces.
-    static let surface = Color(red: 0.996, green: 0.933, blue: 0.867)
+    /// Soft azure app background.
+    static let background = Color(red: 0.859, green: 0.929, blue: 0.984)
+    /// Slightly deeper azure tone for cards and surfaces.
+    static let surface = Color(red: 0.796, green: 0.886, blue: 0.961)
     /// Primary terracotta/coral accent.
     static let primary = Color(red: 0.886, green: 0.439, blue: 0.294)
     /// Soft amber secondary accent.

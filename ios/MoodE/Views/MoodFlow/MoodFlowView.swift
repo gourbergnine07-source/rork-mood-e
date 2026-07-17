@@ -59,12 +59,14 @@ struct MoodFlowView: View {
             subtitle: "Scegli l'emozione che ti rappresenta di più in questo momento."
         ) {
             LazyVGrid(columns: gridColumns, spacing: 12) {
-                ForEach(Mood.allCases) { mood in
+                ForEach(Array(Mood.allCases.enumerated()), id: \.element) { index, mood in
                     SelectableCard(
                         emoji: mood.emoji,
                         icon: mood.icon,
                         title: mood.title,
-                        isSelected: selectedMood == mood
+                        isSelected: selectedMood == mood,
+                        animatesEmoji: true,
+                        animationIndex: index
                     ) {
                         selectedMood = mood
                     }
