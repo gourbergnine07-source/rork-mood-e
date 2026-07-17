@@ -321,7 +321,8 @@ struct CastMemberCard: View {
                 backdropPath: nil,
                 releaseDate: "1999-03-31",
                 voteAverage: 8.2,
-                voteCount: 26000
+                voteCount: 26000,
+                genreIds: [28, 878]
             )
         )
     }

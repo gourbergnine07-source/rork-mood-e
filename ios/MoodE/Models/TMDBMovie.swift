@@ -15,6 +15,7 @@ nonisolated struct TMDBMovie: Codable, Identifiable, Hashable {
     let releaseDate: String?
     let voteAverage: Double
     let voteCount: Int
+    let genreIds: [Int]?
 
     enum CodingKeys: String, CodingKey {
         case id, title, overview
@@ -23,6 +24,12 @@ nonisolated struct TMDBMovie: Codable, Identifiable, Hashable {
         case releaseDate = "release_date"
         case voteAverage = "vote_average"
         case voteCount = "vote_count"
+        case genreIds = "genre_ids"
+    }
+
+    /// Italian genre names resolved from TMDB genre IDs.
+    var genreNames: [String] {
+        (genreIds ?? []).compactMap { TMDBGenreCatalog.italianName(for: $0) }
     }
 
     /// Release year extracted from the release date (e.g. "1994").
@@ -42,6 +49,19 @@ nonisolated struct TMDBMovie: Codable, Identifiable, Hashable {
         guard let backdropPath else { return nil }
         return URL(string: "https://image.tmdb.org/t/p/w780\(backdropPath)")
     }
+}
+
+/// Italian display names for TMDB movie genre IDs.
+nonisolated enum TMDBGenreCatalog {
+    private static let names: [Int: String] = [
+        28: "Azione", 12: "Avventura", 16: "Animazione", 35: "Commedia",
+        80: "Crime", 99: "Documentario", 18: "Dramma", 10751: "Famiglia",
+        14: "Fantasy", 36: "Storia", 27: "Horror", 10402: "Musica",
+        9648: "Mistero", 10749: "Romantico", 878: "Fantascienza",
+        53: "Thriller", 10752: "Guerra", 37: "Western", 10770: "Film TV"
+    ]
+
+    static func italianName(for id: Int) -> String? { names[id] }
 }
 
 /// Paginated list response from TMDB endpoints (discover, trending, now playing).

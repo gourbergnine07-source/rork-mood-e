@@ -96,29 +96,69 @@ struct MovieResultsView: View {
     // MARK: - Results
 
     private func resultsList(_ movies: [TMDBMovie]) -> some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                recapChips
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    recapChips
+                        .id("top")
 
-                Text("Scelti per te")
-                    .font(.title3.weight(.bold))
-                    .foregroundStyle(Theme.ink)
+                    Text("Scelti per te")
+                        .font(.title3.weight(.bold))
+                        .foregroundStyle(Theme.ink)
+                        .padding(.horizontal, 24)
+
+                    LazyVStack(spacing: 14) {
+                        ForEach(movies) { movie in
+                            NavigationLink(value: movie) {
+                                MovieCard(movie: movie)
+                            }
+                            .buttonStyle(PressableCardStyle())
+                        }
+                    }
                     .padding(.horizontal, 24)
 
-                LazyVStack(spacing: 14) {
-                    ForEach(movies) { movie in
-                        NavigationLink(value: movie) {
-                            MovieCard(movie: movie)
-                        }
-                        .buttonStyle(PressableCardStyle())
-                    }
+                    newBatchButton
                 }
-                .padding(.horizontal, 24)
+                .padding(.top, 12)
+                .padding(.bottom, 32)
             }
-            .padding(.top, 12)
-            .padding(.bottom, 32)
+            .scrollIndicators(.hidden)
+            .onChange(of: viewModel.batchId) { _, _ in
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.9)) {
+                    proxy.scrollTo("top", anchor: .top)
+                }
+            }
         }
-        .scrollIndicators(.hidden)
+    }
+
+    /// Reruns the same filters on the next discover page for fresh picks.
+    private var newBatchButton: some View {
+        Button {
+            Task { await viewModel.loadNewBatch(selection: selection) }
+        } label: {
+            HStack(spacing: 8) {
+                if viewModel.isRefreshing {
+                    ProgressView()
+                        .tint(.white)
+                } else {
+                    Image(systemName: "wand.and.stars")
+                        .font(.system(size: 15, weight: .semibold))
+                }
+                Text("Nuove proposte")
+                    .font(.headline)
+            }
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity)
+            .frame(height: 54)
+            .background(
+                viewModel.isRefreshing ? Theme.primary.opacity(0.6) : Theme.primary,
+                in: .rect(cornerRadius: 18)
+            )
+        }
+        .disabled(viewModel.isRefreshing)
+        .sensoryFeedback(.impact(weight: .medium), trigger: viewModel.batchId)
+        .padding(.horizontal, 24)
+        .padding(.top, 6)
     }
 
     private var recapChips: some View {
@@ -180,6 +220,13 @@ struct MovieCard: View {
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
                     .background(Theme.amber.opacity(0.15), in: .capsule)
+                }
+
+                if !movie.genreNames.isEmpty {
+                    Text(movie.genreNames.prefix(3).joined(separator: " · "))
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(Theme.primary)
+                        .lineLimit(1)
                 }
 
                 if !movie.overview.isEmpty {
