@@ -21,4 +21,15 @@ enum Theme {
     static let ink = Color(red: 0.239, green: 0.169, blue: 0.137)
     /// Softer brown for secondary text.
     static let inkSoft = Color(red: 0.478, green: 0.388, blue: 0.337)
+
+    // MARK: - Tab accent colors
+
+    /// Home tab: warm terracotta.
+    static let tabHome = primary
+    /// Tendenze tab: fiery amber-orange.
+    static let tabTrending = Color(red: 0.94, green: 0.52, blue: 0.16)
+    /// Al Cinema tab: deep indigo like a cinema at night.
+    static let tabCinema = Color(red: 0.36, green: 0.44, blue: 0.85)
+    /// La mia lista tab: soft rose.
+    static let tabList = Color(red: 0.86, green: 0.38, blue: 0.55)
 }

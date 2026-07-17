@@ -3,7 +3,7 @@
 //  MoodE
 //
 
-import Foundation
+import SwiftUI
 
 /// Emotional state chosen in step 1.
 enum Mood: String, CaseIterable, Identifiable, Hashable {
@@ -62,6 +62,24 @@ enum Mood: String, CaseIterable, Identifiable, Hashable {
         case .impaurito: return "moon.stars"
         }
     }
+
+    /// Signature color of each emotion, used for card backgrounds and accents.
+    var tint: Color {
+        switch self {
+        case .felice: return Color(red: 0.94, green: 0.70, blue: 0.16)
+        case .triste: return Color(red: 0.36, green: 0.56, blue: 0.86)
+        case .stressato: return Color(red: 0.27, green: 0.61, blue: 0.62)
+        case .annoiato: return Color(red: 0.62, green: 0.56, blue: 0.85)
+        case .innamorato: return Color(red: 0.93, green: 0.42, blue: 0.61)
+        case .nostalgico: return Color(red: 0.71, green: 0.52, blue: 0.28)
+        case .arrabbiato: return Color(red: 0.88, green: 0.35, blue: 0.29)
+        case .motivato: return Color(red: 0.94, green: 0.54, blue: 0.18)
+        case .malinconico: return Color(red: 0.47, green: 0.54, blue: 0.75)
+        case .spensierato: return Color(red: 0.31, green: 0.69, blue: 0.49)
+        case .curioso: return Color(red: 0.57, green: 0.42, blue: 0.83)
+        case .impaurito: return Color(red: 0.38, green: 0.38, blue: 0.72)
+        }
+    }
 }
 
 /// What the user wants to get from the movie, chosen in step 2.
@@ -115,6 +133,22 @@ enum ViewingGoal: String, CaseIterable, Identifiable, Hashable {
         case .innamorarmi: return "heart.text.square"
         }
     }
+
+    /// Signature color of each goal, used for card backgrounds and accents.
+    var tint: Color {
+        switch self {
+        case .ridere: return Color(red: 0.94, green: 0.69, blue: 0.15)
+        case .piangere: return Color(red: 0.38, green: 0.58, blue: 0.87)
+        case .rilassarmi: return Color(red: 0.32, green: 0.69, blue: 0.54)
+        case .riflettere: return Color(red: 0.56, green: 0.44, blue: 0.83)
+        case .emozionarmi: return Color(red: 0.92, green: 0.44, blue: 0.62)
+        case .distrarmi: return Color(red: 0.94, green: 0.55, blue: 0.21)
+        case .ispirarmi: return Color(red: 0.88, green: 0.64, blue: 0.14)
+        case .paura: return Color(red: 0.40, green: 0.38, blue: 0.72)
+        case .sognare: return Color(red: 0.51, green: 0.46, blue: 0.88)
+        case .innamorarmi: return Color(red: 0.87, green: 0.37, blue: 0.51)
+        }
+    }
 }
 
 /// Preferred movie era, chosen in step 3.
@@ -150,6 +184,17 @@ enum MovieEra: String, CaseIterable, Identifiable, Hashable {
         case .twoThousands: return "Storie moderne e memorabili"
         case .lastFiveYears: return "Le uscite più recenti"
         case .noPreference: return "Sorprendimi con qualsiasi epoca"
+        }
+    }
+
+    /// Signature color of each era, used for row backgrounds and accents.
+    var tint: Color {
+        switch self {
+        case .seventiesEighties: return Color(red: 0.71, green: 0.52, blue: 0.28)
+        case .nineties: return Color(red: 0.57, green: 0.44, blue: 0.83)
+        case .twoThousands: return Color(red: 0.36, green: 0.57, blue: 0.86)
+        case .lastFiveYears: return Color(red: 0.88, green: 0.43, blue: 0.28)
+        case .noPreference: return Color(red: 0.29, green: 0.62, blue: 0.61)
         }
     }
 }

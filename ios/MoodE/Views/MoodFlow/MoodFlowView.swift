@@ -65,6 +65,7 @@ struct MoodFlowView: View {
                         icon: mood.icon,
                         title: mood.title,
                         isSelected: selectedMood == mood,
+                        tint: mood.tint,
                         animatesEmoji: true,
                         animationIndex: index
                     ) {
@@ -81,12 +82,15 @@ struct MoodFlowView: View {
             subtitle: "Dimmi che effetto cerchi: sceglieremo il film giusto per te."
         ) {
             LazyVGrid(columns: goalColumns, spacing: 12) {
-                ForEach(ViewingGoal.allCases) { goal in
+                ForEach(Array(ViewingGoal.allCases.enumerated()), id: \.element) { index, goal in
                     SelectableCard(
                         emoji: goal.emoji,
                         icon: goal.icon,
                         title: goal.title,
-                        isSelected: selectedGoal == goal
+                        isSelected: selectedGoal == goal,
+                        tint: goal.tint,
+                        animatesEmoji: true,
+                        animationIndex: index
                     ) {
                         selectedGoal = goal
                     }
@@ -106,7 +110,8 @@ struct MoodFlowView: View {
                         emoji: era.emoji,
                         title: era.title,
                         subtitle: era.subtitle,
-                        isSelected: selectedEra == era
+                        isSelected: selectedEra == era,
+                        tint: era.tint
                     ) {
                         selectedEra = era
                     }

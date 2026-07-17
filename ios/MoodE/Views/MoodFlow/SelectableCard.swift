@@ -13,6 +13,7 @@ struct SelectableCard: View {
     let icon: String
     let title: String
     let isSelected: Bool
+    var tint: Color = Theme.primary
     var animatesEmoji: Bool = false
     var animationIndex: Int = 0
     let action: () -> Void
@@ -30,10 +31,10 @@ struct SelectableCard: View {
                         .offset(y: isFloating ? -3 : 2)
                     Image(systemName: icon)
                         .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(isSelected ? .white : Theme.primary)
+                        .foregroundStyle(isSelected ? .white : tint)
                         .padding(6)
                         .background(
-                            isSelected ? Theme.primary : Theme.primary.opacity(0.12),
+                            isSelected ? tint : .white.opacity(0.85),
                             in: .circle
                         )
                         .offset(x: 18, y: -6)
@@ -49,15 +50,28 @@ struct SelectableCard: View {
             .frame(maxWidth: .infinity)
             .frame(height: 116)
             .background(
-                isSelected ? Theme.primary.opacity(0.14) : .white.opacity(0.65),
+                LinearGradient(
+                    colors: isSelected
+                        ? [tint.opacity(0.50), tint.opacity(0.28)]
+                        : [tint.opacity(0.26), tint.opacity(0.12)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ),
                 in: .rect(cornerRadius: 22)
             )
+            .background(.white.opacity(0.85), in: .rect(cornerRadius: 22))
             .overlay(
                 RoundedRectangle(cornerRadius: 22)
                     .stroke(
-                        isSelected ? Theme.primary : Theme.primary.opacity(0.10),
+                        isSelected ? tint : tint.opacity(0.35),
                         lineWidth: isSelected ? 2 : 1
                     )
+            )
+            .shadow(
+                color: tint.opacity(isSelected ? 0.35 : 0.15),
+                radius: isSelected ? 10 : 5,
+                x: 0,
+                y: 4
             )
             .scaleEffect(isSelected ? 1.03 : 1.0)
         }
@@ -98,6 +112,7 @@ struct SelectableRow: View {
     let title: String
     let subtitle: String
     let isSelected: Bool
+    var tint: Color = Theme.primary
     let action: () -> Void
 
     var body: some View {
@@ -107,7 +122,7 @@ struct SelectableRow: View {
                     .font(.system(size: 30))
                     .frame(width: 52, height: 52)
                     .background(
-                        isSelected ? Theme.primary.opacity(0.16) : Theme.primary.opacity(0.08),
+                        isSelected ? tint.opacity(0.30) : tint.opacity(0.16),
                         in: .rect(cornerRadius: 16)
                     )
 
@@ -124,19 +139,32 @@ struct SelectableRow: View {
 
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 24))
-                    .foregroundStyle(isSelected ? Theme.primary : Theme.primary.opacity(0.25))
+                    .foregroundStyle(isSelected ? tint : tint.opacity(0.35))
             }
             .padding(16)
             .background(
-                isSelected ? Theme.primary.opacity(0.12) : .white.opacity(0.65),
+                LinearGradient(
+                    colors: isSelected
+                        ? [tint.opacity(0.40), tint.opacity(0.20)]
+                        : [tint.opacity(0.20), tint.opacity(0.08)],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                ),
                 in: .rect(cornerRadius: 22)
             )
+            .background(.white.opacity(0.85), in: .rect(cornerRadius: 22))
             .overlay(
                 RoundedRectangle(cornerRadius: 22)
                     .stroke(
-                        isSelected ? Theme.primary : Theme.primary.opacity(0.10),
+                        isSelected ? tint : tint.opacity(0.30),
                         lineWidth: isSelected ? 2 : 1
                     )
+            )
+            .shadow(
+                color: tint.opacity(isSelected ? 0.30 : 0.12),
+                radius: isSelected ? 9 : 4,
+                x: 0,
+                y: 3
             )
         }
         .buttonStyle(PressableCardStyle())

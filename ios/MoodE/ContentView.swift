@@ -6,30 +6,48 @@
 import SwiftUI
 
 /// Root tab bar navigation for Mood-E.
+/// Each tab has its own signature color: the tab bar tint follows the selection.
 struct ContentView: View {
+    @State private var selectedTab: Int = 0
+
+    private var selectedTint: Color {
+        switch selectedTab {
+        case 0: return Theme.tabHome
+        case 1: return Theme.tabTrending
+        case 2: return Theme.tabCinema
+        default: return Theme.tabList
+        }
+    }
+
     var body: some View {
-        TabView {
+        TabView(selection: $selectedTab) {
             HomeView()
                 .tabItem {
-                    Label("Home", systemImage: "face.smiling")
+                    Label("Home", systemImage: "face.smiling.inverse")
                 }
+                .tag(0)
 
             TrendingView()
                 .tabItem {
-                    Label("Tendenze", systemImage: "flame")
+                    Label("Tendenze", systemImage: "flame.fill")
                 }
+                .tag(1)
 
             CinemaView()
                 .tabItem {
-                    Label("Al Cinema", systemImage: "popcorn")
+                    Label("Al Cinema", systemImage: "popcorn.fill")
                 }
+                .tag(2)
 
             MyListView()
                 .tabItem {
-                    Label("La mia lista", systemImage: "bookmark")
+                    Label("La mia lista", systemImage: "bookmark.fill")
                 }
+                .tag(3)
         }
-        .tint(Theme.primary)
+        .tint(selectedTint)
+        .sensoryFeedback(.selection, trigger: selectedTab)
+        .animation(.easeInOut(duration: 0.25), value: selectedTab)
     }
 }
 
