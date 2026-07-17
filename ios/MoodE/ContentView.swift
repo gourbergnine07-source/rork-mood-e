@@ -16,7 +16,8 @@ struct ContentView: View {
         case 0: return Theme.tabHome
         case 1: return Theme.tabTrending
         case 2: return Theme.tabCinema
-        default: return Theme.tabList
+        case 3: return Theme.tabList
+        default: return Theme.tabSettings
         }
     }
 
@@ -46,6 +47,12 @@ struct ContentView: View {
                 }
                 .badge(library.toWatchCount)
                 .tag(3)
+
+            SettingsView()
+                .tabItem {
+                    Label("Impostazioni", systemImage: "gearshape.fill")
+                }
+                .tag(4)
         }
         .tint(selectedTint)
         .sensoryFeedback(.selection, trigger: selectedTab)

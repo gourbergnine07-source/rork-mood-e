@@ -34,4 +34,6 @@ enum Theme {
     static let tabCinema = Color(red: 0.36, green: 0.44, blue: 0.85)
     /// La mia lista tab: soft rose.
     static let tabList = Color(red: 0.86, green: 0.38, blue: 0.55)
+    /// Impostazioni tab: calm deep teal.
+    static let tabSettings = Color(red: 0.18, green: 0.52, blue: 0.53)
 }
