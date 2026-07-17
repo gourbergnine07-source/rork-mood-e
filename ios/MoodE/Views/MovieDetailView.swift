@@ -10,6 +10,7 @@ struct MovieDetailView: View {
     let movie: TMDBMovie
 
     @State private var viewModel = MovieDetailViewModel()
+    @Environment(MovieLibrary.self) private var library
 
     var body: some View {
         ZStack {
@@ -80,6 +81,8 @@ struct MovieDetailView: View {
 
                 VStack(alignment: .leading, spacing: 20) {
                     titleBlock(detail)
+
+                    actionButtons
 
                     if !detail.genres.isEmpty {
                         genreChips(detail.genres)
@@ -173,6 +176,39 @@ struct MovieDetailView: View {
         }
     }
 
+    // MARK: - Watchlist / seen actions
+
+    private var isInWatchlist: Bool { library.isInWatchlist(movie.id) }
+    private var isSeen: Bool { library.isSeen(movie.id) }
+
+    private var actionButtons: some View {
+        HStack(spacing: 12) {
+            LibraryActionButton(
+                title: isInWatchlist ? "Nella tua lista" : "Aggiungi alla lista",
+                icon: isInWatchlist ? "bookmark.fill" : "bookmark",
+                tint: Theme.primary,
+                isActive: isInWatchlist
+            ) {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+                    library.toggleWatchlist(movie)
+                }
+            }
+
+            LibraryActionButton(
+                title: isSeen ? "Visto" : "Già visto",
+                icon: isSeen ? "checkmark.circle.fill" : "checkmark.circle",
+                tint: Theme.seenGreen,
+                isActive: isSeen
+            ) {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+                    library.toggleSeen(movie)
+                }
+            }
+        }
+        .sensoryFeedback(.impact(weight: .medium), trigger: isInWatchlist)
+        .sensoryFeedback(.success, trigger: isSeen)
+    }
+
     private func metaBadge(icon: String, text: String) -> some View {
         HStack(spacing: 4) {
             Image(systemName: icon)
@@ -251,6 +287,46 @@ struct MovieDetailView: View {
     }
 }
 
+/// Prominent toggle button for watchlist / seen actions:
+/// outlined when inactive, filled with its tint when active.
+struct LibraryActionButton: View {
+    let title: String
+    let icon: String
+    let tint: Color
+    let isActive: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 7) {
+                Image(systemName: icon)
+                    .font(.system(size: 15, weight: .semibold))
+                    .contentTransition(.symbolEffect(.replace))
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+            }
+            .foregroundStyle(isActive ? .white : tint)
+            .frame(maxWidth: .infinity)
+            .frame(height: 50)
+            .background(
+                isActive ? tint : tint.opacity(0.10),
+                in: .rect(cornerRadius: 16)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(tint.opacity(isActive ? 0 : 0.35), lineWidth: 1.5)
+            )
+            .shadow(
+                color: isActive ? tint.opacity(0.35) : .clear,
+                radius: 10, y: 5
+            )
+        }
+        .buttonStyle(PressableCardStyle())
+    }
+}
+
 /// Small card with actor photo, name and role.
 struct CastMemberCard: View {
     let member: TMDBCastMember
@@ -326,4 +402,5 @@ struct CastMemberCard: View {
             )
         )
     }
+    .environment(MovieLibrary())
 }

@@ -5,16 +5,17 @@
 
 import SwiftUI
 
-/// La mia lista tab: will host the watchlist and "already seen" movies.
+/// La mia lista tab: local watchlist and "already seen" movies.
 struct MyListView: View {
     @State private var selectedSection: ListSection = .watchlist
+    @Environment(MovieLibrary.self) private var library
 
     var body: some View {
         NavigationStack {
             ZStack {
                 Theme.background.ignoresSafeArea()
 
-                VStack(spacing: 24) {
+                VStack(spacing: 16) {
                     Picker("Sezione", selection: $selectedSection) {
                         ForEach(ListSection.allCases) { section in
                             Text(section.title).tag(section)
@@ -24,21 +25,52 @@ struct MyListView: View {
                     .padding(.horizontal, 24)
                     .padding(.top, 8)
 
-                    Spacer()
-
-                    PlaceholderCard(
-                        icon: selectedSection.icon,
-                        title: selectedSection.placeholderTitle,
-                        message: selectedSection.placeholderMessage
-                    )
-
-                    Spacer()
+                    if movies.isEmpty {
+                        Spacer()
+                        PlaceholderCard(
+                            icon: selectedSection.icon,
+                            title: selectedSection.placeholderTitle,
+                            message: selectedSection.placeholderMessage
+                        )
+                        Spacer()
+                    } else {
+                        movieList
+                    }
                 }
             }
             .navigationTitle("La mia lista")
             .toolbarTitleDisplayMode(.large)
+            .navigationDestination(for: TMDBMovie.self) { movie in
+                MovieDetailView(movie: movie)
+            }
         }
-        .tint(Theme.primary)
+        .tint(Theme.tabList)
+        .sensoryFeedback(.selection, trigger: selectedSection)
+    }
+
+    private var movies: [TMDBMovie] {
+        switch selectedSection {
+        case .watchlist: return library.watchlist
+        case .seen: return library.seen
+        }
+    }
+
+    private var movieList: some View {
+        ScrollView {
+            LazyVStack(spacing: 14) {
+                ForEach(movies) { movie in
+                    NavigationLink(value: movie) {
+                        MovieCard(movie: movie)
+                    }
+                    .buttonStyle(PressableCardStyle())
+                }
+            }
+            .padding(.horizontal, 24)
+            .padding(.top, 4)
+            .padding(.bottom, 32)
+        }
+        .scrollIndicators(.hidden)
+        .animation(.spring(response: 0.4, dampingFraction: 0.85), value: movies)
     }
 }
 
@@ -82,4 +114,5 @@ enum ListSection: String, CaseIterable, Identifiable {
 
 #Preview {
     MyListView()
+        .environment(MovieLibrary())
 }

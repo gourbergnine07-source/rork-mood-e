@@ -21,6 +21,8 @@ enum Theme {
     static let ink = Color(red: 0.239, green: 0.169, blue: 0.137)
     /// Softer brown for secondary text.
     static let inkSoft = Color(red: 0.478, green: 0.388, blue: 0.337)
+    /// Confident green for the "already seen" state.
+    static let seenGreen = Color(red: 0.28, green: 0.6, blue: 0.42)
 
     // MARK: - Tab accent colors
 

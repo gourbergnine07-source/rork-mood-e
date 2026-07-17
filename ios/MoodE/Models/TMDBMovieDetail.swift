@@ -49,9 +49,9 @@ nonisolated struct TMDBMovieDetail: Codable {
         return URL(string: "https://image.tmdb.org/t/p/w780\(posterPath)")
     }
 
-    /// Main cast (first 10 actors).
+    /// Main cast (first 8 actors).
     var mainCast: [TMDBCastMember] {
-        Array(credits.cast.prefix(10))
+        Array(credits.cast.prefix(8))
     }
 
     /// Best official YouTube trailer, falling back to any YouTube video.
