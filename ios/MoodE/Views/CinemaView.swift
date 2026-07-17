@@ -12,6 +12,7 @@ struct CinemaView: View {
     @State private var locationService = LocationService()
     @State private var viewModel = CinemaViewModel()
     @State private var skippedPermission = false
+    @State private var cinemaSearchText = ""
     @Environment(\.openURL) private var openURL
 
     private let columns = [
@@ -306,10 +307,19 @@ struct CinemaView: View {
                 .background(.white.opacity(0.65), in: .rect(cornerRadius: 20))
 
             case .loaded(let cinemas):
-                VStack(spacing: 10) {
-                    ForEach(cinemas) { cinema in
-                        NearbyCinemaRow(cinema: cinema)
+                cinemaSearchBar
+
+                let filtered = filteredCinemas(cinemas)
+
+                if filtered.isEmpty {
+                    noSearchResultsCard
+                } else {
+                    VStack(spacing: 10) {
+                        ForEach(filtered) { cinema in
+                            NearbyCinemaRow(cinema: cinema)
+                        }
                     }
+                    .animation(.spring(duration: 0.3), value: filtered)
                 }
 
                 showtimesComingNote
@@ -320,6 +330,64 @@ struct CinemaView: View {
         }
         .padding(.horizontal, 24)
         .padding(.top, 8)
+    }
+
+    /// Filters nearby cinemas by name (and address) using the search text.
+    private func filteredCinemas(_ cinemas: [NearbyCinema]) -> [NearbyCinema] {
+        let query = cinemaSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return cinemas }
+        return cinemas.filter { cinema in
+            cinema.name.localizedStandardContains(query)
+            || (cinema.address?.localizedStandardContains(query) ?? false)
+        }
+    }
+
+    private var cinemaSearchBar: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(Theme.tabCinema)
+
+            TextField("Cerca un cinema per nome", text: $cinemaSearchText)
+                .font(.subheadline)
+                .foregroundStyle(Theme.ink)
+                .autocorrectionDisabled()
+                .submitLabel(.search)
+
+            if !cinemaSearchText.isEmpty {
+                Button {
+                    withAnimation(.spring(duration: 0.25)) {
+                        cinemaSearchText = ""
+                    }
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 16))
+                        .foregroundStyle(Theme.inkSoft.opacity(0.6))
+                }
+                .accessibilityLabel("Cancella ricerca")
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+        .background(.white.opacity(0.8), in: .rect(cornerRadius: 14))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(Theme.tabCinema.opacity(0.18), lineWidth: 1)
+        )
+    }
+
+    private var noSearchResultsCard: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 18))
+                .foregroundStyle(Theme.tabCinema.opacity(0.6))
+            Text("Nessun cinema corrisponde a \"\(cinemaSearchText.trimmingCharacters(in: .whitespacesAndNewlines))\"")
+                .font(.subheadline)
+                .foregroundStyle(Theme.inkSoft)
+            Spacer(minLength: 0)
+        }
+        .padding(16)
+        .background(.white.opacity(0.65), in: .rect(cornerRadius: 16))
     }
 
     private var showtimesComingNote: some View {
