@@ -10,6 +10,7 @@ struct MovieDetailView: View {
     let movie: TMDBMovie
 
     @State private var viewModel = MovieDetailViewModel()
+    @State private var trailerToPlay: TMDBVideo?
     @Environment(MovieLibrary.self) private var library
 
     var body: some View {
@@ -30,6 +31,9 @@ struct MovieDetailView: View {
         .tint(Theme.primary)
         .task {
             await viewModel.load(movieID: movie.id)
+        }
+        .sheet(item: $trailerToPlay) { trailer in
+            TrailerPlayerSheet(trailer: trailer, movieTitle: movie.title)
         }
     }
 
@@ -82,6 +86,10 @@ struct MovieDetailView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     titleBlock(detail)
 
+                    if let trailer = detail.trailer {
+                        watchTrailerButton(trailer)
+                    }
+
                     actionButtons
 
                     if !detail.genres.isEmpty {
@@ -90,10 +98,6 @@ struct MovieDetailView: View {
 
                     if !detail.overview.isEmpty {
                         overviewSection(detail.overview)
-                    }
-
-                    if let trailer = detail.trailer, let embedURL = trailer.embedURL {
-                        trailerSection(embedURL)
                     }
 
                     if !detail.mainCast.isEmpty {
@@ -140,6 +144,36 @@ struct MovieDetailView: View {
                 .frame(height: 120)
                 .allowsHitTesting(false)
             }
+            .overlay {
+                if let trailer = detail.trailer {
+                    posterPlayButton(trailer)
+                }
+            }
+    }
+
+    /// Floating play button on the poster: opens the trailer player.
+    private func posterPlayButton(_ trailer: TMDBVideo) -> some View {
+        Button {
+            trailerToPlay = trailer
+        } label: {
+            ZStack {
+                Circle()
+                    .fill(.black.opacity(0.45))
+                    .frame(width: 72, height: 72)
+                    .background(.ultraThinMaterial, in: .circle)
+
+                Image(systemName: "play.fill")
+                    .font(.system(size: 28, weight: .bold))
+                    .foregroundStyle(.white)
+                    .offset(x: 2)
+            }
+            .overlay(
+                Circle().stroke(.white.opacity(0.6), lineWidth: 1.5)
+            )
+            .shadow(color: .black.opacity(0.35), radius: 14, y: 6)
+        }
+        .buttonStyle(PressableCardStyle())
+        .accessibilityLabel("Guarda il trailer")
     }
 
     private var posterFallback: some View {
@@ -174,6 +208,36 @@ struct MovieDetailView: View {
                 .background(Theme.amber.opacity(0.15), in: .capsule)
             }
         }
+    }
+
+    // MARK: - Trailer
+
+    /// Prominent "watch trailer" call to action.
+    private func watchTrailerButton(_ trailer: TMDBVideo) -> some View {
+        Button {
+            trailerToPlay = trailer
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "play.circle.fill")
+                    .font(.system(size: 20, weight: .semibold))
+                Text("Guarda trailer")
+                    .font(.headline)
+            }
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity)
+            .frame(height: 54)
+            .background(
+                LinearGradient(
+                    colors: [Theme.ink, Theme.ink.opacity(0.85)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                ),
+                in: .rect(cornerRadius: 18)
+            )
+            .shadow(color: Theme.ink.opacity(0.3), radius: 10, y: 5)
+        }
+        .buttonStyle(PressableCardStyle())
+        .sensoryFeedback(.impact(weight: .medium), trigger: trailerToPlay)
     }
 
     // MARK: - Watchlist / seen actions
@@ -248,19 +312,6 @@ struct MovieDetailView: View {
                 .font(.subheadline)
                 .foregroundStyle(Theme.inkSoft)
                 .lineSpacing(4)
-        }
-    }
-
-    private func trailerSection(_ embedURL: URL) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionTitle("Trailer ufficiale")
-            TrailerWebView(url: embedURL)
-                .aspectRatio(16 / 9, contentMode: .fit)
-                .clipShape(.rect(cornerRadius: 18))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 18)
-                        .stroke(Theme.primary.opacity(0.10), lineWidth: 1)
-                )
         }
     }
 

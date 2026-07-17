@@ -112,4 +112,9 @@ nonisolated struct TMDBVideo: Codable, Identifiable, Hashable {
     var embedURL: URL? {
         URL(string: "https://www.youtube.com/embed/\(key)?playsinline=1&rel=0")
     }
+
+    /// Embeddable YouTube player URL with autoplay, for the full player sheet.
+    var autoplayEmbedURL: URL? {
+        URL(string: "https://www.youtube.com/embed/\(key)?playsinline=1&rel=0&autoplay=1")
+    }
 }
