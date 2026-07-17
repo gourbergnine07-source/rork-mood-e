@@ -14,6 +14,7 @@ struct CinemaView: View {
     @State private var skippedPermission = false
     @State private var cinemaSearchText = ""
     @State private var selectedGenreId: Int?
+    @State private var trailerPlayback = TrailerPlayback()
     @Environment(\.openURL) private var openURL
 
     private let columns = [
@@ -32,6 +33,7 @@ struct CinemaView: View {
             .navigationDestination(for: TMDBMovie.self) { movie in
                 MovieDetailView(movie: movie)
             }
+            .trailerPlayer(trailerPlayback)
         }
         .tint(Theme.tabCinema)
         .onChange(of: locationService.authorizationStatus) { oldStatus, newStatus in
@@ -211,7 +213,11 @@ struct CinemaView: View {
                         LazyVGrid(columns: columns, spacing: 18) {
                             ForEach(filteredMovies) { movie in
                                 NavigationLink(value: movie) {
-                                    NowPlayingCard(movie: movie)
+                                    NowPlayingCard(
+                                        movie: movie,
+                                        isLoadingTrailer: trailerPlayback.loadingMovieId == movie.id,
+                                        onPlayTrailer: { trailerPlayback.play(movie) }
+                                    )
                                 }
                                 .buttonStyle(PressableCardStyle())
                             }
@@ -619,6 +625,8 @@ struct NearbyCinemaRow: View {
 /// Grid card for a now-playing movie: poster, title and release date.
 struct NowPlayingCard: View {
     let movie: TMDBMovie
+    var isLoadingTrailer: Bool = false
+    var onPlayTrailer: (() -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -639,6 +647,16 @@ struct NowPlayingCard: View {
                         .font(.caption2.weight(.medium))
                         .foregroundStyle(Theme.inkSoft)
                 }
+            }
+
+            if let onPlayTrailer {
+                WatchTrailerButton(
+                    tint: Theme.tabCinema,
+                    isCompact: true,
+                    isLoading: isLoadingTrailer,
+                    action: onPlayTrailer
+                )
+                .padding(.top, 2)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

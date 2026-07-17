@@ -10,9 +10,7 @@ struct MovieResultsView: View {
     let selection: MoodSelection
 
     @State private var viewModel = MovieResultsViewModel()
-    @State private var trailerSelection: TrailerSelection?
-    @State private var loadingTrailerMovieId: Int?
-    @State private var showsTrailerUnavailable = false
+    @State private var trailerPlayback = TrailerPlayback()
     @Environment(MovieLibrary.self) private var library
 
     var body: some View {
@@ -41,33 +39,7 @@ struct MovieResultsView: View {
         .task {
             await viewModel.load(selection: selection, excluding: library.watchedIds)
         }
-        .sheet(item: $trailerSelection) { selection in
-            TrailerPlayerSheet(trailer: selection.trailer, movieTitle: selection.movieTitle)
-        }
-        .alert("Trailer non disponibile", isPresented: $showsTrailerUnavailable) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text("Non abbiamo trovato un trailer per questo film.")
-        }
-    }
-
-    /// Fetches the best trailer for a movie and opens the player sheet.
-    private func playTrailer(for movie: TMDBMovie) {
-        guard loadingTrailerMovieId == nil else { return }
-        loadingTrailerMovieId = movie.id
-        Task {
-            defer { loadingTrailerMovieId = nil }
-            do {
-                let videos = try await TMDBService.movieVideos(id: movie.id)
-                if let trailer = videos.bestTrailer {
-                    trailerSelection = TrailerSelection(movieTitle: movie.title, trailer: trailer)
-                } else {
-                    showsTrailerUnavailable = true
-                }
-            } catch {
-                showsTrailerUnavailable = true
-            }
-        }
+        .trailerPlayer(trailerPlayback)
     }
 
     // MARK: - States
@@ -143,14 +115,14 @@ struct MovieResultsView: View {
                             NavigationLink(value: movie) {
                                 MovieCard(
                                     movie: movie,
-                                    isLoadingTrailer: loadingTrailerMovieId == movie.id,
-                                    onPlayTrailer: { playTrailer(for: movie) }
+                                    isLoadingTrailer: trailerPlayback.loadingMovieId == movie.id,
+                                    onPlayTrailer: { trailerPlayback.play(movie) }
                                 )
                             }
                             .buttonStyle(PressableCardStyle())
                         }
                     }
-                    .sensoryFeedback(.impact(weight: .medium), trigger: loadingTrailerMovieId)
+                    .sensoryFeedback(.impact(weight: .medium), trigger: trailerPlayback.loadingMovieId)
                     .padding(.horizontal, 24)
 
                     newBatchButton
@@ -290,6 +262,15 @@ struct MovieCard: View {
 
                 quickActions
                     .padding(.top, 2)
+
+                if let onPlayTrailer {
+                    WatchTrailerButton(
+                        tint: Theme.rose,
+                        isLoading: isLoadingTrailer,
+                        action: onPlayTrailer
+                    )
+                    .padding(.top, 2)
+                }
             }
 
             Spacer(minLength: 0)

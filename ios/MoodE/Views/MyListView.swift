@@ -8,6 +8,7 @@ import SwiftUI
 /// La mia lista tab: local "to watch" and "watched" lists with live updates.
 struct MyListView: View {
     @State private var selectedSection: ListSection = .watchlist
+    @State private var trailerPlayback = TrailerPlayback()
     @Environment(MovieLibrary.self) private var library
 
     var body: some View {
@@ -39,6 +40,7 @@ struct MyListView: View {
             .navigationDestination(for: TMDBMovie.self) { movie in
                 MovieDetailView(movie: movie)
             }
+            .trailerPlayer(trailerPlayback)
         }
         .tint(Theme.tabList)
         .sensoryFeedback(.selection, trigger: selectedSection)
@@ -72,7 +74,9 @@ struct MyListView: View {
                             withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
                                 library.markWatched(entry.id)
                             }
-                        } : nil
+                        } : nil,
+                        isLoadingTrailer: trailerPlayback.loadingMovieId == entry.id,
+                        onPlayTrailer: { trailerPlayback.play(entry.asMovie) }
                     )
                     .transition(.asymmetric(
                         insertion: .opacity.combined(with: .move(edge: .top)),
@@ -94,6 +98,8 @@ struct MyListView: View {
 struct LibraryEntryRow: View {
     let entry: LibraryEntry
     let onMarkWatched: (() -> Void)?
+    var isLoadingTrailer: Bool = false
+    var onPlayTrailer: (() -> Void)? = nil
 
     @State private var justMarked: Bool = false
 
@@ -111,6 +117,16 @@ struct LibraryEntryRow: View {
                             .multilineTextAlignment(.leading)
 
                         dateLabel
+
+                        if let onPlayTrailer {
+                            WatchTrailerButton(
+                                tint: Theme.tabList,
+                                isCompact: true,
+                                isLoading: isLoadingTrailer,
+                                action: onPlayTrailer
+                            )
+                            .padding(.top, 2)
+                        }
                     }
 
                     Spacer(minLength: 0)
