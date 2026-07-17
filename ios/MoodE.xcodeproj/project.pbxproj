@@ -401,6 +401,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Mood-E";
+				INFOPLIST_KEY_CFBundleName = "Mood-E";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Usiamo la tua posizione solo per capire in quale paese ti trovi e mostrarti i film in sala e i cinema vicino a te.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -436,6 +437,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Mood-E";
+				INFOPLIST_KEY_CFBundleName = "Mood-E";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Usiamo la tua posizione solo per capire in quale paese ti trovi e mostrarti i film in sala e i cinema vicino a te.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
