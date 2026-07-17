@@ -14,6 +14,19 @@ struct NearbyCinema: Identifiable, Hashable {
     let name: String
     let address: String?
     let distanceMeters: Double?
+    let latitude: Double?
+    let longitude: Double?
+
+    /// Opens Apple Maps with driving directions to this cinema.
+    func openDirectionsInMaps() {
+        guard let latitude, let longitude else { return }
+        let placemark = MKPlacemark(coordinate: CLLocationCoordinate2D(latitude: latitude, longitude: longitude))
+        let mapItem = MKMapItem(placemark: placemark)
+        mapItem.name = name
+        mapItem.openInMaps(launchOptions: [
+            MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving
+        ])
+    }
 
     /// Distance formatted in Italian (e.g. "850 m" or "2,3 km").
     var formattedDistance: String? {
@@ -101,7 +114,9 @@ final class CinemaViewModel {
                         id: "\(name)|\(itemLocation?.coordinate.latitude ?? 0)|\(itemLocation?.coordinate.longitude ?? 0)",
                         name: name,
                         address: address.isEmpty ? nil : address,
-                        distanceMeters: distance
+                        distanceMeters: distance,
+                        latitude: itemLocation?.coordinate.latitude,
+                        longitude: itemLocation?.coordinate.longitude
                     )
                 }
                 .sorted { ($0.distanceMeters ?? .greatestFiniteMagnitude) < ($1.distanceMeters ?? .greatestFiniteMagnitude) }

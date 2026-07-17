@@ -363,52 +363,72 @@ struct CinemaView: View {
     }
 }
 
-/// Row showing a nearby cinema: name, address and distance chip.
+/// Tappable row for a nearby cinema: opens Apple Maps with driving directions.
 struct NearbyCinemaRow: View {
     let cinema: NearbyCinema
 
+    @State private var tapCount = 0
+
     var body: some View {
-        HStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Theme.tabCinema.opacity(0.12))
-                    .frame(width: 44, height: 44)
-                Image(systemName: "popcorn.fill")
-                    .font(.system(size: 18))
-                    .foregroundStyle(Theme.tabCinema)
-            }
+        Button {
+            tapCount += 1
+            cinema.openDirectionsInMaps()
+        } label: {
+            HStack(spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Theme.tabCinema.opacity(0.12))
+                        .frame(width: 44, height: 44)
+                    Image(systemName: "popcorn.fill")
+                        .font(.system(size: 18))
+                        .foregroundStyle(Theme.tabCinema)
+                }
 
-            VStack(alignment: .leading, spacing: 3) {
-                Text(cinema.name)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Theme.ink)
-                    .lineLimit(1)
-
-                if let address = cinema.address {
-                    Text(address)
-                        .font(.caption)
-                        .foregroundStyle(Theme.inkSoft)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(cinema.name)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Theme.ink)
                         .lineLimit(1)
+
+                    if let address = cinema.address {
+                        Text(address)
+                            .font(.caption)
+                            .foregroundStyle(Theme.inkSoft)
+                            .lineLimit(1)
+                    }
+                }
+
+                Spacer(minLength: 8)
+
+                VStack(alignment: .trailing, spacing: 5) {
+                    if let distance = cinema.formattedDistance {
+                        Text(distance)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Theme.tabCinema)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(Theme.tabCinema.opacity(0.12), in: .capsule)
+                    }
+
+                    HStack(spacing: 3) {
+                        Image(systemName: "arrow.triangle.turn.up.right.circle.fill")
+                            .font(.system(size: 11))
+                        Text("Indicazioni")
+                            .font(.caption2.weight(.semibold))
+                    }
+                    .foregroundStyle(Theme.tabCinema.opacity(0.85))
                 }
             }
-
-            Spacer(minLength: 8)
-
-            if let distance = cinema.formattedDistance {
-                Text(distance)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Theme.tabCinema)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(Theme.tabCinema.opacity(0.12), in: .capsule)
-            }
+            .padding(12)
+            .background(.white.opacity(0.65), in: .rect(cornerRadius: 16))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Theme.tabCinema.opacity(0.10), lineWidth: 1)
+            )
         }
-        .padding(12)
-        .background(.white.opacity(0.65), in: .rect(cornerRadius: 16))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Theme.tabCinema.opacity(0.10), lineWidth: 1)
-        )
+        .buttonStyle(PressableCardStyle())
+        .sensoryFeedback(.impact(weight: .light), trigger: tapCount)
+        .accessibilityLabel("Apri le indicazioni per \(cinema.name)")
     }
 }
 
