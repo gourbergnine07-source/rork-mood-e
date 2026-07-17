@@ -10,6 +10,7 @@ struct MovieResultsView: View {
     let selection: MoodSelection
 
     @State private var viewModel = MovieResultsViewModel()
+    @Environment(MovieLibrary.self) private var library
 
     var body: some View {
         ZStack {
@@ -35,7 +36,7 @@ struct MovieResultsView: View {
             MovieDetailView(movie: movie)
         }
         .task {
-            await viewModel.load(selection: selection)
+            await viewModel.load(selection: selection, excluding: library.watchedIds)
         }
     }
 
@@ -65,7 +66,7 @@ struct MovieResultsView: View {
                 .foregroundStyle(Theme.inkSoft)
                 .multilineTextAlignment(.center)
             Button {
-                Task { await viewModel.load(selection: selection) }
+                Task { await viewModel.load(selection: selection, excluding: library.watchedIds) }
             } label: {
                 Label("Riprova", systemImage: "arrow.clockwise")
                     .font(.headline)
@@ -134,7 +135,7 @@ struct MovieResultsView: View {
     /// Reruns the same filters on the next discover page for fresh picks.
     private var newBatchButton: some View {
         Button {
-            Task { await viewModel.loadNewBatch(selection: selection) }
+            Task { await viewModel.loadNewBatch(selection: selection, excluding: library.watchedIds) }
         } label: {
             HStack(spacing: 8) {
                 if viewModel.isRefreshing {
@@ -287,4 +288,5 @@ struct MovieCard: View {
             selection: MoodSelection(mood: .felice, goal: .ridere, era: .nineties)
         )
     }
+    .environment(MovieLibrary())
 }

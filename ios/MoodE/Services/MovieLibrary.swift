@@ -84,6 +84,11 @@ final class MovieLibrary {
         entries.filter { $0.status == .toWatch }.count
     }
 
+    /// IDs of watched movies, used to exclude them from recommendations.
+    var watchedIds: Set<Int> {
+        Set(entries.filter { $0.status == .watched }.map(\.id))
+    }
+
     // MARK: - Queries
 
     func entry(for movieID: Int) -> LibraryEntry? {
