@@ -13,6 +13,12 @@ enum AppLinks {
     /// Repository name — placeholder, sostituire con quello reale.
     static let gitHubRepo = "nome-repo"
 
+    /// True once the real GitHub username/repo have been filled in.
+    /// While false, legal pages are served from the app bundle.
+    static var isRemoteConfigured: Bool {
+        gitHubUser != "tuo-username-github" && gitHubRepo != "nome-repo"
+    }
+
     static var privacyPolicy: URL {
         URL(string: "https://\(gitHubUser).github.io/\(gitHubRepo)/privacy-policy.html")!
     }

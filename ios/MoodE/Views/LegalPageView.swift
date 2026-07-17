@@ -18,11 +18,28 @@ enum LegalPage: Hashable {
         }
     }
 
-    var url: URL {
+    var remoteURL: URL {
         switch self {
         case .privacyPolicy: return AppLinks.privacyPolicy
         case .terms: return AppLinks.terms
         }
+    }
+
+    /// HTML file bundled with the app, shown until GitHub Pages is live.
+    var bundledFileName: String {
+        switch self {
+        case .privacyPolicy: return "privacy-policy"
+        case .terms: return "termini"
+        }
+    }
+
+    var bundledURL: URL? {
+        Bundle.main.url(forResource: bundledFileName, withExtension: "html")
+    }
+
+    /// Remote page when configured, otherwise the local copy in the bundle.
+    var resolvedURL: URL? {
+        AppLinks.isRemoteConfigured ? remoteURL : bundledURL
     }
 }
 
@@ -38,9 +55,11 @@ struct LegalPageView: View {
         ZStack {
             Theme.background.ignoresSafeArea()
 
-            WebPageView(url: page.url, loadState: $loadState)
-                .id(reloadToken)
-                .opacity(loadState == .loaded ? 1 : 0)
+            if let url = page.resolvedURL {
+                WebPageView(url: url, loadState: $loadState)
+                    .id(reloadToken)
+                    .opacity(loadState == .loaded ? 1 : 0)
+            }
 
             switch loadState {
             case .loading:
@@ -127,7 +146,11 @@ struct WebPageView: UIViewRepresentable {
         webView.isOpaque = false
         webView.backgroundColor = .clear
         webView.scrollView.backgroundColor = .clear
-        webView.load(URLRequest(url: url))
+        if url.isFileURL {
+            webView.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
+        } else {
+            webView.load(URLRequest(url: url))
+        }
         return webView
     }
 
