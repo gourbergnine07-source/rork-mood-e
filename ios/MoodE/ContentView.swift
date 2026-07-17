@@ -9,6 +9,7 @@ import SwiftUI
 /// Each tab has its own signature color: the tab bar tint follows the selection.
 struct ContentView: View {
     @State private var selectedTab: Int = 0
+    @Environment(MovieLibrary.self) private var library
 
     private var selectedTint: Color {
         switch selectedTab {
@@ -43,6 +44,7 @@ struct ContentView: View {
                 .tabItem {
                     Label("La mia lista", systemImage: "bookmark.fill")
                 }
+                .badge(library.toWatchCount)
                 .tag(3)
         }
         .tint(selectedTint)
@@ -53,4 +55,5 @@ struct ContentView: View {
 
 #Preview {
     ContentView()
+        .environment(MovieLibrary())
 }
