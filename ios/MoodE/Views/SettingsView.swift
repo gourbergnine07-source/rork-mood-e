@@ -39,6 +39,8 @@ struct SettingsView: View {
     @Environment(NotificationService.self) private var notifications
     @Environment(MovieLibrary.self) private var library
     @State private var showPermissionAlert = false
+    @State private var showOnboarding = false
+    @AppStorage("onboarding.completed") private var hasCompletedOnboarding: Bool = true
     private var theme: ThemeManager { ThemeManager.shared }
 
     private var appVersion: String {
@@ -53,6 +55,7 @@ struct SettingsView: View {
                 appearanceSection
                 notificationsSection
                 librarySection
+                onboardingSection
                 privacySection
                 supportSection
                 legalSection
@@ -63,6 +66,12 @@ struct SettingsView: View {
             .toolbarTitleDisplayMode(.large)
             .navigationDestination(for: LegalPage.self) { page in
                 LegalPageView(page: page)
+            }
+            .fullScreenCover(isPresented: $showOnboarding) {
+                OnboardingView {
+                    hasCompletedOnboarding = true
+                    showOnboarding = false
+                }
             }
             .alert("Notifiche disattivate", isPresented: $showPermissionAlert) {
                 Button("Apri Impostazioni") { openSystemSettings() }
@@ -234,6 +243,31 @@ struct SettingsView: View {
             Text("La mia lista")
         } footer: {
             Text("I film segnati come \"già visti\" vengono rimossi automaticamente dopo una settimana. Una volta rimossi, potranno riapparire tra i consigli. Puoi sempre rimuoverli manualmente dalla lista.")
+                .font(.footnote)
+                .foregroundStyle(Theme.inkSoft)
+        }
+        .listRowBackground(Theme.card)
+    }
+
+    // MARK: - Introduzione
+
+    private var onboardingSection: some View {
+        Section {
+            Button {
+                hasCompletedOnboarding = false
+                showOnboarding = true
+            } label: {
+                SettingsRow(
+                    icon: "arrow.counterclockwise.circle.fill",
+                    iconColor: Theme.tabTrending,
+                    title: "Rivedi l'introduzione"
+                )
+            }
+            .sensoryFeedback(.impact(weight: .light), trigger: showOnboarding)
+        } header: {
+            Text("Introduzione")
+        } footer: {
+            Text("Azzera i dati dell'onboarding e riguarda le schermate introduttive che spiegano come funziona Mood-E.")
                 .font(.footnote)
                 .foregroundStyle(Theme.inkSoft)
         }
