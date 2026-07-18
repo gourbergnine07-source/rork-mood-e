@@ -109,8 +109,34 @@ struct SettingsView: View {
 
     // MARK: - Aspetto
 
+    private var appearanceModeBinding: Binding<AppearanceMode> {
+        Binding(
+            get: { theme.appearance },
+            set: { newValue in
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    theme.appearance = newValue
+                }
+            }
+        )
+    }
+
     private var appearanceSection: some View {
         Section {
+            Picker(selection: appearanceModeBinding) {
+                ForEach(AppearanceMode.allCases) { mode in
+                    Label(mode.displayName, systemImage: mode.icon)
+                        .tag(mode)
+                }
+            } label: {
+                SettingsRow(
+                    icon: "circle.lefthalf.filled",
+                    iconColor: Theme.tabCinema,
+                    title: "Tema"
+                )
+            }
+            .pickerStyle(.menu)
+            .sensoryFeedback(.selection, trigger: theme.appearance)
+
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 3), spacing: 16) {
                 ForEach(AccentPalette.allCases) { palette in
                     PaletteSwatchButton(
@@ -128,7 +154,7 @@ struct SettingsView: View {
         } header: {
             Text("Aspetto")
         } footer: {
-            Text("Scegli la palette che preferisci: cambia il colore principale e lo sfondo di tutta l'app, sia in modalità chiara che scura.")
+            Text("Con \"Sistema\" l'app segue la modalità chiara o scura di iOS, oppure puoi forzarla. La palette cambia il colore principale e lo sfondo di tutta l'app.")
                 .font(.footnote)
                 .foregroundStyle(Theme.inkSoft)
         }

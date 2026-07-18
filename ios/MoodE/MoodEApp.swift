@@ -12,6 +12,7 @@ import UserNotifications
 struct MoodEApp: App {
     @State private var library = MovieLibrary()
     @State private var notifications = NotificationService()
+    @State private var theme = ThemeManager.shared
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
@@ -23,6 +24,7 @@ struct MoodEApp: App {
             ContentView()
                 .environment(library)
                 .environment(notifications)
+                .preferredColorScheme(theme.appearance.colorScheme)
                 .onChange(of: scenePhase) { _, newPhase in
                     guard newPhase == .active else { return }
                     Task {
