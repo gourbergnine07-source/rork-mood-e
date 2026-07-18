@@ -114,7 +114,7 @@ struct SettingsView: View {
     private var appInfoSection: some View {
         Section(L("settings.info")) {
             HStack(spacing: 16) {
-                Image("film_strip_heart_gold")
+                Image("app_icon_preview")
                     .resizable()
                     .aspectRatio(contentMode: .fill)
                     .frame(width: 64, height: 64)
