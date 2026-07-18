@@ -2,9 +2,9 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- AdMob App ID DI TEST: sostituire con l'App ID reale (ca-app-pub-XXXX~YYYY) prima della pubblicazione. -->
+	<!-- AdMob App ID reale di Mood-E. -->
 	<key>GADApplicationIdentifier</key>
-	<string>ca-app-pub-3940256099942544~1458002511</string>
+	<string>ca-app-pub-7245682186872516~9021400460</string>
 	<key>NSUserTrackingUsageDescription</key>
 	<string>Ti mostreremo annunci più pertinenti ai tuoi interessi.</string>
 	<key>SKAdNetworkItems</key>
