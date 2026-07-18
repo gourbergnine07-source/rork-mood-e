@@ -11,7 +11,9 @@ import CoreLocation
 struct CinemaView: View {
     @State private var locationService = LocationService()
     @State private var viewModel = CinemaViewModel()
-    @State private var skippedPermission = false
+    /// Persisted so "Non ora" is remembered across launches: the tab then
+    /// always falls back to national now-playing results (device country, default IT).
+    @AppStorage("cinema.skippedPermission") private var skippedPermission: Bool = false
     @State private var cinemaSearchText = ""
     @State private var selectedGenreId: Int?
     @State private var trailerPlayback = TrailerPlayback()
@@ -42,7 +44,8 @@ struct CinemaView: View {
             Task { await loadMovies() }
         }
         .task {
-            if locationService.authorizationStatus != .notDetermined, case .idle = viewModel.state {
+            let canLoad = locationService.authorizationStatus != .notDetermined || skippedPermission
+            if canLoad, case .idle = viewModel.state {
                 await loadMovies()
             }
         }

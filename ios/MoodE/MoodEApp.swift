@@ -21,7 +21,7 @@ struct MoodEApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RootView()
                 .environment(library)
                 .environment(notifications)
                 .preferredColorScheme(theme.appearance.colorScheme)
