@@ -91,7 +91,7 @@ struct SettingsView: View {
             }
             .padding(.vertical, 6)
         }
-        .listRowBackground(Color.white.opacity(0.72))
+        .listRowBackground(Theme.card)
     }
 
     // MARK: - Privacy
@@ -106,7 +106,7 @@ struct SettingsView: View {
                 )
             }
         }
-        .listRowBackground(Color.white.opacity(0.72))
+        .listRowBackground(Theme.card)
     }
 
     // MARK: - Supporto e assistenza
@@ -141,7 +141,7 @@ struct SettingsView: View {
                 .font(.footnote)
                 .foregroundStyle(Theme.inkSoft)
         }
-        .listRowBackground(Color.white.opacity(0.72))
+        .listRowBackground(Theme.card)
     }
 
     // MARK: - Legale
@@ -162,7 +162,7 @@ struct SettingsView: View {
                 .font(.caption2)
                 .foregroundStyle(Theme.inkSoft)
         }
-        .listRowBackground(Color.white.opacity(0.72))
+        .listRowBackground(Theme.card)
     }
 }
 

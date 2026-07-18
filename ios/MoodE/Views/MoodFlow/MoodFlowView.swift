@@ -157,7 +157,7 @@ struct MoodFlowView: View {
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(step == 0 ? Theme.inkSoft.opacity(0.3) : Theme.primary)
                     .frame(width: 36, height: 36)
-                    .background(.white.opacity(0.65), in: .circle)
+                    .background(Theme.card, in: .circle)
             }
             .disabled(step == 0)
 

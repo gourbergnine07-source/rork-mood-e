@@ -34,7 +34,7 @@ struct SelectableCard: View {
                         .foregroundStyle(isSelected ? .white : tint)
                         .padding(6)
                         .background(
-                            isSelected ? tint : .white.opacity(0.85),
+                            isSelected ? tint : Theme.cardStrong,
                             in: .circle
                         )
                         .offset(x: 18, y: -6)
@@ -59,7 +59,7 @@ struct SelectableCard: View {
                 ),
                 in: .rect(cornerRadius: 22)
             )
-            .background(.white.opacity(0.85), in: .rect(cornerRadius: 22))
+            .background(Theme.cardStrong, in: .rect(cornerRadius: 22))
             .overlay(
                 RoundedRectangle(cornerRadius: 22)
                     .stroke(
@@ -152,7 +152,7 @@ struct SelectableRow: View {
                 ),
                 in: .rect(cornerRadius: 22)
             )
-            .background(.white.opacity(0.85), in: .rect(cornerRadius: 22))
+            .background(Theme.cardStrong, in: .rect(cornerRadius: 22))
             .overlay(
                 RoundedRectangle(cornerRadius: 22)
                     .stroke(

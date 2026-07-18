@@ -223,7 +223,7 @@ struct MovieDetailView: View {
                 Text("Guarda trailer")
                     .font(.headline)
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(Theme.inkInverse)
             .frame(maxWidth: .infinity)
             .frame(height: 54)
             .background(
@@ -284,7 +284,7 @@ struct MovieDetailView: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
-        .background(.white.opacity(0.65), in: .capsule)
+        .background(Theme.card, in: .capsule)
         .overlay(
             Capsule().stroke(Theme.primary.opacity(0.12), lineWidth: 1)
         )

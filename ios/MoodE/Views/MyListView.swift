@@ -147,7 +147,7 @@ struct LibraryEntryRow: View {
             }
         }
         .padding(12)
-        .background(.white.opacity(0.65), in: .rect(cornerRadius: 22))
+        .background(Theme.card, in: .rect(cornerRadius: 22))
         .overlay(
             RoundedRectangle(cornerRadius: 22)
                 .stroke(Theme.tabList.opacity(0.12), lineWidth: 1)
@@ -287,7 +287,7 @@ struct EmptyLibraryCard: View {
         }
         .padding(28)
         .frame(maxWidth: .infinity)
-        .background(.white.opacity(0.65), in: .rect(cornerRadius: 28))
+        .background(Theme.card, in: .rect(cornerRadius: 28))
         .overlay(
             RoundedRectangle(cornerRadius: 28)
                 .stroke(Theme.tabList.opacity(0.12), lineWidth: 1)

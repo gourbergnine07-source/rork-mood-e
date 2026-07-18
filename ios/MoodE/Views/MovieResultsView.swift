@@ -202,7 +202,7 @@ struct MovieResultsView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(.white.opacity(0.65), in: .capsule)
+        .background(Theme.card, in: .capsule)
         .overlay(
             Capsule().stroke(Theme.primary.opacity(0.15), lineWidth: 1)
         )
@@ -289,7 +289,7 @@ struct MovieCard: View {
             Spacer(minLength: 0)
         }
         .padding(12)
-        .background(.white.opacity(0.65), in: .rect(cornerRadius: 22))
+        .background(Theme.card, in: .rect(cornerRadius: 22))
         .overlay(
             RoundedRectangle(cornerRadius: 22)
                 .stroke(Theme.primary.opacity(0.10), lineWidth: 1)

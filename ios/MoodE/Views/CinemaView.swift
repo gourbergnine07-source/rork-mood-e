@@ -357,7 +357,7 @@ struct CinemaView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
-        .background(.white.opacity(0.65), in: .rect(cornerRadius: 14))
+        .background(Theme.card, in: .rect(cornerRadius: 14))
         .overlay(
             RoundedRectangle(cornerRadius: 14)
                 .stroke(Theme.tabCinema.opacity(0.15), lineWidth: 1)
@@ -405,7 +405,7 @@ struct CinemaView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(16)
-                .background(.white.opacity(0.65), in: .rect(cornerRadius: 20))
+                .background(Theme.card, in: .rect(cornerRadius: 20))
 
             case .loaded(let cinemas):
                 cinemaSearchBar
@@ -470,7 +470,7 @@ struct CinemaView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 11)
-        .background(.white.opacity(0.8), in: .rect(cornerRadius: 14))
+        .background(Theme.cardStrong, in: .rect(cornerRadius: 14))
         .overlay(
             RoundedRectangle(cornerRadius: 14)
                 .stroke(Theme.tabCinema.opacity(0.18), lineWidth: 1)
@@ -488,7 +488,7 @@ struct CinemaView: View {
             Spacer(minLength: 0)
         }
         .padding(16)
-        .background(.white.opacity(0.65), in: .rect(cornerRadius: 16))
+        .background(Theme.card, in: .rect(cornerRadius: 16))
     }
 
     private var showtimesComingNote: some View {
@@ -524,7 +524,7 @@ struct CinemaView: View {
             Spacer(minLength: 0)
         }
         .padding(16)
-        .background(.white.opacity(0.65), in: .rect(cornerRadius: 20))
+        .background(Theme.card, in: .rect(cornerRadius: 20))
         .overlay(
             RoundedRectangle(cornerRadius: 20)
                 .stroke(Theme.tabCinema.opacity(0.12), lineWidth: 1)
@@ -626,7 +626,7 @@ struct NearbyCinemaRow: View {
                 }
             }
             .padding(12)
-            .background(.white.opacity(0.65), in: .rect(cornerRadius: 16))
+            .background(Theme.card, in: .rect(cornerRadius: 16))
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
                     .stroke(Theme.tabCinema.opacity(0.10), lineWidth: 1)

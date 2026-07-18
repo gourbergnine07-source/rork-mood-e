@@ -44,7 +44,7 @@ struct PlaceholderCard: View {
         }
         .padding(28)
         .frame(maxWidth: .infinity)
-        .background(.white.opacity(0.65), in: .rect(cornerRadius: 28))
+        .background(Theme.card, in: .rect(cornerRadius: 28))
         .overlay(
             RoundedRectangle(cornerRadius: 28)
                 .stroke(Theme.primary.opacity(0.10), lineWidth: 1)

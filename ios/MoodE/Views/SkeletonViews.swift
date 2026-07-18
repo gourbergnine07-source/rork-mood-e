@@ -13,7 +13,11 @@ struct ShimmerModifier: ViewModifier {
         content
             .overlay {
                 LinearGradient(
-                    colors: [.white.opacity(0), .white.opacity(0.6), .white.opacity(0)],
+                    colors: [
+                        Theme.shimmerHighlight.opacity(0),
+                        Theme.shimmerHighlight,
+                        Theme.shimmerHighlight.opacity(0)
+                    ],
                     startPoint: .leading,
                     endPoint: .trailing
                 )
@@ -119,7 +123,7 @@ struct SkeletonResultsList: View {
                     Spacer(minLength: 0)
                 }
                 .padding(12)
-                .background(.white.opacity(0.5), in: .rect(cornerRadius: 22))
+                .background(Theme.card, in: .rect(cornerRadius: 22))
             }
         }
         .shimmer()
