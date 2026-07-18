@@ -55,12 +55,26 @@ nonisolated struct LibraryEntry: Codable, Identifiable, Hashable {
 final class MovieLibrary {
     private(set) var entries: [LibraryEntry]
 
+    /// When true, watched movies are removed automatically 7 days after
+    /// being marked as seen (they may then reappear in recommendations).
+    var autoRemoveWatchedAfterWeek: Bool {
+        didSet {
+            UserDefaults.standard.set(autoRemoveWatchedAfterWeek, forKey: Self.autoRemoveKey)
+            if autoRemoveWatchedAfterWeek { pruneExpiredWatched() }
+        }
+    }
+
     private static let entriesKey = "movieLibrary.entries"
     private static let legacyWatchlistKey = "movieLibrary.watchlist"
     private static let legacySeenKey = "movieLibrary.seen"
+    private static let autoRemoveKey = "movieLibrary.autoRemoveWatched"
+    /// One week, the retention window for auto-removal of watched movies.
+    private static let watchedRetention: TimeInterval = 7 * 24 * 60 * 60
 
     init() {
         entries = Self.loadEntries()
+        autoRemoveWatchedAfterWeek = UserDefaults.standard.bool(forKey: Self.autoRemoveKey)
+        pruneExpiredWatched()
     }
 
     // MARK: - Derived lists
@@ -146,6 +160,24 @@ final class MovieLibrary {
         entries[index].status = .watched
         entries[index].watchedDate = Date()
         persist()
+    }
+
+    /// Manually removes an entry from the library (e.g. from the "Già visti" list).
+    func removeEntry(_ entryID: Int) {
+        let before = entries.count
+        entries.removeAll { $0.id == entryID }
+        if entries.count != before { persist() }
+    }
+
+    /// Drops watched movies older than one week when auto-removal is enabled.
+    func pruneExpiredWatched() {
+        guard autoRemoveWatchedAfterWeek else { return }
+        let cutoff = Date().addingTimeInterval(-Self.watchedRetention)
+        let before = entries.count
+        entries.removeAll { entry in
+            entry.status == .watched && (entry.watchedDate ?? .distantPast) < cutoff
+        }
+        if entries.count != before { persist() }
     }
 
     private func makeEntry(from movie: TMDBMovie, status: LibraryStatus) -> LibraryEntry {

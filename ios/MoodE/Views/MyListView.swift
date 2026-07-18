@@ -44,6 +44,7 @@ struct MyListView: View {
         }
         .tint(Theme.tabList)
         .sensoryFeedback(.selection, trigger: selectedSection)
+        .onAppear { library.pruneExpiredWatched() }
     }
 
     private var entries: [LibraryEntry] {
@@ -75,6 +76,11 @@ struct MyListView: View {
                                 library.markWatched(entry.id)
                             }
                         } : nil,
+                        onRemove: entry.status == .watched ? {
+                            withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
+                                library.removeEntry(entry.id)
+                            }
+                        } : nil,
                         isLoadingTrailer: trailerPlayback.loadingMovieId == entry.id,
                         onPlayTrailer: { trailerPlayback.play(entry.asMovie) }
                     )
@@ -98,10 +104,12 @@ struct MyListView: View {
 struct LibraryEntryRow: View {
     let entry: LibraryEntry
     let onMarkWatched: (() -> Void)?
+    var onRemove: (() -> Void)? = nil
     var isLoadingTrailer: Bool = false
     var onPlayTrailer: (() -> Void)? = nil
 
     @State private var justMarked: Bool = false
+    @State private var justRemoved: Bool = false
 
     var body: some View {
         HStack(spacing: 12) {
@@ -142,6 +150,8 @@ struct LibraryEntryRow: View {
 
             if let onMarkWatched {
                 quickWatchedButton(onMarkWatched)
+            } else if let onRemove {
+                removeButton(onRemove)
             } else {
                 watchedBadge
             }
@@ -197,6 +207,27 @@ struct LibraryEntryRow: View {
         .buttonStyle(PressableCardStyle())
         .sensoryFeedback(.success, trigger: justMarked)
         .accessibilityLabel("Segna \(entry.title) come visto")
+    }
+
+    /// Quick action: remove a watched movie from the library.
+    private func removeButton(_ action: @escaping () -> Void) -> some View {
+        Button {
+            justRemoved = true
+            action()
+        } label: {
+            VStack(spacing: 4) {
+                Image(systemName: "trash")
+                    .font(.system(size: 22, weight: .semibold))
+                Text("Rimuovi")
+                    .font(.caption2.weight(.semibold))
+            }
+            .foregroundStyle(Theme.rose)
+            .frame(width: 56, height: 64)
+            .background(Theme.rose.opacity(0.12), in: .rect(cornerRadius: 16))
+        }
+        .buttonStyle(PressableCardStyle())
+        .sensoryFeedback(.impact(weight: .medium), trigger: justRemoved)
+        .accessibilityLabel("Rimuovi \(entry.title) dai già visti")
     }
 
     private var watchedBadge: some View {

@@ -37,6 +37,7 @@ enum AppLinks {
 struct SettingsView: View {
     @Environment(\.openURL) private var openURL
     @Environment(NotificationService.self) private var notifications
+    @Environment(MovieLibrary.self) private var library
     @State private var showPermissionAlert = false
 
     private var appVersion: String {
@@ -49,6 +50,7 @@ struct SettingsView: View {
             List {
                 appInfoSection
                 notificationsSection
+                librarySection
                 privacySection
                 supportSection
                 legalSection
@@ -147,6 +149,35 @@ struct SettingsView: View {
             Text("Notifiche")
         } footer: {
             Text("Ricevi un avviso quando arrivano nuovi film su TMDB e il giorno in cui un film esce al cinema. Puoi disattivarle quando vuoi.")
+                .font(.footnote)
+                .foregroundStyle(Theme.inkSoft)
+        }
+        .listRowBackground(Theme.card)
+    }
+
+    // MARK: - La mia lista
+
+    private var autoRemoveBinding: Binding<Bool> {
+        Binding(
+            get: { library.autoRemoveWatchedAfterWeek },
+            set: { library.autoRemoveWatchedAfterWeek = $0 }
+        )
+    }
+
+    private var librarySection: some View {
+        Section {
+            Toggle(isOn: autoRemoveBinding) {
+                SettingsRow(
+                    icon: "clock.arrow.circlepath",
+                    iconColor: Theme.seenGreen,
+                    title: "Rimuovi i visti dopo 7 giorni"
+                )
+            }
+            .tint(Theme.tabSettings)
+        } header: {
+            Text("La mia lista")
+        } footer: {
+            Text("I film segnati come \"già visti\" vengono rimossi automaticamente dopo una settimana. Una volta rimossi, potranno riapparire tra i consigli. Puoi sempre rimuoverli manualmente dalla lista.")
                 .font(.footnote)
                 .foregroundStyle(Theme.inkSoft)
         }
@@ -264,4 +295,5 @@ struct SettingsRow: View {
 #Preview {
     SettingsView()
         .environment(NotificationService())
+        .environment(MovieLibrary())
 }
