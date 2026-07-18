@@ -17,19 +17,19 @@ enum Theme {
         })
     }
 
-    // MARK: - Neutral surfaces (adaptive)
+    // MARK: - Neutral surfaces (adaptive, follow the user's chosen palette)
 
-    /// App background: soft azure in light, deep night blue in dark.
-    static let background = adaptive(
-        light: UIColor(red: 0.859, green: 0.929, blue: 0.984, alpha: 1),
-        dark: UIColor(red: 0.071, green: 0.098, blue: 0.145, alpha: 1)
-    )
+    /// App background, tinted by the selected accent palette.
+    static var background: Color {
+        let palette = ThemeManager.shared.accent
+        return adaptive(light: palette.backgroundLight, dark: palette.backgroundDark)
+    }
 
-    /// Cards and secondary surfaces: deeper azure in light, elevated navy in dark.
-    static let surface = adaptive(
-        light: UIColor(red: 0.796, green: 0.886, blue: 0.961, alpha: 1),
-        dark: UIColor(red: 0.118, green: 0.153, blue: 0.212, alpha: 1)
-    )
+    /// Cards and secondary surfaces, tinted by the selected accent palette.
+    static var surface: Color {
+        let palette = ThemeManager.shared.accent
+        return adaptive(light: palette.surfaceLight, dark: palette.surfaceDark)
+    }
 
     /// Frosted card background used behind content cards and chips
     /// (replaces the old hardcoded `.white.opacity(...)` fills).
@@ -73,11 +73,11 @@ enum Theme {
 
     // MARK: - Accents (brightened in dark for contrast on dark surfaces)
 
-    /// Primary intense azure accent.
-    static let primary = adaptive(
-        light: UIColor(red: 0.090, green: 0.443, blue: 0.851, alpha: 1),
-        dark: UIColor(red: 0.310, green: 0.612, blue: 0.969, alpha: 1)
-    )
+    /// Primary accent, chosen by the user in Impostazioni > Aspetto.
+    static var primary: Color {
+        let palette = ThemeManager.shared.accent
+        return adaptive(light: palette.primaryLight, dark: palette.primaryDark)
+    }
 
     /// Soft amber secondary accent.
     static let amber = adaptive(
@@ -99,8 +99,8 @@ enum Theme {
 
     // MARK: - Tab accent colors (adaptive)
 
-    /// Home tab: intense azure.
-    static let tabHome = primary
+    /// Home tab: follows the user's primary accent.
+    static var tabHome: Color { primary }
 
     /// Tendenze tab: fiery amber-orange.
     static let tabTrending = adaptive(

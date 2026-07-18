@@ -39,6 +39,7 @@ struct SettingsView: View {
     @Environment(NotificationService.self) private var notifications
     @Environment(MovieLibrary.self) private var library
     @State private var showPermissionAlert = false
+    private var theme: ThemeManager { ThemeManager.shared }
 
     private var appVersion: String {
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
@@ -49,6 +50,7 @@ struct SettingsView: View {
         NavigationStack {
             List {
                 appInfoSection
+                appearanceSection
                 notificationsSection
                 librarySection
                 privacySection
@@ -101,6 +103,34 @@ struct SettingsView: View {
                 }
             }
             .padding(.vertical, 6)
+        }
+        .listRowBackground(Theme.card)
+    }
+
+    // MARK: - Aspetto
+
+    private var appearanceSection: some View {
+        Section {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 3), spacing: 16) {
+                ForEach(AccentPalette.allCases) { palette in
+                    PaletteSwatchButton(
+                        palette: palette,
+                        isSelected: theme.accent == palette
+                    ) {
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                            theme.accent = palette
+                        }
+                    }
+                }
+            }
+            .padding(.vertical, 8)
+            .sensoryFeedback(.selection, trigger: theme.accent)
+        } header: {
+            Text("Aspetto")
+        } footer: {
+            Text("Scegli la palette che preferisci: cambia il colore principale e lo sfondo di tutta l'app, sia in modalità chiara che scura.")
+                .font(.footnote)
+                .foregroundStyle(Theme.inkSoft)
         }
         .listRowBackground(Theme.card)
     }
@@ -257,6 +287,45 @@ struct SettingsView: View {
                 .foregroundStyle(Theme.inkSoft)
         }
         .listRowBackground(Theme.card)
+    }
+}
+
+/// Tappable color swatch for the appearance picker: a filled circle
+/// with a selection ring and the palette name underneath.
+struct PaletteSwatchButton: View {
+    let palette: AccentPalette
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 6) {
+                ZStack {
+                    Circle()
+                        .fill(palette.swatch)
+                        .frame(width: 40, height: 40)
+
+                    if isSelected {
+                        Circle()
+                            .strokeBorder(palette.swatch, lineWidth: 2.5)
+                            .frame(width: 52, height: 52)
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundStyle(Theme.inkInverse)
+                    }
+                }
+                .frame(width: 52, height: 52)
+
+                Text(palette.displayName)
+                    .font(.caption2.weight(isSelected ? .semibold : .regular))
+                    .foregroundStyle(isSelected ? Theme.ink : Theme.inkSoft)
+            }
+            .frame(maxWidth: .infinity)
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Palette \(palette.displayName)")
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 
