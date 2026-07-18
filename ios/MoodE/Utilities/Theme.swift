@@ -73,10 +73,10 @@ enum Theme {
 
     // MARK: - Accents (brightened in dark for contrast on dark surfaces)
 
-    /// Primary terracotta/coral accent.
+    /// Primary intense azure accent.
     static let primary = adaptive(
-        light: UIColor(red: 0.886, green: 0.439, blue: 0.294, alpha: 1),
-        dark: UIColor(red: 0.949, green: 0.529, blue: 0.388, alpha: 1)
+        light: UIColor(red: 0.090, green: 0.443, blue: 0.851, alpha: 1),
+        dark: UIColor(red: 0.310, green: 0.612, blue: 0.969, alpha: 1)
     )
 
     /// Soft amber secondary accent.
@@ -99,7 +99,7 @@ enum Theme {
 
     // MARK: - Tab accent colors (adaptive)
 
-    /// Home tab: warm terracotta.
+    /// Home tab: intense azure.
     static let tabHome = primary
 
     /// Tendenze tab: fiery amber-orange.

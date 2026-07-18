@@ -44,7 +44,7 @@ struct MoodFlowView: View {
 
             bottomBar
                 .padding(.horizontal, 24)
-                .padding(.bottom, 12)
+                .padding(.bottom, 6)
         }
         .navigationDestination(item: $resultSelection) { selection in
             MovieResultsView(selection: selection)
@@ -140,8 +140,8 @@ struct MoodFlowView: View {
                 content()
             }
             .padding(.horizontal, 24)
-            .padding(.top, 20)
-            .padding(.bottom, 24)
+            .padding(.top, 14)
+            .padding(.bottom, 16)
         }
         .scrollIndicators(.hidden)
     }
@@ -181,23 +181,23 @@ struct MoodFlowView: View {
         Button {
             advance()
         } label: {
-            HStack(spacing: 8) {
+            HStack(spacing: 7) {
                 Text(step == 2 ? "Trova il mio film" : "Continua")
-                    .font(.headline)
+                    .font(.subheadline.weight(.semibold))
                 if step == 2 {
                     Image(systemName: "sparkles")
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.system(size: 13, weight: .semibold))
                 } else {
                     Image(systemName: "arrow.right")
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.system(size: 13, weight: .semibold))
                 }
             }
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
-            .frame(height: 54)
+            .frame(height: 42)
             .background(
                 canAdvance ? Theme.primary : Theme.primary.opacity(0.35),
-                in: .rect(cornerRadius: 18)
+                in: .rect(cornerRadius: 14)
             )
         }
         .disabled(!canAdvance)
