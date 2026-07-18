@@ -7,19 +7,21 @@ import SwiftUI
 
 /// One FAQ entry shown in the in-app help page.
 struct FAQItem: Identifiable {
-    let id = UUID()
+    let id: Int
     let question: String
     let answer: String
 }
 
 /// In-app "Domande frequenti" page: native expandable Q&A list.
 struct FAQView: View {
-    @State private var expandedId: UUID?
+    @State private var expandedId: Int?
 
     /// Computed so questions and answers re-localize on language change.
+    /// Uses stable index-based ids so expansion state survives re-renders.
     private var items: [FAQItem] {
         (1...8).map { index in
             FAQItem(
+                id: index,
                 question: L("faq.q\(index)"),
                 answer: L("faq.a\(index)")
             )
