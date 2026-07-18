@@ -17,6 +17,31 @@ enum Theme {
         })
     }
 
+    /// Returns `base` with hue/saturation/brightness shifted (hue wraps around).
+    /// Used to derive harmonious per-tab accents from the user's palette.
+    private static func shifted(_ base: UIColor, hue dH: CGFloat, saturation dS: CGFloat = 0, brightness dB: CGFloat = 0) -> UIColor {
+        var h: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        base.getHue(&h, saturation: &s, brightness: &b, alpha: &a)
+        var hue = (h + dH).truncatingRemainder(dividingBy: 1)
+        if hue < 0 { hue += 1 }
+        return UIColor(
+            hue: hue,
+            saturation: min(max(s + dS, 0), 1),
+            brightness: min(max(b + dB, 0), 1),
+            alpha: a
+        )
+    }
+
+    /// Adaptive accent derived from the selected palette's primary,
+    /// shifted in hue/brightness to stay in harmony with the palette.
+    private static func paletteAccent(hue dH: CGFloat, saturation dS: CGFloat = 0, brightness dB: CGFloat = 0) -> Color {
+        let palette = ThemeManager.shared.accent
+        return adaptive(
+            light: shifted(palette.primaryLight, hue: dH, saturation: dS, brightness: dB),
+            dark: shifted(palette.primaryDark, hue: dH, saturation: dS, brightness: dB)
+        )
+    }
+
     // MARK: - Neutral surfaces (adaptive, follow the user's chosen palette)
 
     /// App background, tinted by the selected accent palette.
@@ -97,32 +122,28 @@ enum Theme {
         dark: UIColor(red: 0.369, green: 0.729, blue: 0.529, alpha: 1)
     )
 
-    // MARK: - Tab accent colors (adaptive)
+    // MARK: - Tab accent colors (adaptive, all derived from the user's palette)
 
     /// Home tab: follows the user's primary accent.
     static var tabHome: Color { primary }
 
-    /// Tendenze tab: fiery amber-orange.
-    static let tabTrending = adaptive(
-        light: UIColor(red: 0.94, green: 0.52, blue: 0.16, alpha: 1),
-        dark: UIColor(red: 0.988, green: 0.612, blue: 0.278, alpha: 1)
-    )
+    /// Tendenze tab: warm sibling of the primary accent.
+    static var tabTrending: Color {
+        paletteAccent(hue: 0.055, brightness: 0.03)
+    }
 
-    /// Al Cinema tab: deep indigo like a cinema at night.
-    static let tabCinema = adaptive(
-        light: UIColor(red: 0.36, green: 0.44, blue: 0.85, alpha: 1),
-        dark: UIColor(red: 0.541, green: 0.612, blue: 0.949, alpha: 1)
-    )
+    /// Al Cinema tab: cool sibling of the primary accent.
+    static var tabCinema: Color {
+        paletteAccent(hue: -0.065)
+    }
 
-    /// La mia lista tab: soft rose.
-    static let tabList = adaptive(
-        light: UIColor(red: 0.86, green: 0.38, blue: 0.55, alpha: 1),
-        dark: UIColor(red: 0.929, green: 0.494, blue: 0.651, alpha: 1)
-    )
+    /// La mia lista tab: softer, further-shifted sibling of the primary accent.
+    static var tabList: Color {
+        paletteAccent(hue: 0.11, brightness: 0.02)
+    }
 
-    /// Impostazioni tab: calm deep teal.
-    static let tabSettings = adaptive(
-        light: UIColor(red: 0.18, green: 0.52, blue: 0.53, alpha: 1),
-        dark: UIColor(red: 0.302, green: 0.671, blue: 0.682, alpha: 1)
-    )
+    /// Impostazioni tab: calm, opposite-shifted sibling of the primary accent.
+    static var tabSettings: Color {
+        paletteAccent(hue: -0.12)
+    }
 }
