@@ -108,7 +108,7 @@ struct TrailerPlayerSheet: View {
                     .font(.system(size: 28))
                     .foregroundStyle(.white.opacity(0.7))
             }
-            .accessibilityLabel("Chiudi trailer")
+            .accessibilityLabel(L("trailer.close"))
         }
         .padding(.horizontal, 20)
         .padding(.top, 22)
@@ -119,7 +119,7 @@ struct TrailerPlayerSheet: View {
             Image(systemName: "play.slash")
                 .font(.system(size: 36))
                 .foregroundStyle(.white.opacity(0.5))
-            Text("Trailer non disponibile")
+            Text(L("trailer.unavailable.title"))
                 .font(.subheadline)
                 .foregroundStyle(.white.opacity(0.7))
         }

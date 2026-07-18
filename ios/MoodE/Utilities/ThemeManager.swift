@@ -13,14 +13,8 @@ enum AppearanceMode: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
-    /// Italian label shown in the settings picker.
-    var displayName: String {
-        switch self {
-        case .system: return "Sistema"
-        case .light: return "Chiaro"
-        case .dark: return "Scuro"
-        }
-    }
+    /// Localized label shown in the settings picker.
+    var displayName: String { L("appearance.\(rawValue)") }
 
     /// SF Symbol shown next to the label.
     var icon: String {

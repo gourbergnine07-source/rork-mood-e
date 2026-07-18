@@ -26,7 +26,7 @@ struct TrendingView: View {
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 AdBannerView()
             }
-            .navigationTitle("Tendenze")
+            .navigationTitle(L("tab.trending"))
             .toolbarTitleDisplayMode(.large)
             .navigationDestination(for: TMDBMovie.self) { movie in
                 MovieDetailView(movie: movie)
@@ -42,6 +42,10 @@ struct TrendingView: View {
         .onChange(of: scenePhase) { _, newPhase in
             guard newPhase == .active else { return }
             Task { await viewModel.refreshIfStale() }
+        }
+        .onChange(of: LocalizationManager.shared.language) { _, _ in
+            // Language switch: refetch trending data localized in the new language.
+            Task { await viewModel.reloadForLanguage() }
         }
     }
 
@@ -78,7 +82,7 @@ struct TrendingView: View {
             Image(systemName: "wifi.exclamationmark")
                 .font(.system(size: 40))
                 .foregroundStyle(Theme.tabTrending)
-            Text("Ops!")
+            Text(L("common.oops"))
                 .font(.title3.weight(.semibold))
                 .foregroundStyle(Theme.ink)
             Text(message)
@@ -88,7 +92,7 @@ struct TrendingView: View {
             Button {
                 Task { await viewModel.load(forceRefresh: true) }
             } label: {
-                Label("Riprova", systemImage: "arrow.clockwise")
+                Label(L("common.retry"), systemImage: "arrow.clockwise")
                     .font(.headline)
                     .foregroundStyle(.white)
                     .padding(.horizontal, 24)
@@ -159,10 +163,10 @@ struct TrendingView: View {
         VStack(spacing: 12) {
             Text("🔥")
                 .font(.system(size: 44))
-            Text("Nessun film di tendenza trovato")
+            Text(L("trending.empty.title"))
                 .font(.headline)
                 .foregroundStyle(Theme.ink)
-            Text("Riprova tra poco: la classifica si aggiorna di continuo.")
+            Text(L("trending.empty.msg"))
                 .font(.subheadline)
                 .foregroundStyle(Theme.inkSoft)
                 .multilineTextAlignment(.center)
@@ -203,7 +207,7 @@ struct WindowSelectorChip: View {
         .buttonStyle(PressableCardStyle())
         .sensoryFeedback(.selection, trigger: isSelected)
         .animation(.spring(duration: 0.25), value: isSelected)
-        .accessibilityLabel("Mostra tendenze: \(label)")
+        .accessibilityLabel(LF("trending.a11y.show", label))
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
@@ -239,7 +243,7 @@ struct TrendingCard: View {
                 Image(systemName: "star.fill")
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(Theme.amber)
-                Text(String(format: "%.1f", movie.voteAverage))
+                Text(LocalizationManager.shared.rating(movie.voteAverage))
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(Theme.ink)
                 if let year = movie.releaseYear {
@@ -321,7 +325,7 @@ struct TrendingCard: View {
         .padding(.vertical, 5)
         .background(rankColor.opacity(0.92), in: .capsule)
         .shadow(color: .black.opacity(0.25), radius: 3, y: 1)
-        .accessibilityLabel("Posizione \(rank) in classifica")
+        .accessibilityLabel(LF("trending.a11y.rank", rank))
     }
 
     private var posterFallback: some View {

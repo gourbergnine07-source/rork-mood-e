@@ -35,7 +35,7 @@ struct PlaceholderCard: View {
                 .multilineTextAlignment(.center)
                 .lineSpacing(3)
 
-            Label("In arrivo", systemImage: "sparkles")
+            Label(L("common.comingSoon"), systemImage: "sparkles")
                 .font(.footnote.weight(.semibold))
                 .foregroundStyle(Theme.primary)
                 .padding(.horizontal, 14)

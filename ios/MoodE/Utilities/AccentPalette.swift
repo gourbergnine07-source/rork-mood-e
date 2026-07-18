@@ -19,17 +19,8 @@ enum AccentPalette: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
-    /// Italian display name shown in the settings picker.
-    var displayName: String {
-        switch self {
-        case .azzurro: return "Azzurro"
-        case .tramonto: return "Tramonto"
-        case .rosa: return "Rosa"
-        case .smeraldo: return "Smeraldo"
-        case .viola: return "Viola"
-        case .grafite: return "Grafite"
-        }
-    }
+    /// Localized display name shown in the settings picker.
+    var displayName: String { L("palette.\(rawValue)") }
 
     // MARK: - Primary accent
 

@@ -34,7 +34,7 @@ struct MovieResultsView: View {
         .safeAreaInset(edge: .bottom, spacing: 0) {
             AdBannerView()
         }
-        .navigationTitle("Il tuo film")
+        .navigationTitle(L("results.title"))
         .toolbarTitleDisplayMode(.inline)
         .tint(Theme.primary)
         .navigationDestination(for: TMDBMovie.self) { movie in
@@ -47,6 +47,10 @@ struct MovieResultsView: View {
             guard newPhase == .active else { return }
             Task { await viewModel.refreshIfStale(selection: selection, excluding: library.watchedIds) }
         }
+        .onChange(of: LocalizationManager.shared.language) { _, _ in
+            // Language switch: refetch the batch localized in the new language.
+            Task { await viewModel.load(selection: selection, excluding: library.watchedIds, forceRefresh: true) }
+        }
         .trailerPlayer(trailerPlayback)
     }
 
@@ -57,7 +61,7 @@ struct MovieResultsView: View {
             VStack(alignment: .leading, spacing: 16) {
                 recapChips
 
-                Text("Sto cercando il film perfetto per te…")
+                Text(L("results.searching"))
                     .font(.subheadline)
                     .foregroundStyle(Theme.inkSoft)
                     .padding(.horizontal, 24)
@@ -76,7 +80,7 @@ struct MovieResultsView: View {
             Image(systemName: "wifi.exclamationmark")
                 .font(.system(size: 40))
                 .foregroundStyle(Theme.primary)
-            Text("Ops!")
+            Text(L("common.oops"))
                 .font(.title3.weight(.semibold))
                 .foregroundStyle(Theme.ink)
             Text(message)
@@ -86,7 +90,7 @@ struct MovieResultsView: View {
             Button {
                 Task { await viewModel.load(selection: selection, excluding: library.watchedIds, forceRefresh: true) }
             } label: {
-                Label("Riprova", systemImage: "arrow.clockwise")
+                Label(L("common.retry"), systemImage: "arrow.clockwise")
                     .font(.headline)
                     .foregroundStyle(.white)
                     .padding(.horizontal, 24)
@@ -101,10 +105,10 @@ struct MovieResultsView: View {
         VStack(spacing: 14) {
             Text("🎬")
                 .font(.system(size: 48))
-            Text("Nessun film trovato")
+            Text(L("results.empty.title"))
                 .font(.title3.weight(.semibold))
                 .foregroundStyle(Theme.ink)
-            Text("Prova a cambiare epoca o obiettivo: con scelte diverse troveremo sicuramente qualcosa.")
+            Text(L("results.empty.msg"))
                 .font(.subheadline)
                 .foregroundStyle(Theme.inkSoft)
                 .multilineTextAlignment(.center)
@@ -121,7 +125,7 @@ struct MovieResultsView: View {
                     recapChips
                         .id("top")
 
-                    Text("Scelti per te")
+                    Text(L("results.chosen"))
                         .font(.title3.weight(.bold))
                         .foregroundStyle(Theme.ink)
                         .padding(.horizontal, 24)
@@ -177,7 +181,7 @@ struct MovieResultsView: View {
                     Image(systemName: "gift.fill")
                         .font(.system(size: 15, weight: .semibold))
                 }
-                Text("Guarda un breve video per altre 5 proposte")
+                Text(L("results.rewarded"))
                     .font(.subheadline.weight(.semibold))
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
@@ -211,7 +215,7 @@ struct MovieResultsView: View {
                     Image(systemName: "wand.and.stars")
                         .font(.system(size: 15, weight: .semibold))
                 }
-                Text("Nuove proposte")
+                Text(L("results.newBatch"))
                     .font(.headline)
             }
             .foregroundStyle(.white)
@@ -295,7 +299,7 @@ struct MovieCard: View {
                         Image(systemName: "star.fill")
                             .font(.system(size: 10))
                             .foregroundStyle(Theme.amber)
-                        Text(String(format: "%.1f", movie.voteAverage))
+                        Text(LocalizationManager.shared.rating(movie.voteAverage))
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(Theme.ink)
                     }
@@ -348,7 +352,7 @@ struct MovieCard: View {
     private var quickActions: some View {
         HStack(spacing: 8) {
             QuickActionChip(
-                title: isInWatchlist ? "Salvato" : "Salva",
+                title: isInWatchlist ? L("card.saved") : L("card.save"),
                 icon: isInWatchlist ? "bookmark.fill" : "bookmark",
                 tint: Theme.primary,
                 isActive: isInWatchlist
@@ -359,7 +363,7 @@ struct MovieCard: View {
             }
 
             QuickActionChip(
-                title: isSeen ? "Visto" : "Già visto",
+                title: isSeen ? L("card.watched") : L("card.seen"),
                 icon: isSeen ? "checkmark.circle.fill" : "checkmark.circle",
                 tint: Theme.seenGreen,
                 isActive: isSeen
@@ -429,7 +433,7 @@ struct MovieCard: View {
                         .contentShape(.rect)
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("Guarda il trailer")
+                    .accessibilityLabel(L("trailer.watchLong"))
                 }
             }
     }

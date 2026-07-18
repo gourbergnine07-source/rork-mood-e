@@ -10,6 +10,7 @@ import SwiftUI
 struct RootView: View {
     private enum LaunchPhase {
         case splash
+        case language
         case onboarding
         case ready
     }
@@ -22,6 +23,18 @@ struct RootView: View {
             switch phase {
             case .splash:
                 SplashView {
+                    withAnimation(.easeInOut(duration: 0.45)) {
+                        if !LocalizationManager.shared.hasChosenLanguage {
+                            phase = .language
+                        } else {
+                            phase = hasCompletedOnboarding ? .ready : .onboarding
+                        }
+                    }
+                }
+                .transition(.opacity)
+
+            case .language:
+                LanguageSelectionView {
                     withAnimation(.easeInOut(duration: 0.45)) {
                         phase = hasCompletedOnboarding ? .ready : .onboarding
                     }

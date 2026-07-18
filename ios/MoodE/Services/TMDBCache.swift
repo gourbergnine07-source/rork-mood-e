@@ -20,12 +20,18 @@ nonisolated enum TMDBCache {
 
     private static let keyPrefix = "tmdbCache."
 
+    /// Keys are scoped per language so switching language refetches
+    /// localized data instead of serving stale entries.
+    private static func scopedKey(_ key: String) -> String {
+        keyPrefix + L10nStore.currentCode + "." + key
+    }
+
     /// Persists a payload with the current timestamp.
     static func save<T: Codable>(_ value: T, forKey key: String) {
         let entry = TMDBCacheEntry(timestamp: Date(), value: value)
         do {
             let data = try JSONEncoder().encode(entry)
-            UserDefaults.standard.set(data, forKey: keyPrefix + key)
+            UserDefaults.standard.set(data, forKey: scopedKey(key))
         } catch {
             print("TMDBCache: failed to save \(key): \(error.localizedDescription)")
         }
@@ -33,7 +39,7 @@ nonisolated enum TMDBCache {
 
     /// Loads a cached payload, reporting whether it is still fresh (< 6h old).
     static func load<T: Codable>(_ type: T.Type, forKey key: String) -> (value: T, isFresh: Bool)? {
-        guard let data = UserDefaults.standard.data(forKey: keyPrefix + key),
+        guard let data = UserDefaults.standard.data(forKey: scopedKey(key)),
               let entry = try? JSONDecoder().decode(TMDBCacheEntry<T>.self, from: data) else {
             return nil
         }

@@ -32,7 +32,7 @@ struct SplashView: View {
                         .font(.system(size: 40, weight: .bold, design: .rounded))
                         .foregroundStyle(Theme.ink)
 
-                    Text("Il film giusto per ogni emozione")
+                    Text(L("app.tagline"))
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(Theme.inkSoft)
                 }
@@ -41,7 +41,7 @@ struct SplashView: View {
             }
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Mood-E. Il film giusto per ogni emozione")
+        .accessibilityLabel("Mood-E. \(L("app.tagline"))")
         .onAppear {
             withAnimation(.spring(response: 0.6, dampingFraction: 0.75)) {
                 showLogo = true

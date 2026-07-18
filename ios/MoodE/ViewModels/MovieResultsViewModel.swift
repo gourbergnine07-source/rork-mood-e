@@ -167,8 +167,7 @@ final class MovieResultsViewModel {
                 // Keep showing the current batch when a refresh fails.
                 return
             }
-            let message = (error as? TMDBError)?.errorDescription
-                ?? "Qualcosa è andato storto. Controlla la connessione e riprova."
+            let message = (error as? TMDBError)?.errorDescription ?? L("error.generic")
             state = .failed(message)
         }
     }

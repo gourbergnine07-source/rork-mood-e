@@ -12,22 +12,8 @@ enum Mood: String, CaseIterable, Identifiable, Hashable {
 
     var id: String { rawValue }
 
-    var title: String {
-        switch self {
-        case .felice: return "Felice"
-        case .triste: return "Triste"
-        case .stressato: return "Stressato"
-        case .annoiato: return "Annoiato"
-        case .innamorato: return "Innamorato"
-        case .nostalgico: return "Nostalgico"
-        case .arrabbiato: return "Arrabbiato"
-        case .motivato: return "Motivato"
-        case .malinconico: return "Malinconico"
-        case .spensierato: return "Spensierato"
-        case .curioso: return "Curioso"
-        case .impaurito: return "Impaurito"
-        }
-    }
+    /// Localized label from the active language table.
+    var title: String { L("mood.\(rawValue)") }
 
     var emoji: String {
         switch self {
@@ -89,20 +75,8 @@ enum ViewingGoal: String, CaseIterable, Identifiable, Hashable {
 
     var id: String { rawValue }
 
-    var title: String {
-        switch self {
-        case .ridere: return "Ridere"
-        case .piangere: return "Piangere / sfogarmi"
-        case .rilassarmi: return "Rilassarmi"
-        case .riflettere: return "Riflettere"
-        case .emozionarmi: return "Emozionarmi"
-        case .distrarmi: return "Distrarmi"
-        case .ispirarmi: return "Sentirmi ispirato"
-        case .paura: return "Avere paura / brivido"
-        case .sognare: return "Sognare / evadere"
-        case .innamorarmi: return "Innamorarmi della storia"
-        }
-    }
+    /// Localized label from the active language table.
+    var title: String { L("goal.\(rawValue)") }
 
     var emoji: String {
         switch self {
@@ -157,15 +131,8 @@ enum MovieEra: String, CaseIterable, Identifiable, Hashable {
 
     var id: String { rawValue }
 
-    var title: String {
-        switch self {
-        case .seventiesEighties: return "Anni '70–'80"
-        case .nineties: return "Anni '90"
-        case .twoThousands: return "Anni 2000–2010"
-        case .lastFiveYears: return "Ultimi 5 anni"
-        case .noPreference: return "Non ho preferenze"
-        }
-    }
+    /// Localized label from the active language table.
+    var title: String { L("era.\(rawValue)") }
 
     var emoji: String {
         switch self {
@@ -177,15 +144,8 @@ enum MovieEra: String, CaseIterable, Identifiable, Hashable {
         }
     }
 
-    var subtitle: String {
-        switch self {
-        case .seventiesEighties: return "Grandi classici e cult"
-        case .nineties: return "L'epoca d'oro del cinema pop"
-        case .twoThousands: return "Storie moderne e memorabili"
-        case .lastFiveYears: return "Le uscite più recenti"
-        case .noPreference: return "Sorprendimi con qualsiasi epoca"
-        }
-    }
+    /// Localized subtitle from the active language table.
+    var subtitle: String { L("era.\(rawValue).sub") }
 
     /// Signature color of each era, used for row backgrounds and accents.
     var tint: Color {

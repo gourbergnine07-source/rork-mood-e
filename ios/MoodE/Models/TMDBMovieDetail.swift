@@ -58,6 +58,23 @@ nonisolated struct TMDBMovieDetail: Codable {
     var trailer: TMDBVideo? {
         videos.bestTrailer
     }
+
+    /// Copy with a replaced overview (used for the English fallback).
+    func withOverview(_ overview: String) -> TMDBMovieDetail {
+        TMDBMovieDetail(
+            id: id,
+            title: title,
+            overview: overview,
+            runtime: runtime,
+            releaseDate: releaseDate,
+            voteAverage: voteAverage,
+            posterPath: posterPath,
+            backdropPath: backdropPath,
+            genres: genres,
+            credits: credits,
+            videos: videos
+        )
+    }
 }
 
 /// Genre info attached to a movie detail.
@@ -94,11 +111,19 @@ nonisolated struct TMDBCastMember: Codable, Identifiable, Hashable {
 nonisolated struct TMDBVideoList: Codable {
     let results: [TMDBVideo]
 
-    /// Best official YouTube trailer, falling back to any YouTube video.
+    /// Best official YouTube trailer: prefers the user's language, then
+    /// English, then any available trailer or video.
     var bestTrailer: TMDBVideo? {
+        let code = L10nStore.currentCode
         let youtube = results.filter { $0.site == "YouTube" }
         let trailers = youtube.filter { $0.type == "Trailer" }
-        return trailers.first(where: { $0.official })
+        let inLanguage = trailers.filter { $0.iso6391 == code }
+        let english = trailers.filter { $0.iso6391 == "en" }
+        return inLanguage.first(where: { $0.official })
+            ?? inLanguage.first
+            ?? english.first(where: { $0.official })
+            ?? english.first
+            ?? trailers.first(where: { $0.official })
             ?? trailers.first
             ?? youtube.first
     }
@@ -112,6 +137,13 @@ nonisolated struct TMDBVideo: Codable, Identifiable, Hashable {
     let site: String
     let type: String
     let official: Bool
+    /// Video language (ISO 639-1, e.g. "it", "en").
+    let iso6391: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, key, name, site, type, official
+        case iso6391 = "iso_639_1"
+    }
 
     /// Embeddable YouTube player URL.
     var embedURL: URL? {

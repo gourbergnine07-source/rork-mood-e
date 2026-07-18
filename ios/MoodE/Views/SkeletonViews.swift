@@ -88,7 +88,7 @@ struct SkeletonPosterGrid: View {
             }
         }
         .shimmer()
-        .accessibilityLabel("Caricamento in corso")
+        .accessibilityLabel(L("common.loading"))
     }
 }
 
@@ -127,6 +127,6 @@ struct SkeletonResultsList: View {
             }
         }
         .shimmer()
-        .accessibilityLabel("Caricamento in corso")
+        .accessibilityLabel(L("common.loading"))
     }
 }

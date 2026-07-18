@@ -25,32 +25,32 @@ struct ContentView: View {
         TabView(selection: $selectedTab) {
             HomeView()
                 .tabItem {
-                    Label("Home", systemImage: "face.smiling.inverse")
+                    Label(L("tab.home"), systemImage: "face.smiling.inverse")
                 }
                 .tag(0)
 
             TrendingView()
                 .tabItem {
-                    Label("Tendenze", systemImage: "flame.fill")
+                    Label(L("tab.trending"), systemImage: "flame.fill")
                 }
                 .tag(1)
 
             CinemaView()
                 .tabItem {
-                    Label("Al Cinema", systemImage: "popcorn.fill")
+                    Label(L("tab.cinema"), systemImage: "popcorn.fill")
                 }
                 .tag(2)
 
             MyListView()
                 .tabItem {
-                    Label("La mia lista", systemImage: "bookmark.fill")
+                    Label(L("tab.list"), systemImage: "bookmark.fill")
                 }
                 .badge(library.toWatchCount)
                 .tag(3)
 
             SettingsView()
                 .tabItem {
-                    Label("Impostazioni", systemImage: "gearshape.fill")
+                    Label(L("tab.settings"), systemImage: "gearshape.fill")
                 }
                 .tag(4)
         }

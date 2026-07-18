@@ -53,6 +53,14 @@ final class TrendingViewModel {
         await refresh(window: window)
     }
 
+    /// Full reload after a language change: clears the per-window memory
+    /// cache so every window refetches data localized in the new language.
+    func reloadForLanguage() async {
+        memoryCache.removeAll()
+        state = .loading
+        await load(forceRefresh: true)
+    }
+
     /// Silent refresh triggered when the app returns to the foreground:
     /// hits the API only if the cached data is older than 6 hours.
     func refreshIfStale() async {
@@ -79,8 +87,7 @@ final class TrendingViewModel {
             if let cached = memoryCache[window] {
                 state = .loaded(cached)
             } else {
-                let message = (error as? TMDBError)?.errorDescription
-                    ?? "Qualcosa è andato storto. Controlla la connessione e riprova."
+                let message = (error as? TMDBError)?.errorDescription ?? L("error.generic")
                 state = .failed(message)
             }
         }

@@ -24,7 +24,7 @@ struct MovieShareButton: View {
             label
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Condividi \(movieTitle)")
+        .accessibilityLabel(LF("share.a11y", movieTitle))
     }
 
     @ViewBuilder

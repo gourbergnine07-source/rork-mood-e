@@ -34,7 +34,7 @@ struct CinemaView: View {
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 AdBannerView()
             }
-            .navigationTitle("Al Cinema")
+            .navigationTitle(L("tab.cinema"))
             .toolbarTitleDisplayMode(.large)
             .navigationDestination(for: TMDBMovie.self) { movie in
                 MovieDetailView(movie: movie)
@@ -55,6 +55,10 @@ struct CinemaView: View {
         .onChange(of: scenePhase) { _, newPhase in
             guard newPhase == .active else { return }
             Task { await viewModel.refreshIfStale() }
+        }
+        .onChange(of: LocalizationManager.shared.language) { _, _ in
+            // Language switch: refetch now-playing data localized in the new language.
+            Task { await loadMovies(forceRefresh: true) }
         }
     }
 
@@ -119,12 +123,12 @@ struct CinemaView: View {
             }
 
             VStack(spacing: 12) {
-                Text("Film in sala vicino a te")
+                Text(L("cinema.perm.title"))
                     .font(.title2.weight(.bold))
                     .foregroundStyle(Theme.ink)
                     .multilineTextAlignment(.center)
 
-                Text("Usiamo la tua posizione solo per capire in quale paese ti trovi e mostrarti i film attualmente al cinema nella tua zona. Non la salviamo né la condividiamo con nessuno.")
+                Text(L("cinema.perm.msg"))
                     .font(.subheadline)
                     .foregroundStyle(Theme.inkSoft)
                     .multilineTextAlignment(.center)
@@ -135,7 +139,7 @@ struct CinemaView: View {
                 Button {
                     locationService.requestPermission()
                 } label: {
-                    Label("Consenti posizione", systemImage: "location.fill")
+                    Label(L("cinema.perm.allow"), systemImage: "location.fill")
                         .font(.headline)
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
@@ -149,7 +153,7 @@ struct CinemaView: View {
                     skippedPermission = true
                     Task { await loadMovies() }
                 } label: {
-                    Text("Non ora")
+                    Text(L("cinema.perm.notNow"))
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Theme.inkSoft)
                         .frame(height: 40)
@@ -170,7 +174,7 @@ struct CinemaView: View {
                     Image(systemName: "ticket.fill")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(Theme.tabCinema)
-                    Text("Trovo i film in sala nella tua zona…")
+                    Text(L("cinema.loading"))
                         .font(.subheadline)
                         .foregroundStyle(Theme.inkSoft)
                 }
@@ -190,7 +194,7 @@ struct CinemaView: View {
             Image(systemName: "wifi.exclamationmark")
                 .font(.system(size: 40))
                 .foregroundStyle(Theme.tabCinema)
-            Text("Ops!")
+            Text(L("common.oops"))
                 .font(.title3.weight(.semibold))
                 .foregroundStyle(Theme.ink)
             Text(message)
@@ -200,7 +204,7 @@ struct CinemaView: View {
             Button {
                 Task { await loadMovies(forceRefresh: true) }
             } label: {
-                Label("Riprova", systemImage: "arrow.clockwise")
+                Label(L("common.retry"), systemImage: "arrow.clockwise")
                     .font(.headline)
                     .foregroundStyle(.white)
                     .padding(.horizontal, 24)
@@ -262,7 +266,7 @@ struct CinemaView: View {
 
     // MARK: - Genre filter
 
-    /// Genres present in the loaded movies, sorted alphabetically by Italian name.
+    /// Genres present in the loaded movies, sorted alphabetically by localized name.
     private func availableGenres(in movies: [TMDBMovie]) -> [(id: Int, name: String)] {
         var counts: [Int: Int] = [:]
         for movie in movies {
@@ -272,7 +276,7 @@ struct CinemaView: View {
         }
         return counts.keys
             .compactMap { id -> (id: Int, name: String)? in
-                guard let name = TMDBGenreCatalog.italianName(for: id) else { return nil }
+                guard let name = TMDBGenreCatalog.name(for: id) else { return nil }
                 return (id: id, name: name)
             }
             .sorted { $0.name < $1.name }
@@ -287,7 +291,7 @@ struct CinemaView: View {
         ScrollView(.horizontal) {
             HStack(spacing: 8) {
                 GenreChip(
-                    label: "Tutti",
+                    label: L("cinema.all"),
                     icon: "sparkles",
                     isSelected: selectedGenreId == nil
                 ) {
@@ -313,10 +317,10 @@ struct CinemaView: View {
         VStack(spacing: 10) {
             Text("🎬")
                 .font(.system(size: 36))
-            Text("Nessun film in sala per questo genere")
+            Text(L("cinema.noGenre"))
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(Theme.ink)
-            Button("Mostra tutti") {
+            Button(L("cinema.showAll")) {
                 withAnimation(.spring(duration: 0.3)) {
                     selectedGenreId = nil
                 }
@@ -334,7 +338,7 @@ struct CinemaView: View {
             Image(systemName: "ticket.fill")
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(Theme.tabCinema)
-            Text("In sala in \(viewModel.regionName)")
+            Text(LF("cinema.inTheatres", viewModel.regionName))
                 .font(.title3.weight(.bold))
                 .foregroundStyle(Theme.ink)
         }
@@ -347,13 +351,13 @@ struct CinemaView: View {
                 .font(.system(size: 16))
                 .foregroundStyle(Theme.tabCinema)
 
-            Text("Posizione disattivata: usiamo il paese del tuo dispositivo.")
+            Text(L("cinema.denied"))
                 .font(.caption)
                 .foregroundStyle(Theme.inkSoft)
 
             Spacer()
 
-            Button("Impostazioni") {
+            Button(L("cinema.settings")) {
                 if let url = URL(string: UIApplication.openSettingsURLString) {
                     openURL(url)
                 }
@@ -375,10 +379,10 @@ struct CinemaView: View {
         VStack(spacing: 12) {
             Text("🎟️")
                 .font(.system(size: 44))
-            Text("Nessun film in sala trovato")
+            Text(L("cinema.empty.title"))
                 .font(.headline)
                 .foregroundStyle(Theme.ink)
-            Text("Riprova più tardi: aggiorniamo l'elenco ogni giorno.")
+            Text(L("cinema.empty.msg"))
                 .font(.subheadline)
                 .foregroundStyle(Theme.inkSoft)
                 .multilineTextAlignment(.center)
@@ -395,7 +399,7 @@ struct CinemaView: View {
                 Image(systemName: "mappin.and.ellipse")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(Theme.tabCinema)
-                Text("Cinema vicino a te")
+                Text(L("cinema.nearby"))
                     .font(.title3.weight(.bold))
                     .foregroundStyle(Theme.ink)
             }
@@ -405,7 +409,7 @@ struct CinemaView: View {
                 HStack(spacing: 12) {
                     ProgressView()
                         .tint(Theme.tabCinema)
-                    Text("Cerco i cinema nella tua zona…")
+                    Text(L("cinema.searchingNearby"))
                         .font(.subheadline)
                         .foregroundStyle(Theme.inkSoft)
                 }
@@ -455,7 +459,7 @@ struct CinemaView: View {
                 .font(.system(size: 15, weight: .medium))
                 .foregroundStyle(Theme.tabCinema)
 
-            TextField("Cerca un cinema per nome", text: $cinemaSearchText)
+            TextField(L("cinema.searchPlaceholder"), text: $cinemaSearchText)
                 .font(.subheadline)
                 .foregroundStyle(Theme.ink)
                 .autocorrectionDisabled()
@@ -471,7 +475,7 @@ struct CinemaView: View {
                         .font(.system(size: 16))
                         .foregroundStyle(Theme.inkSoft.opacity(0.6))
                 }
-                .accessibilityLabel("Cancella ricerca")
+                .accessibilityLabel(L("cinema.clearSearch"))
             }
         }
         .padding(.horizontal, 14)
@@ -488,7 +492,7 @@ struct CinemaView: View {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 18))
                 .foregroundStyle(Theme.tabCinema.opacity(0.6))
-            Text("Nessun cinema corrisponde a \"\(cinemaSearchText.trimmingCharacters(in: .whitespacesAndNewlines))\"")
+            Text(LF("cinema.noMatch", cinemaSearchText.trimmingCharacters(in: .whitespacesAndNewlines)))
                 .font(.subheadline)
                 .foregroundStyle(Theme.inkSoft)
             Spacer(minLength: 0)
@@ -502,7 +506,7 @@ struct CinemaView: View {
             Image(systemName: "clock.badge.questionmark")
                 .font(.system(size: 14))
                 .foregroundStyle(Theme.tabCinema)
-            Text("Presto potrai vedere anche gli orari degli spettacoli")
+            Text(L("cinema.soon"))
                 .font(.caption)
                 .foregroundStyle(Theme.inkSoft)
         }
@@ -521,8 +525,8 @@ struct CinemaView: View {
             }
 
             Text(locationService.isAuthorized
-                 ? "Nessun cinema trovato nella tua zona. Presto potrai vedere anche gli orari degli spettacoli."
-                 : "Attiva la posizione per vedere i cinema vicino a te e, presto, gli orari degli spettacoli.")
+                 ? L("cinema.noneFound")
+                 : L("cinema.enableLocation"))
                 .font(.subheadline)
                 .foregroundStyle(Theme.inkSoft)
                 .lineSpacing(2)
@@ -570,7 +574,7 @@ struct GenreChip: View {
         .buttonStyle(PressableCardStyle())
         .sensoryFeedback(.selection, trigger: isSelected)
         .animation(.spring(duration: 0.25), value: isSelected)
-        .accessibilityLabel("Filtra per genere \(label)")
+        .accessibilityLabel(LF("cinema.a11y.genre", label))
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
@@ -625,7 +629,7 @@ struct NearbyCinemaRow: View {
                     HStack(spacing: 3) {
                         Image(systemName: "arrow.triangle.turn.up.right.circle.fill")
                             .font(.system(size: 11))
-                        Text("Indicazioni")
+                        Text(L("cinema.directions"))
                             .font(.caption2.weight(.semibold))
                     }
                     .foregroundStyle(Theme.tabCinema.opacity(0.85))
@@ -640,7 +644,7 @@ struct NearbyCinemaRow: View {
         }
         .buttonStyle(PressableCardStyle())
         .sensoryFeedback(.impact(weight: .light), trigger: tapCount)
-        .accessibilityLabel("Apri le indicazioni per \(cinema.name)")
+        .accessibilityLabel(LF("cinema.a11y.directions", cinema.name))
     }
 }
 

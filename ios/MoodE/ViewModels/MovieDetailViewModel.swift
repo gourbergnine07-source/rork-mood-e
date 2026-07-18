@@ -24,8 +24,7 @@ final class MovieDetailViewModel {
             let detail = try await TMDBService.movieDetail(id: movieID)
             state = .loaded(detail)
         } catch {
-            let message = (error as? TMDBError)?.errorDescription
-                ?? "Qualcosa è andato storto. Controlla la connessione e riprova."
+            let message = (error as? TMDBError)?.errorDescription ?? L("error.generic")
             state = .failed(message)
         }
     }

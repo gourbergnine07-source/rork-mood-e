@@ -17,7 +17,7 @@ struct MyListView: View {
                 Theme.background.ignoresSafeArea()
 
                 VStack(spacing: 16) {
-                    Picker("Sezione", selection: $selectedSection) {
+                    Picker(L("list.section"), selection: $selectedSection) {
                         ForEach(ListSection.allCases) { section in
                             Text(sectionLabel(section)).tag(section)
                         }
@@ -35,7 +35,7 @@ struct MyListView: View {
                     }
                 }
             }
-            .navigationTitle("La mia lista")
+            .navigationTitle(L("tab.list"))
             .toolbarTitleDisplayMode(.large)
             .navigationDestination(for: TMDBMovie.self) { movie in
                 MovieDetailView(movie: movie)
@@ -58,10 +58,10 @@ struct MyListView: View {
         switch section {
         case .watchlist:
             let count = library.toWatchCount
-            return count > 0 ? "Da vedere (\(count))" : "Da vedere"
+            return count > 0 ? "\(L("list.toWatch")) (\(count))" : L("list.toWatch")
         case .seen:
             let count = library.watched.count
-            return count > 0 ? "Già visti (\(count))" : "Già visti"
+            return count > 0 ? "\(L("list.seen")) (\(count))" : L("list.seen")
         }
     }
 
@@ -170,16 +170,18 @@ struct LibraryEntryRow: View {
     }
 
     private var dateLabel: some View {
-        Group {
+        let dateStyle = Date.FormatStyle.dateTime.day().month(.abbreviated)
+            .locale(LocalizationManager.shared.locale)
+        return Group {
             if entry.status == .watched, let watchedDate = entry.watchedDate {
                 Label(
-                    "Visto il \(watchedDate.formatted(.dateTime.day().month(.abbreviated)))",
+                    LF("list.watchedOn", watchedDate.formatted(dateStyle)),
                     systemImage: "checkmark.circle.fill"
                 )
                 .foregroundStyle(Theme.seenGreen)
             } else {
                 Label(
-                    "Aggiunto il \(entry.addedDate.formatted(.dateTime.day().month(.abbreviated)))",
+                    LF("list.addedOn", entry.addedDate.formatted(dateStyle)),
                     systemImage: "bookmark.fill"
                 )
                 .foregroundStyle(Theme.tabList)
@@ -197,7 +199,7 @@ struct LibraryEntryRow: View {
             VStack(spacing: 4) {
                 Image(systemName: "checkmark.circle")
                     .font(.system(size: 24, weight: .semibold))
-                Text("Visto")
+                Text(L("list.markSeen"))
                     .font(.caption2.weight(.semibold))
             }
             .foregroundStyle(Theme.seenGreen)
@@ -206,7 +208,7 @@ struct LibraryEntryRow: View {
         }
         .buttonStyle(PressableCardStyle())
         .sensoryFeedback(.success, trigger: justMarked)
-        .accessibilityLabel("Segna \(entry.title) come visto")
+        .accessibilityLabel(LF("list.a11y.markSeen", entry.title))
     }
 
     /// Quick action: remove a watched movie from the library.
@@ -218,7 +220,7 @@ struct LibraryEntryRow: View {
             VStack(spacing: 4) {
                 Image(systemName: "trash")
                     .font(.system(size: 22, weight: .semibold))
-                Text("Rimuovi")
+                Text(L("list.remove"))
                     .font(.caption2.weight(.semibold))
             }
             .foregroundStyle(Theme.rose)
@@ -227,7 +229,7 @@ struct LibraryEntryRow: View {
         }
         .buttonStyle(PressableCardStyle())
         .sensoryFeedback(.impact(weight: .medium), trigger: justRemoved)
-        .accessibilityLabel("Rimuovi \(entry.title) dai già visti")
+        .accessibilityLabel(LF("list.a11y.remove", entry.title))
     }
 
     private var watchedBadge: some View {
@@ -351,17 +353,15 @@ enum ListSection: String, CaseIterable, Identifiable {
 
     var emptyTitle: String {
         switch self {
-        case .watchlist: return "Nessun film da vedere"
-        case .seen: return "Nessun film già visto"
+        case .watchlist: return L("list.empty.watch.title")
+        case .seen: return L("list.empty.seen.title")
         }
     }
 
     var emptyMessage: String {
         switch self {
-        case .watchlist:
-            return "Non hai ancora film da vedere: esplora le proposte nella Home e salva quelli che ti incuriosiscono!"
-        case .seen:
-            return "Quando finisci un film, segnalo come visto: lo ritroverai qui e non te lo riproporremo."
+        case .watchlist: return L("list.empty.watch.msg")
+        case .seen: return L("list.empty.seen.msg")
         }
     }
 }

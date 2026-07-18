@@ -32,6 +32,10 @@ struct MovieDetailView: View {
         .task {
             await viewModel.load(movieID: movie.id)
         }
+        .onChange(of: LocalizationManager.shared.language) { _, _ in
+            // Language switch: reload the detail localized in the new language.
+            Task { await viewModel.load(movieID: movie.id) }
+        }
         .onDisappear {
             // Tornando ai risultati: interstitial al massimo 1 ogni 5 minuti.
             AdsManager.shared.maybeShowReturnInterstitial()
@@ -48,7 +52,7 @@ struct MovieDetailView: View {
             ProgressView()
                 .controlSize(.large)
                 .tint(Theme.primary)
-            Text("Carico i dettagli…")
+            Text(L("detail.loading"))
                 .font(.subheadline)
                 .foregroundStyle(Theme.inkSoft)
         }
@@ -59,7 +63,7 @@ struct MovieDetailView: View {
             Image(systemName: "wifi.exclamationmark")
                 .font(.system(size: 40))
                 .foregroundStyle(Theme.primary)
-            Text("Ops!")
+            Text(L("common.oops"))
                 .font(.title3.weight(.semibold))
                 .foregroundStyle(Theme.ink)
             Text(message)
@@ -69,7 +73,7 @@ struct MovieDetailView: View {
             Button {
                 Task { await viewModel.load(movieID: movie.id) }
             } label: {
-                Label("Riprova", systemImage: "arrow.clockwise")
+                Label(L("common.retry"), systemImage: "arrow.clockwise")
                     .font(.headline)
                     .foregroundStyle(.white)
                     .padding(.horizontal, 24)
@@ -177,7 +181,7 @@ struct MovieDetailView: View {
             .shadow(color: .black.opacity(0.35), radius: 14, y: 6)
         }
         .buttonStyle(PressableCardStyle())
-        .accessibilityLabel("Guarda il trailer")
+        .accessibilityLabel(L("trailer.watchLong"))
     }
 
     private var posterFallback: some View {
@@ -203,7 +207,7 @@ struct MovieDetailView: View {
                     Image(systemName: "star.fill")
                         .font(.system(size: 11))
                         .foregroundStyle(Theme.amber)
-                    Text(String(format: "%.1f", detail.voteAverage))
+                    Text(LocalizationManager.shared.rating(detail.voteAverage))
                         .font(.footnote.weight(.semibold))
                         .foregroundStyle(Theme.ink)
                 }
@@ -224,7 +228,7 @@ struct MovieDetailView: View {
             HStack(spacing: 8) {
                 Image(systemName: "play.circle.fill")
                     .font(.system(size: 20, weight: .semibold))
-                Text("Guarda trailer")
+                Text(L("trailer.watchLong"))
                     .font(.headline)
             }
             .foregroundStyle(Theme.inkInverse)
@@ -252,7 +256,7 @@ struct MovieDetailView: View {
     private var actionButtons: some View {
         HStack(spacing: 12) {
             LibraryActionButton(
-                title: isInWatchlist ? "Nella tua lista" : "Aggiungi alla lista",
+                title: isInWatchlist ? L("detail.inList") : L("detail.addList"),
                 icon: isInWatchlist ? "bookmark.fill" : "bookmark",
                 tint: Theme.primary,
                 isActive: isInWatchlist
@@ -263,7 +267,7 @@ struct MovieDetailView: View {
             }
 
             LibraryActionButton(
-                title: isSeen ? "Visto" : "Già visto",
+                title: isSeen ? L("card.watched") : L("card.seen"),
                 icon: isSeen ? "checkmark.circle.fill" : "checkmark.circle",
                 tint: Theme.seenGreen,
                 isActive: isSeen
@@ -311,7 +315,7 @@ struct MovieDetailView: View {
 
     private func overviewSection(_ overview: String) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            sectionTitle("Trama")
+            sectionTitle(L("detail.plot"))
             Text(overview)
                 .font(.subheadline)
                 .foregroundStyle(Theme.inkSoft)
@@ -321,7 +325,7 @@ struct MovieDetailView: View {
 
     private func castSection(_ cast: [TMDBCastMember]) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            sectionTitle("Cast principale")
+            sectionTitle(L("detail.cast"))
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(alignment: .top, spacing: 14) {

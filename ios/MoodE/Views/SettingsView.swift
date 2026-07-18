@@ -53,6 +53,7 @@ struct SettingsView: View {
             List {
                 appInfoSection
                 appearanceSection
+                languageSection
                 notificationsSection
                 librarySection
                 onboardingSection
@@ -63,7 +64,7 @@ struct SettingsView: View {
             }
             .scrollContentBackground(.hidden)
             .background(Theme.background)
-            .navigationTitle("Impostazioni")
+            .navigationTitle(L("tab.settings"))
             .toolbarTitleDisplayMode(.large)
             .navigationDestination(for: LegalPage.self) { page in
                 LegalPageView(page: page)
@@ -74,11 +75,11 @@ struct SettingsView: View {
                     showOnboarding = false
                 }
             }
-            .alert("Notifiche disattivate", isPresented: $showPermissionAlert) {
-                Button("Apri Impostazioni") { openSystemSettings() }
-                Button("Annulla", role: .cancel) {}
+            .alert(L("settings.notif.alert.title"), isPresented: $showPermissionAlert) {
+                Button(L("settings.notif.open")) { openSystemSettings() }
+                Button(L("common.cancel"), role: .cancel) {}
             } message: {
-                Text("Per ricevere gli avvisi sulle nuove uscite, consenti le notifiche di Mood-E nelle impostazioni di iOS.")
+                Text(L("settings.notif.alert.msg"))
             }
         }
         .tint(Theme.tabSettings)
@@ -94,14 +95,14 @@ struct SettingsView: View {
                 SettingsRow(
                     icon: "megaphone.fill",
                     iconColor: Theme.primary,
-                    title: "Gestione consenso pubblicità",
+                    title: L("settings.ads.consent"),
                     showsExternalBadge: true
                 )
             }
         } header: {
-            Text("Pubblicità")
+            Text(L("settings.ads.header"))
         } footer: {
-            Text("Apri le impostazioni di iOS per consentire o revocare il tracciamento pubblicitario. Se lo disattivi, vedrai comunque annunci, ma non personalizzati.")
+            Text(L("settings.ads.footer"))
                 .font(.footnote)
                 .foregroundStyle(Theme.inkSoft)
         }
@@ -111,7 +112,7 @@ struct SettingsView: View {
     // MARK: - Info app
 
     private var appInfoSection: some View {
-        Section("Info app") {
+        Section(L("settings.info")) {
             HStack(spacing: 16) {
                 Image("film_strip_heart_gold")
                     .resizable()
@@ -131,7 +132,7 @@ struct SettingsView: View {
                     Text("v\(appVersion)")
                         .font(.subheadline)
                         .foregroundStyle(Theme.inkSoft)
-                    Text("Il film giusto per ogni emozione")
+                    Text(L("app.tagline"))
                         .font(.caption)
                         .foregroundStyle(Theme.inkSoft)
                 }
@@ -165,7 +166,7 @@ struct SettingsView: View {
                 SettingsRow(
                     icon: "circle.lefthalf.filled",
                     iconColor: Theme.tabCinema,
-                    title: "Tema"
+                    title: L("settings.theme")
                 )
             }
             .pickerStyle(.menu)
@@ -186,9 +187,47 @@ struct SettingsView: View {
             .padding(.vertical, 8)
             .sensoryFeedback(.selection, trigger: theme.accent)
         } header: {
-            Text("Aspetto")
+            Text(L("settings.appearance"))
         } footer: {
-            Text("Con \"Sistema\" l'app segue la modalità chiara o scura di iOS, oppure puoi forzarla. La palette cambia il colore principale e lo sfondo di tutta l'app.")
+            Text(L("settings.appearance.footer"))
+                .font(.footnote)
+                .foregroundStyle(Theme.inkSoft)
+        }
+        .listRowBackground(Theme.card)
+    }
+
+    // MARK: - Lingua
+
+    private var languageBinding: Binding<AppLanguage> {
+        Binding(
+            get: { LocalizationManager.shared.language },
+            set: { newValue in
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    LocalizationManager.shared.language = newValue
+                }
+            }
+        )
+    }
+
+    private var languageSection: some View {
+        Section {
+            Picker(selection: languageBinding) {
+                ForEach(AppLanguage.allCases) { language in
+                    Text("\(language.flag)  \(language.nativeName)").tag(language)
+                }
+            } label: {
+                SettingsRow(
+                    icon: "globe",
+                    iconColor: Theme.tabHome,
+                    title: L("settings.language")
+                )
+            }
+            .pickerStyle(.menu)
+            .sensoryFeedback(.selection, trigger: LocalizationManager.shared.language)
+        } header: {
+            Text(L("settings.language.header"))
+        } footer: {
+            Text(L("settings.language.footer"))
                 .font(.footnote)
                 .foregroundStyle(Theme.inkSoft)
         }
@@ -217,7 +256,7 @@ struct SettingsView: View {
                 SettingsRow(
                     icon: "bell.badge.fill",
                     iconColor: Theme.rose,
-                    title: "Nuove uscite e film al cinema"
+                    title: L("settings.notif.toggle")
                 )
             }
             .tint(Theme.tabSettings)
@@ -230,15 +269,15 @@ struct SettingsView: View {
                     SettingsRow(
                         icon: "gear.badge.xmark",
                         iconColor: Theme.inkSoft,
-                        title: "Consenti le notifiche in iOS",
+                        title: L("settings.notif.denied"),
                         showsExternalBadge: true
                     )
                 }
             }
         } header: {
-            Text("Notifiche")
+            Text(L("settings.notif.header"))
         } footer: {
-            Text("Ricevi un avviso quando arrivano nuovi film su TMDB e il giorno in cui un film esce al cinema. Puoi disattivarle quando vuoi.")
+            Text(L("settings.notif.footer"))
                 .font(.footnote)
                 .foregroundStyle(Theme.inkSoft)
         }
@@ -260,14 +299,14 @@ struct SettingsView: View {
                 SettingsRow(
                     icon: "clock.arrow.circlepath",
                     iconColor: Theme.seenGreen,
-                    title: "Rimuovi i visti dopo 7 giorni"
+                    title: L("settings.list.toggle")
                 )
             }
             .tint(Theme.tabSettings)
         } header: {
-            Text("La mia lista")
+            Text(L("settings.list.header"))
         } footer: {
-            Text("I film segnati come \"già visti\" vengono rimossi automaticamente dopo una settimana. Una volta rimossi, potranno riapparire tra i consigli. Puoi sempre rimuoverli manualmente dalla lista.")
+            Text(L("settings.list.footer"))
                 .font(.footnote)
                 .foregroundStyle(Theme.inkSoft)
         }
@@ -285,14 +324,14 @@ struct SettingsView: View {
                 SettingsRow(
                     icon: "arrow.counterclockwise.circle.fill",
                     iconColor: Theme.tabTrending,
-                    title: "Rivedi l'introduzione"
+                    title: L("settings.intro.review")
                 )
             }
             .sensoryFeedback(.impact(weight: .light), trigger: showOnboarding)
         } header: {
-            Text("Introduzione")
+            Text(L("settings.intro.header"))
         } footer: {
-            Text("Azzera i dati dell'onboarding e riguarda le schermate introduttive che spiegano come funziona Mood-E.")
+            Text(L("settings.intro.footer"))
                 .font(.footnote)
                 .foregroundStyle(Theme.inkSoft)
         }
@@ -307,12 +346,12 @@ struct SettingsView: View {
     // MARK: - Privacy
 
     private var privacySection: some View {
-        Section("Privacy") {
+        Section(L("settings.privacy.header")) {
             NavigationLink(value: LegalPage.privacyPolicy) {
                 SettingsRow(
                     icon: "hand.raised.fill",
                     iconColor: Theme.tabCinema,
-                    title: "Informativa sulla Privacy"
+                    title: L("settings.privacy.policy")
                 )
             }
         }
@@ -329,7 +368,7 @@ struct SettingsView: View {
                 SettingsRow(
                     icon: "exclamationmark.bubble.fill",
                     iconColor: Theme.primary,
-                    title: "Segnala un problema",
+                    title: L("settings.support.report"),
                     showsExternalBadge: true
                 )
             }
@@ -340,13 +379,13 @@ struct SettingsView: View {
                 SettingsRow(
                     icon: "questionmark.circle.fill",
                     iconColor: Theme.amber,
-                    title: "Domande frequenti"
+                    title: L("settings.support.faq")
                 )
             }
         } header: {
-            Text("Supporto e assistenza")
+            Text(L("settings.support.header"))
         } footer: {
-            Text("Per segnalare un problema o richiedere una nuova funzione, apri una richiesta sul nostro GitHub. Ti risponderemo il prima possibile.")
+            Text(L("settings.support.footer"))
                 .font(.footnote)
                 .foregroundStyle(Theme.inkSoft)
         }
@@ -361,13 +400,13 @@ struct SettingsView: View {
                 SettingsRow(
                     icon: "doc.text.fill",
                     iconColor: Theme.tabList,
-                    title: "Termini di utilizzo"
+                    title: L("settings.legal.terms")
                 )
             }
         } header: {
-            Text("Legale")
+            Text(L("settings.legal.header"))
         } footer: {
-            Text("Questa app utilizza dati forniti da TMDB ma non è approvata o certificata da TMDB.")
+            Text(L("settings.legal.footer"))
                 .font(.caption2)
                 .foregroundStyle(Theme.inkSoft)
         }
@@ -409,7 +448,7 @@ struct PaletteSwatchButton: View {
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Palette \(palette.displayName)")
+        .accessibilityLabel(palette.displayName)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
@@ -439,7 +478,7 @@ struct SettingsRow: View {
                 Image(systemName: "arrow.up.right.square")
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(Theme.inkSoft.opacity(0.7))
-                    .accessibilityLabel("Si apre nel browser")
+                    .accessibilityLabel(L("settings.external"))
             }
         }
         .contentShape(.rect)

@@ -13,8 +13,8 @@ enum LegalPage: Hashable {
 
     var title: String {
         switch self {
-        case .privacyPolicy: return "Informativa sulla Privacy"
-        case .terms: return "Termini di utilizzo"
+        case .privacyPolicy: return L("legal.privacy")
+        case .terms: return L("legal.terms")
         }
     }
 
@@ -67,7 +67,7 @@ struct LegalPageView: View {
                     ProgressView()
                         .controlSize(.large)
                         .tint(Theme.tabSettings)
-                    Text("Carico la pagina…")
+                    Text(L("legal.loading"))
                         .font(.subheadline)
                         .foregroundStyle(Theme.inkSoft)
                 }
@@ -88,10 +88,10 @@ struct LegalPageView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 16, weight: .semibold))
-                        Text("Indietro")
+                        Text(L("legal.back"))
                     }
                 }
-                .accessibilityLabel("Torna alle Impostazioni")
+                .accessibilityLabel(L("legal.a11y.back"))
             }
         }
     }
@@ -101,10 +101,10 @@ struct LegalPageView: View {
             Image(systemName: "wifi.exclamationmark")
                 .font(.system(size: 40))
                 .foregroundStyle(Theme.tabSettings)
-            Text("Pagina non disponibile")
+            Text(L("legal.failed.title"))
                 .font(.title3.weight(.semibold))
                 .foregroundStyle(Theme.ink)
-            Text("Non è stato possibile caricare la pagina. Controlla la connessione e riprova.")
+            Text(L("legal.failed.msg"))
                 .font(.subheadline)
                 .foregroundStyle(Theme.inkSoft)
                 .multilineTextAlignment(.center)
@@ -112,7 +112,7 @@ struct LegalPageView: View {
                 loadState = .loading
                 reloadToken += 1
             } label: {
-                Label("Riprova", systemImage: "arrow.clockwise")
+                Label(L("common.retry"), systemImage: "arrow.clockwise")
                     .font(.headline)
                     .foregroundStyle(.white)
                     .padding(.horizontal, 24)

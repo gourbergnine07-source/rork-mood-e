@@ -55,8 +55,8 @@ struct MoodFlowView: View {
 
     private var moodStep: some View {
         stepScreen(
-            title: "Come ti senti oggi?",
-            subtitle: "Scegli l'emozione che ti rappresenta di più in questo momento."
+            title: L("flow.s1.title"),
+            subtitle: L("flow.s1.sub")
         ) {
             LazyVGrid(columns: gridColumns, spacing: 12) {
                 ForEach(Array(Mood.allCases.enumerated()), id: \.element) { index, mood in
@@ -78,8 +78,8 @@ struct MoodFlowView: View {
 
     private var goalStep: some View {
         stepScreen(
-            title: "Cosa vuoi ottenere guardando un film?",
-            subtitle: "Dimmi che effetto cerchi: sceglieremo il film giusto per te."
+            title: L("flow.s2.title"),
+            subtitle: L("flow.s2.sub")
         ) {
             LazyVGrid(columns: goalColumns, spacing: 12) {
                 ForEach(Array(ViewingGoal.allCases.enumerated()), id: \.element) { index, goal in
@@ -101,8 +101,8 @@ struct MoodFlowView: View {
 
     private var eraStep: some View {
         stepScreen(
-            title: "Che epoca preferisci?",
-            subtitle: "Un ultimo tocco: da quale periodo vuoi che arrivi il tuo film?"
+            title: L("flow.s3.title"),
+            subtitle: L("flow.s3.sub")
         ) {
             VStack(spacing: 12) {
                 ForEach(MovieEra.allCases) { era in
@@ -182,7 +182,7 @@ struct MoodFlowView: View {
             advance()
         } label: {
             HStack(spacing: 7) {
-                Text(step == 2 ? "Trova il mio film" : "Continua")
+                Text(step == 2 ? L("flow.find") : L("flow.continue"))
                     .font(.subheadline.weight(.semibold))
                 if step == 2 {
                     Image(systemName: "sparkles")

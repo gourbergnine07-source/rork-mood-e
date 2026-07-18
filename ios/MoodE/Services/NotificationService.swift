@@ -123,15 +123,15 @@ final class NotificationService {
         guard let first = movies.first else { return }
 
         let content = UNMutableNotificationContent()
-        content.title = "Novità su TMDB 🎬"
+        content.title = L("notif.new.title")
         if totalCount == 1 {
-            content.body = "«\(first.title)» è appena arrivato: dagli un'occhiata!"
+            content.body = LF("notif.new.one", first.title)
         } else {
-            let titles = movies.map { "«\($0.title)»" }.joined(separator: ", ")
+            let titles = movies.map(\.title).joined(separator: ", ")
             let extra = totalCount - movies.count
             content.body = extra > 0
-                ? "\(titles) e altri \(extra) film sono appena arrivati!"
-                : "\(titles) sono appena arrivati!"
+                ? LF("notif.new.manyExtra", titles, extra)
+                : LF("notif.new.many", titles)
         }
         content.sound = .default
 
@@ -163,8 +163,8 @@ final class NotificationService {
             components.hour = 10
 
             let content = UNMutableNotificationContent()
-            content.title = "Oggi al cinema 🍿"
-            content.body = "«\(movie.title)» esce oggi nelle sale!"
+            content.title = L("notif.release.title")
+            content.body = LF("notif.release.body", movie.title)
             content.sound = .default
 
             let request = UNNotificationRequest(

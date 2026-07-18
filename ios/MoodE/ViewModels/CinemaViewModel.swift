@@ -28,14 +28,14 @@ struct NearbyCinema: Identifiable, Hashable {
         ])
     }
 
-    /// Distance formatted in Italian (e.g. "850 m" or "2,3 km").
+    /// Distance formatted with the user's locale (e.g. "2,3 km" vs "2.3 km").
     var formattedDistance: String? {
         guard let distanceMeters else { return nil }
         if distanceMeters < 1000 {
             return "\(Int(distanceMeters)) m"
         }
         let km = distanceMeters / 1000
-        return String(format: "%.1f km", locale: Locale(identifier: "it_IT"), km)
+        return String(format: "%.1f km", locale: LocalizationManager.shared.locale, km)
     }
 }
 
@@ -61,9 +61,9 @@ final class CinemaViewModel {
     private(set) var regionCode: String = "IT"
     private(set) var isRefreshing = false
 
-    /// Italian display name of the region (e.g. "Italia").
+    /// Localized display name of the region (e.g. "Italia" / "Italy").
     var regionName: String {
-        Locale(identifier: "it_IT").localizedString(forRegionCode: regionCode) ?? regionCode
+        LocalizationManager.shared.locale.localizedString(forRegionCode: regionCode) ?? regionCode
     }
 
     var hasLoaded: Bool {
@@ -114,7 +114,7 @@ final class CinemaViewModel {
             if case .loaded = state {
                 // Keep showing cached data when a background refresh fails.
             } else {
-                state = .failed("Non riusciamo a caricare i film in sala. Controlla la connessione e riprova.")
+                state = .failed(L("error.cinema"))
             }
         }
     }

@@ -49,10 +49,10 @@ private struct TrailerPlayerModifier: ViewModifier {
             .sheet(item: $playback.selection) { selection in
                 TrailerPlayerSheet(trailer: selection.trailer, movieTitle: selection.movieTitle)
             }
-            .alert("Trailer non disponibile", isPresented: $playback.showsUnavailable) {
-                Button("OK", role: .cancel) {}
+            .alert(L("trailer.unavailable.title"), isPresented: $playback.showsUnavailable) {
+                Button(L("common.ok"), role: .cancel) {}
             } message: {
-                Text("Non abbiamo trovato un trailer per questo film.")
+                Text(L("trailer.unavailable.msg"))
             }
     }
 }
@@ -76,7 +76,7 @@ struct WatchTrailerButton: View {
                     Image(systemName: "play.fill")
                         .font(.system(size: isCompact ? 10 : 12, weight: .bold))
                 }
-                Text("Guarda Trailer")
+                Text(L("trailer.watch"))
                     .font(isCompact ? .caption2.weight(.bold) : .caption.weight(.bold))
                     .lineLimit(1)
             }
@@ -91,7 +91,7 @@ struct WatchTrailerButton: View {
         }
         .buttonStyle(.plain)
         .disabled(isLoading)
-        .accessibilityLabel("Guarda il trailer")
+        .accessibilityLabel(L("trailer.watchLong"))
     }
 }
 

@@ -27,9 +27,9 @@ nonisolated struct TMDBMovie: Codable, Identifiable, Hashable {
         case genreIds = "genre_ids"
     }
 
-    /// Italian genre names resolved from TMDB genre IDs.
+    /// Localized genre names resolved from TMDB genre IDs.
     var genreNames: [String] {
-        (genreIds ?? []).compactMap { TMDBGenreCatalog.italianName(for: $0) }
+        (genreIds ?? []).compactMap { TMDBGenreCatalog.name(for: $0) }
     }
 
     /// Release year extracted from the release date (e.g. "1994").
@@ -38,7 +38,8 @@ nonisolated struct TMDBMovie: Codable, Identifiable, Hashable {
         return String(releaseDate.prefix(4))
     }
 
-    /// Release date formatted in Italian (e.g. "12 giugno 2026").
+    /// Release date formatted in the user's language, with the day/month
+    /// order adapted per locale (e.g. "12 giugno 2026" vs "June 12, 2026").
     var formattedReleaseDate: String? {
         guard let releaseDate else { return nil }
         let parser = DateFormatter()
@@ -46,9 +47,24 @@ nonisolated struct TMDBMovie: Codable, Identifiable, Hashable {
         parser.locale = Locale(identifier: "en_US_POSIX")
         guard let date = parser.date(from: releaseDate) else { return nil }
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "it_IT")
-        formatter.dateFormat = "d MMMM yyyy"
+        formatter.locale = L10nStore.currentLocale
+        formatter.setLocalizedDateFormatFromTemplate("d MMMM yyyy")
         return formatter.string(from: date)
+    }
+
+    /// Copy with a replaced overview (used for the English fallback).
+    func withOverview(_ overview: String) -> TMDBMovie {
+        TMDBMovie(
+            id: id,
+            title: title,
+            overview: overview,
+            posterPath: posterPath,
+            backdropPath: backdropPath,
+            releaseDate: releaseDate,
+            voteAverage: voteAverage,
+            voteCount: voteCount,
+            genreIds: genreIds
+        )
     }
 
     /// Full URL for the poster image (w500).
@@ -74,7 +90,7 @@ nonisolated struct TMDBMovie: Codable, Identifiable, Hashable {
         lines.append(headline)
 
         if voteAverage > 0 {
-            lines.append("\u{2B50} \(String(format: "%.1f", voteAverage))/10 su TMDB")
+            lines.append(String(format: LN("share.ratingFormat"), L10nStore.rating(voteAverage)))
         }
 
         if !genreNames.isEmpty {
@@ -93,17 +109,14 @@ nonisolated struct TMDBMovie: Codable, Identifiable, Hashable {
     }
 }
 
-/// Italian display names for TMDB movie genre IDs.
+/// Localized display names for TMDB movie genre IDs (from the language tables).
 nonisolated enum TMDBGenreCatalog {
-    private static let names: [Int: String] = [
-        28: "Azione", 12: "Avventura", 16: "Animazione", 35: "Commedia",
-        80: "Crime", 99: "Documentario", 18: "Dramma", 10751: "Famiglia",
-        14: "Fantasy", 36: "Storia", 27: "Horror", 10402: "Musica",
-        9648: "Mistero", 10749: "Romantico", 878: "Fantascienza",
-        53: "Thriller", 10752: "Guerra", 37: "Western", 10770: "Film TV"
-    ]
-
-    static func italianName(for id: Int) -> String? { names[id] }
+    /// Localized genre name, or nil when the ID is unknown.
+    static func name(for id: Int) -> String? {
+        let key = "genre.\(id)"
+        let value = LN(key)
+        return value == key ? nil : value
+    }
 }
 
 /// Paginated list response from TMDB endpoints (discover, trending, now playing).

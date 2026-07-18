@@ -20,26 +20,29 @@ struct OnboardingView: View {
 
     @State private var currentPage = 0
 
-    private let slides: [OnboardingSlide] = [
-        OnboardingSlide(
-            id: 0,
-            icon: "face.smiling.inverse",
-            title: "Dicci come ti senti",
-            message: "Apri Mood-E e scegli la tua emozione del momento: felice, malinconico, stressato… ce n'è per tutti gli stati d'animo."
-        ),
-        OnboardingSlide(
-            id: 1,
-            icon: "scope",
-            title: "Obiettivo ed epoca",
-            message: "Scegli cosa vuoi provare guardando il film — ridere, commuoverti, rilassarti — e l'epoca che preferisci, dai classici alle novità."
-        ),
-        OnboardingSlide(
-            id: 2,
-            icon: "sparkles.tv.fill",
-            title: "La proposta su misura",
-            message: "Ricevi subito film scelti per te: guarda il trailer, salvali nella tua lista e scopri cosa c'è al cinema vicino a te."
-        )
-    ]
+    /// Computed so the slides re-localize instantly on language change.
+    private var slides: [OnboardingSlide] {
+        [
+            OnboardingSlide(
+                id: 0,
+                icon: "face.smiling.inverse",
+                title: L("onb.s1.title"),
+                message: L("onb.s1.msg")
+            ),
+            OnboardingSlide(
+                id: 1,
+                icon: "scope",
+                title: L("onb.s2.title"),
+                message: L("onb.s2.msg")
+            ),
+            OnboardingSlide(
+                id: 2,
+                icon: "sparkles.tv.fill",
+                title: L("onb.s3.title"),
+                message: L("onb.s3.msg")
+            )
+        ]
+    }
 
     private var isLastPage: Bool {
         currentPage == slides.count - 1
@@ -53,7 +56,7 @@ struct OnboardingView: View {
                 HStack {
                     Spacer()
                     if !isLastPage {
-                        Button("Salta") {
+                        Button(L("onb.skip")) {
                             onFinished()
                         }
                         .font(.subheadline.weight(.semibold))
@@ -93,7 +96,7 @@ struct OnboardingView: View {
                         }
                     } label: {
                         HStack(spacing: 8) {
-                            Text(isLastPage ? "Inizia" : "Avanti")
+                            Text(isLastPage ? L("onb.start") : L("onb.next"))
                                 .font(.headline)
                             Image(systemName: isLastPage ? "sparkles" : "arrow.right")
                                 .font(.system(size: 15, weight: .semibold))
@@ -136,7 +139,7 @@ struct OnboardingSlideView: View {
             }
 
             VStack(spacing: 14) {
-                Text("Passo \(stepIndex + 1) di 3")
+                Text(LF("onb.step", stepIndex + 1))
                     .font(.caption.weight(.bold))
                     .foregroundStyle(Theme.primary)
                     .padding(.horizontal, 12)

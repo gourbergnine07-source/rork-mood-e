@@ -15,13 +15,13 @@ nonisolated enum TMDBError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .missingAPIKey:
-            return "Chiave API TMDB mancante. Configurala nelle impostazioni del progetto."
+            return LN("error.missingKey")
         case .invalidURL:
-            return "Indirizzo della richiesta non valido."
+            return LN("error.invalidURL")
         case .badResponse(let statusCode):
-            return "TMDB ha risposto con un errore (codice \(statusCode)). Riprova tra poco."
+            return String(format: LN("error.badResponse"), statusCode)
         case .decodingFailed:
-            return "Non sono riuscito a leggere i dati dei film. Riprova."
+            return LN("error.decoding")
         }
     }
 }
@@ -69,11 +69,11 @@ nonisolated enum TrendingWindow: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
-    /// Italian label shown in the Tendenze selector.
+    /// Localized label shown in the trending selector.
     var label: String {
         switch self {
-        case .week: return "Questa settimana"
-        case .day: return "Oggi"
+        case .week: return LN("trending.week")
+        case .day: return LN("trending.day")
         }
     }
 }
@@ -81,7 +81,15 @@ nonisolated enum TrendingWindow: String, CaseIterable, Identifiable {
 /// Networking service for The Movie Database (api.themoviedb.org/3).
 enum TMDBService {
     private static let baseURL = "https://api.themoviedb.org/3"
-    private static let language = "it-IT"
+
+    /// TMDB language parameter following the user's chosen language.
+    private static var language: String { LocalizationManager.shared.language.tmdbCode }
+
+    /// Trailer languages: user language first, English as fallback.
+    private static var videoLanguageParam: String {
+        let code = LocalizationManager.shared.language.rawValue
+        return code == "en" ? "en" : "\(code),en"
+    }
 
     /// Discovers movies matching the user's mood, goal and era choices.
     /// Returns the full paginated response so callers can request fresh pages.
@@ -115,23 +123,22 @@ enum TMDBService {
             queryItems.append(URLQueryItem(name: "primary_release_date.lte", value: lte))
         }
 
-        return try await request(path: "/discover/movie", queryItems: queryItems)
+        let response: TMDBMovieListResponse = try await request(path: "/discover/movie", queryItems: queryItems)
+        return await fillingMissingOverviews(response, path: "/discover/movie", queryItems: queryItems)
     }
 
     /// Trending movies for the requested time window (week or day).
     static func trendingMovies(window: TrendingWindow = .week) async throws -> [TMDBMovie] {
-        let response: TMDBMovieListResponse = try await request(
-            path: "/trending/movie/\(window.rawValue)",
-            queryItems: []
-        )
-        return response.results
+        let path = "/trending/movie/\(window.rawValue)"
+        let response: TMDBMovieListResponse = try await request(path: path, queryItems: [])
+        return await fillingMissingOverviews(response, path: path, queryItems: []).results
     }
 
     /// Movies currently playing in theatres (region-aware).
     static func nowPlayingMovies(region: String = "IT") async throws -> [TMDBMovie] {
         let queryItems = [URLQueryItem(name: "region", value: region)]
         let response: TMDBMovieListResponse = try await request(path: "/movie/now_playing", queryItems: queryItems)
-        return response.results
+        return await fillingMissingOverviews(response, path: "/movie/now_playing", queryItems: queryItems).results
     }
 
     /// Upcoming cinema releases (region-aware), used for release-day notifications.
@@ -142,25 +149,75 @@ enum TMDBService {
     }
 
     /// Videos (trailers) only — lightweight call for quick access from result cards.
+    /// Requests trailers in the user's language plus English as fallback.
     static func movieVideos(id: Int) async throws -> TMDBVideoList {
         let queryItems = [
-            URLQueryItem(name: "include_video_language", value: "it,en")
+            URLQueryItem(name: "include_video_language", value: videoLanguageParam)
         ]
         return try await request(path: "/movie/\(id)/videos", queryItems: queryItems)
     }
 
     /// Full movie detail with cast and videos in a single call.
+    /// Falls back to the English overview when the localized one is missing.
     static func movieDetail(id: Int) async throws -> TMDBMovieDetail {
         let queryItems = [
             URLQueryItem(name: "append_to_response", value: "credits,videos"),
-            URLQueryItem(name: "include_video_language", value: "it,en")
+            URLQueryItem(name: "include_video_language", value: videoLanguageParam)
         ]
-        return try await request(path: "/movie/\(id)", queryItems: queryItems)
+        let detail: TMDBMovieDetail = try await request(path: "/movie/\(id)", queryItems: queryItems)
+
+        guard detail.overview.isEmpty, LocalizationManager.shared.language != .english else {
+            return detail
+        }
+        if let english: TMDBMovieDetail = try? await request(
+            path: "/movie/\(id)", queryItems: queryItems, languageOverride: "en-US"
+        ), !english.overview.isEmpty {
+            return detail.withOverview(english.overview)
+        }
+        return detail
+    }
+
+    /// When TMDB has no localized overview for some movies in a list,
+    /// fetches the same page in English (one extra call at most) and fills
+    /// only the missing overviews — no field is ever left empty needlessly.
+    private static func fillingMissingOverviews(
+        _ response: TMDBMovieListResponse,
+        path: String,
+        queryItems: [URLQueryItem]
+    ) async -> TMDBMovieListResponse {
+        guard LocalizationManager.shared.language != .english,
+              response.results.contains(where: { $0.overview.isEmpty }) else {
+            return response
+        }
+        guard let english: TMDBMovieListResponse = try? await request(
+            path: path, queryItems: queryItems, languageOverride: "en-US"
+        ) else { return response }
+
+        let englishOverviews = Dictionary(
+            english.results.map { ($0.id, $0.overview) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        let merged = response.results.map { movie -> TMDBMovie in
+            guard movie.overview.isEmpty,
+                  let fallback = englishOverviews[movie.id],
+                  !fallback.isEmpty else { return movie }
+            return movie.withOverview(fallback)
+        }
+        return TMDBMovieListResponse(
+            page: response.page,
+            results: merged,
+            totalPages: response.totalPages,
+            totalResults: response.totalResults
+        )
     }
 
     // MARK: - Core request
 
-    private static func request<T: Decodable>(path: String, queryItems: [URLQueryItem]) async throws -> T {
+    private static func request<T: Decodable>(
+        path: String,
+        queryItems: [URLQueryItem],
+        languageOverride: String? = nil
+    ) async throws -> T {
         let apiKey = Config.EXPO_PUBLIC_TMDB_API_KEY
         guard !apiKey.isEmpty else { throw TMDBError.missingAPIKey }
 
@@ -169,7 +226,7 @@ enum TMDBService {
         }
         components.queryItems = queryItems + [
             URLQueryItem(name: "api_key", value: apiKey),
-            URLQueryItem(name: "language", value: language)
+            URLQueryItem(name: "language", value: languageOverride ?? language)
         ]
 
         guard let url = components.url else { throw TMDBError.invalidURL }
