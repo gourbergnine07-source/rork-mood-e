@@ -56,6 +56,7 @@ struct SettingsView: View {
                 notificationsSection
                 librarySection
                 onboardingSection
+                adsSection
                 privacySection
                 supportSection
                 legalSection
@@ -81,6 +82,30 @@ struct SettingsView: View {
             }
         }
         .tint(Theme.tabSettings)
+    }
+
+    // MARK: - Pubblicità
+
+    private var adsSection: some View {
+        Section {
+            Button {
+                openSystemSettings()
+            } label: {
+                SettingsRow(
+                    icon: "megaphone.fill",
+                    iconColor: Theme.primary,
+                    title: "Gestione consenso pubblicità",
+                    showsExternalBadge: true
+                )
+            }
+        } header: {
+            Text("Pubblicità")
+        } footer: {
+            Text("Apri le impostazioni di iOS per consentire o revocare il tracciamento pubblicitario. Se lo disattivi, vedrai comunque annunci, ma non personalizzati.")
+                .font(.footnote)
+                .foregroundStyle(Theme.inkSoft)
+        }
+        .listRowBackground(Theme.card)
     }
 
     // MARK: - Info app

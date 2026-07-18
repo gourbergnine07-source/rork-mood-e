@@ -227,7 +227,11 @@ struct MoodFlowView: View {
             isMovingForward = true
             withAnimation { step += 1 }
         } else if let mood = selectedMood, let goal = selectedGoal, let era = selectedEra {
-            resultSelection = MoodSelection(mood: mood, goal: goal, era: era)
+            let selection = MoodSelection(mood: mood, goal: goal, era: era)
+            // Interstitial al massimo 1 ogni 3 ricerche, poi si aprono i risultati.
+            AdsManager.shared.showSearchInterstitialIfDue {
+                resultSelection = selection
+            }
         }
     }
 

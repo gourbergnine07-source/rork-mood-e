@@ -31,6 +31,9 @@ struct CinemaView: View {
                 Theme.background.ignoresSafeArea()
                 content
             }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                AdBannerView()
+            }
             .navigationTitle("Al Cinema")
             .toolbarTitleDisplayMode(.large)
             .navigationDestination(for: TMDBMovie.self) { movie in

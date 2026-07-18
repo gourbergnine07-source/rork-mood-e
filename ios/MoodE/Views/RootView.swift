@@ -40,6 +40,11 @@ struct RootView: View {
             case .ready:
                 ContentView()
                     .transition(.opacity)
+                    .task {
+                        // ATT prompt (solo al primo avvio, dopo l'onboarding),
+                        // poi avvio del SDK annunci: nessun annuncio prima del consenso.
+                        await AdsManager.shared.requestTrackingAndStart()
+                    }
             }
         }
     }

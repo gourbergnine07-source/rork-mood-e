@@ -27,6 +27,8 @@ final class MovieResultsViewModel {
 
     private(set) var state: LoadState = .loading
     private(set) var isRefreshing: Bool = false
+    /// True while the rewarded-ad bonus batch is being fetched.
+    private(set) var isLoadingBonus: Bool = false
     /// Incremented on every successful batch, used to scroll back to top.
     private(set) var batchId: Int = 0
 
@@ -88,6 +90,43 @@ final class MovieResultsViewModel {
         let nextPage = currentPage >= totalPages ? 1 : currentPage + 1
         await fetch(selection: selection, startPage: nextPage, excluding: excludedIds)
         isRefreshing = false
+    }
+
+    /// Appends up to 5 extra picks (from the next discover pages) after the
+    /// user watched a rewarded ad. Keeps the current batch on screen and does
+    /// not touch the cache, so the base recommendations stay stable.
+    func loadBonusMovies(selection: MoodSelection, excluding excludedIds: Set<Int> = []) async {
+        guard case .loaded(let current) = state, !isLoadingBonus else { return }
+        isLoadingBonus = true
+        defer { isLoadingBonus = false }
+
+        do {
+            var bonus: [TMDBMovie] = []
+            var page = currentPage
+            var fetches = 0
+
+            while bonus.count < 5 && fetches < 3 {
+                page = page >= totalPages ? 1 : page + 1
+                let response = try await TMDBService.discoverMovies(for: selection, page: page)
+                currentPage = response.page
+                totalPages = max(response.totalPages, 1)
+                fetches += 1
+
+                let fresh = response.results.filter { movie in
+                    !excludedIds.contains(movie.id)
+                        && !current.contains(where: { $0.id == movie.id })
+                        && !bonus.contains(where: { $0.id == movie.id })
+                }
+                bonus += fresh
+
+                if page == 1 { break }
+            }
+
+            guard !bonus.isEmpty else { return }
+            state = .loaded(current + Array(bonus.prefix(5)))
+        } catch {
+            print("MovieResultsViewModel: bonus non caricato: \(error.localizedDescription)")
+        }
     }
 
     /// Fetches pages starting at `startPage`, filtering out watched movies and

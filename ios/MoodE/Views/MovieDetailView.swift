@@ -32,6 +32,10 @@ struct MovieDetailView: View {
         .task {
             await viewModel.load(movieID: movie.id)
         }
+        .onDisappear {
+            // Tornando ai risultati: interstitial al massimo 1 ogni 5 minuti.
+            AdsManager.shared.maybeShowReturnInterstitial()
+        }
         .sheet(item: $trailerToPlay) { trailer in
             TrailerPlayerSheet(trailer: trailer, movieTitle: movie.title)
         }

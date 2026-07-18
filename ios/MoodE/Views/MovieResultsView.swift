@@ -31,6 +31,9 @@ struct MovieResultsView: View {
                 }
             }
         }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            AdBannerView()
+        }
         .navigationTitle("Il tuo film")
         .toolbarTitleDisplayMode(.inline)
         .tint(Theme.primary)
@@ -138,6 +141,10 @@ struct MovieResultsView: View {
                     .sensoryFeedback(.impact(weight: .medium), trigger: trailerPlayback.loadingMovieId)
                     .padding(.horizontal, 24)
 
+                    if AdsManager.shared.isRewardedReady || viewModel.isLoadingBonus {
+                        rewardedButton
+                    }
+
                     newBatchButton
                 }
                 .padding(.top, 12)
@@ -150,6 +157,45 @@ struct MovieResultsView: View {
                 }
             }
         }
+    }
+
+    /// Rewarded ad: watching a short video unlocks 5 extra picks
+    /// appended below the current batch.
+    private var rewardedButton: some View {
+        Button {
+            AdsManager.shared.showRewarded {
+                Task {
+                    await viewModel.loadBonusMovies(selection: selection, excluding: library.watchedIds)
+                }
+            }
+        } label: {
+            HStack(spacing: 8) {
+                if viewModel.isLoadingBonus {
+                    ProgressView()
+                        .tint(Theme.amber)
+                } else {
+                    Image(systemName: "gift.fill")
+                        .font(.system(size: 15, weight: .semibold))
+                }
+                Text("Guarda un breve video per altre 5 proposte")
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+            }
+            .foregroundStyle(Theme.amber)
+            .frame(maxWidth: .infinity)
+            .frame(minHeight: 50)
+            .padding(.horizontal, 14)
+            .background(Theme.amber.opacity(0.12), in: .rect(cornerRadius: 16))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Theme.amber.opacity(0.35), lineWidth: 1)
+            )
+        }
+        .disabled(viewModel.isLoadingBonus)
+        .sensoryFeedback(.impact(weight: .medium), trigger: viewModel.isLoadingBonus)
+        .padding(.horizontal, 24)
+
     }
 
     /// Reruns the same filters on the next discover page for fresh picks.

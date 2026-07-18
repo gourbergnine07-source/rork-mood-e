@@ -23,6 +23,9 @@ struct TrendingView: View {
                 Theme.background.ignoresSafeArea()
                 content
             }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                AdBannerView()
+            }
             .navigationTitle("Tendenze")
             .toolbarTitleDisplayMode(.large)
             .navigationDestination(for: TMDBMovie.self) { movie in
