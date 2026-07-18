@@ -134,6 +134,13 @@ enum TMDBService {
         return response.results
     }
 
+    /// Upcoming cinema releases (region-aware), used for release-day notifications.
+    static func upcomingMovies(region: String = "IT") async throws -> [TMDBMovie] {
+        let queryItems = [URLQueryItem(name: "region", value: region)]
+        let response: TMDBMovieListResponse = try await request(path: "/movie/upcoming", queryItems: queryItems)
+        return response.results
+    }
+
     /// Videos (trailers) only — lightweight call for quick access from result cards.
     static func movieVideos(id: Int) async throws -> TMDBVideoList {
         let queryItems = [

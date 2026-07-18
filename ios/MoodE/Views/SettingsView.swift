@@ -36,6 +36,8 @@ enum AppLinks {
 /// in a classic iOS grouped list.
 struct SettingsView: View {
     @Environment(\.openURL) private var openURL
+    @Environment(NotificationService.self) private var notifications
+    @State private var showPermissionAlert = false
 
     private var appVersion: String {
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
@@ -46,6 +48,7 @@ struct SettingsView: View {
         NavigationStack {
             List {
                 appInfoSection
+                notificationsSection
                 privacySection
                 supportSection
                 legalSection
@@ -56,6 +59,12 @@ struct SettingsView: View {
             .toolbarTitleDisplayMode(.large)
             .navigationDestination(for: LegalPage.self) { page in
                 LegalPageView(page: page)
+            }
+            .alert("Notifiche disattivate", isPresented: $showPermissionAlert) {
+                Button("Apri Impostazioni") { openSystemSettings() }
+                Button("Annulla", role: .cancel) {}
+            } message: {
+                Text("Per ricevere gli avvisi sulle nuove uscite, consenti le notifiche di Mood-E nelle impostazioni di iOS.")
             }
         }
         .tint(Theme.tabSettings)
@@ -92,6 +101,61 @@ struct SettingsView: View {
             .padding(.vertical, 6)
         }
         .listRowBackground(Theme.card)
+    }
+
+    // MARK: - Notifiche
+
+    private var notificationsBinding: Binding<Bool> {
+        Binding(
+            get: { notifications.isEnabled },
+            set: { newValue in
+                Task {
+                    let success = await notifications.setEnabled(newValue)
+                    if newValue && !success {
+                        showPermissionAlert = true
+                    }
+                }
+            }
+        )
+    }
+
+    private var notificationsSection: some View {
+        Section {
+            Toggle(isOn: notificationsBinding) {
+                SettingsRow(
+                    icon: "bell.badge.fill",
+                    iconColor: Theme.rose,
+                    title: "Nuove uscite e film al cinema"
+                )
+            }
+            .tint(Theme.tabSettings)
+            .disabled(notifications.isWorking)
+
+            if notifications.authorizationStatus == .denied {
+                Button {
+                    openSystemSettings()
+                } label: {
+                    SettingsRow(
+                        icon: "gear.badge.xmark",
+                        iconColor: Theme.inkSoft,
+                        title: "Consenti le notifiche in iOS",
+                        showsExternalBadge: true
+                    )
+                }
+            }
+        } header: {
+            Text("Notifiche")
+        } footer: {
+            Text("Ricevi un avviso quando arrivano nuovi film su TMDB e il giorno in cui un film esce al cinema. Puoi disattivarle quando vuoi.")
+                .font(.footnote)
+                .foregroundStyle(Theme.inkSoft)
+        }
+        .listRowBackground(Theme.card)
+    }
+
+    private func openSystemSettings() {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+        openURL(url)
     }
 
     // MARK: - Privacy
@@ -200,4 +264,5 @@ struct SettingsRow: View {
 
 #Preview {
     SettingsView()
+        .environment(NotificationService())
 }
