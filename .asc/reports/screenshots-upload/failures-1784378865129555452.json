@@ -1,0 +1,30 @@
+{
+  "versionLocalizationId": "281d7311-01cd-416d-a679-caf13be9f628",
+  "path": ".asc/reports/screenshots-upload/failures-1784378865129555452.json",
+  "deviceType": "IPHONE_65",
+  "displayType": "APP_IPHONE_65",
+  "setId": "2c47c893-8eea-4073-afe7-eb79ed65532a",
+  "files": [
+    "/home/user/rork-app/screenshots/iphone/it/01_scelta_emozione.png",
+    "/home/user/rork-app/screenshots/iphone/it/02_film_consigliati.png",
+    "/home/user/rork-app/screenshots/iphone/it/03_dettaglio_e_trailer.png",
+    "/home/user/rork-app/screenshots/iphone/it/04_tendenze.png",
+    "/home/user/rork-app/screenshots/iphone/it/05_la_mia_lista.png"
+  ],
+  "pendingFiles": [
+    "/home/user/rork-app/screenshots/iphone/it/01_scelta_emozione.png",
+    "/home/user/rork-app/screenshots/iphone/it/02_film_consigliati.png",
+    "/home/user/rork-app/screenshots/iphone/it/03_dettaglio_e_trailer.png",
+    "/home/user/rork-app/screenshots/iphone/it/04_tendenze.png",
+    "/home/user/rork-app/screenshots/iphone/it/05_la_mia_lista.png"
+  ],
+  "failures": [
+    {
+      "fileName": "01_scelta_emozione.png",
+      "filePath": "/home/user/rork-app/screenshots/iphone/it/01_scelta_emozione.png",
+      "error": "asset b4ec64c9-7c39-4054-b0f4-0ca2177ba637 delivery failed: IMAGE_ALPHA_NOT_ALLOWED"
+    }
+  ],
+  "error": "asset b4ec64c9-7c39-4054-b0f4-0ca2177ba637 delivery failed: IMAGE_ALPHA_NOT_ALLOWED",
+  "generatedAt": "2026-07-18T12:47:45Z"
+}

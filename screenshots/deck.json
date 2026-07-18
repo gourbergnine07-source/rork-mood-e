@@ -1,0 +1,73 @@
+{
+  "theme": {
+    "style": "A premium home-cinema world at night: deep charcoal and near-black backgrounds warmed by golden marquee and spotlight glow, curtain-red undertones, faint film-grain texture and soft light streaks like projector beams. One slide breaks into a warm cream-gold tone for contrast, keeping the mood intimate, cinematic, and never generic corporate dark.",
+    "headlineFont": "'Plus Jakarta Sans', sans-serif — import via @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&display=swap')",
+    "headlineFontSize": 124,
+    "mockupIds": {
+      "iphone": "deep-blue",
+      "ipad": "space-gray"
+    },
+    "palette": {
+      "primary": "#1A1512",
+      "secondary": "#8B1E2E",
+      "accent": "#F2B84B"
+    }
+  },
+  "slides": [
+    {
+      "label": "Scelta emozione",
+      "backgroundPrompt": "Rich cinematic dark environment in deep charcoal black with a warm golden glow pooling softly from the lower center like theater house-lights before a film starts, faint vertical light beams cutting through soft haze, fine film-grain texture and floating dust particles catching the light, the upper third calmer and near-black for text overlay, 8K quality, ultra smooth gradients, premium feel, no text, no letters, no UI elements, no device mockups.",
+      "backgroundUrl": "https://r2-pub.rork.com/app-store-screenshots/68a9dbaf-cf7b-430b-b0f7-3912b0c2bcf1.png"
+    },
+    {
+      "label": "Film consigliati",
+      "backgroundPrompt": "Deep charcoal background with elegant thin golden light streaks running diagonally like projector beams sweeping across the frame, warm amber highlights catching floating translucent particles, dramatic rim lighting from the right edge, subtle depth of field blur toward the edges, upper portion dark and uncluttered, 8K quality, ultra smooth gradients, premium feel, no text, no letters, no UI elements, no device mockups.",
+      "backgroundUrl": "https://r2-pub.rork.com/app-store-screenshots/efc00a4d-3399-43ef-811e-7a2bf35c96b2.png"
+    },
+    {
+      "label": "Dettaglio e trailer",
+      "backgroundPrompt": "Deep curtain-red to near-black gradient background evoking velvet theater drapery, a warm golden spotlight glowing from the center creating soft radial light falloff, subtle folded fabric-like texture in shadow, fine grain and gentle vignette toward the top for text clarity, 8K quality, ultra smooth gradients, premium feel, no text, no letters, no UI elements, no device mockups.",
+      "backgroundUrl": "https://r2-pub.rork.com/app-store-screenshots/8c5591bd-bd92-42a4-862a-e2dceaef9469.png"
+    },
+    {
+      "label": "Tendenze",
+      "backgroundPrompt": "Vast dark navy-charcoal night sky background with scattered warm golden marquee-light dots forming loose constellation patterns, soft diffused amber glow pooling in the lower half, thin luminous threads connecting the lights, calm dark open space in the upper third, 8K quality, ultra smooth gradients, premium feel, no text, no letters, no UI elements, no device mockups.",
+      "backgroundUrl": "https://r2-pub.rork.com/app-store-screenshots/5134b218-53ce-409a-8783-2b6b621dce0c.png"
+    },
+    {
+      "label": "La mia lista",
+      "backgroundPrompt": "Warm cream-gold background with soft flowing folds of pale ivory and champagne light, gentle diffused sunlight glow from the upper right, subtle fine grain texture and smooth pastel gradients transitioning into a warm golden lower edge, calm and minimal composition with open uncluttered upper area, 8K quality, ultra smooth gradients, premium feel, no text, no letters, no UI elements, no device mockups.",
+      "backgroundUrl": "https://r2-pub.rork.com/app-store-screenshots/12f53e11-cb35-4a1f-8153-a1aff8f99d89.png"
+    }
+  ],
+  "headlines": {
+    "it": {
+      "Scelta emozione": "Il film giusto<br>per come ti senti",
+      "Film consigliati": "15 film pensati<br>solo per te",
+      "Dettaglio e trailer": "Guarda il trailer<br>senza uscire",
+      "Tendenze": "Scopri cosa<br>guardano tutti",
+      "La mia lista": "La tua lista<br>sempre con te"
+    },
+    "en": {
+      "Scelta emozione": "Feeling It?<br>We've Got The Movie",
+      "Film consigliati": "15 Picks,<br>Made For You",
+      "Dettaglio e trailer": "Watch The Trailer<br>Instantly",
+      "Tendenze": "See What's<br>Trending Now",
+      "La mia lista": "Your List,<br>No Account Needed"
+    },
+    "es": {
+      "Scelta emozione": "¿Cómo te<br>sientes hoy?",
+      "Film consigliati": "Tu peli ideal<br>en segundos",
+      "Dettaglio e trailer": "Tráiler al<br>instante",
+      "Tendenze": "Lo que todos<br>están viendo",
+      "La mia lista": "Tu lista,<br>sin cuenta"
+    },
+    "fr": {
+      "Scelta emozione": "Ton humeur<br>Ton film",
+      "Film consigliati": "15 films<br>Juste pour toi",
+      "Dettaglio e trailer": "La bande-annonce<br>Sans quitter l'appli",
+      "Tendenze": "Ce que tout<br>Le monde regarde",
+      "La mia lista": "Ta liste<br>Sans compte"
+    }
+  }
+}
