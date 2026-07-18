@@ -6,12 +6,11 @@
 import SwiftUI
 
 /// Central place for the GitHub-based support & legal URLs.
-/// Replace the placeholders once the GitHub Pages site is live.
 enum AppLinks {
-    /// GitHub username — placeholder, sostituire con quello reale.
-    static let gitHubUser = "tuo-username-github"
-    /// Repository name — placeholder, sostituire con quello reale.
-    static let gitHubRepo = "nome-repo"
+    /// GitHub username.
+    static let gitHubUser = "gourbergnine07-source"
+    /// Repository name.
+    static let gitHubRepo = "rork-mood-e"
 
     /// True once the real GitHub username/repo have been filled in.
     /// While false, legal pages are served from the app bundle.
