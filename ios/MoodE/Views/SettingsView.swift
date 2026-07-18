@@ -188,14 +188,13 @@ struct SettingsView: View {
                 )
             }
 
-            Button {
-                openURL(AppLinks.issuesList)
+            NavigationLink {
+                FAQView()
             } label: {
                 SettingsRow(
                     icon: "questionmark.circle.fill",
                     iconColor: Theme.amber,
-                    title: "Domande frequenti / Issues esistenti",
-                    showsExternalBadge: true
+                    title: "Domande frequenti"
                 )
             }
         } header: {
