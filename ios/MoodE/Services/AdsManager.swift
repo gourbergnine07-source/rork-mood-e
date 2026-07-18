@@ -17,12 +17,11 @@ import AppTrackingTransparency
 final class AdsManager: NSObject, FullScreenContentDelegate {
     static let shared = AdsManager()
 
-    /// Ad Unit ID di TEST Google: sostituire con quelli reali del proprio
-    /// account AdMob SOLO prima della pubblicazione su App Store.
+    /// Ad Unit ID reali dell'account AdMob di Mood-E.
     enum AdUnit {
-        static let banner = "ca-app-pub-3940256099942544/2435281174"
-        static let interstitial = "ca-app-pub-3940256099942544/4411468910"
-        static let rewarded = "ca-app-pub-3940256099942544/1712485313"
+        static let banner = "ca-app-pub-7245682186872516/8638257086"
+        static let interstitial = "ca-app-pub-7245682186872516/4287828396"
+        static let rewarded = "ca-app-pub-7245682186872516/6750460342"
     }
 
     private(set) var isStarted = false
