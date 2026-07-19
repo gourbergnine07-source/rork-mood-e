@@ -250,7 +250,8 @@
   "settings.notif.releases": "Nuevos estrenos para ti",
   "settings.notif.footer2": "Un recordatorio nocturno para el check-in, un aviso amable sobre películas guardadas hace más de 5 días y estrenos acordes a tus emociones recientes. Cada aviso se desactiva por separado.",
 
-  "flow.quick": "Elección rápida: propónme una película ya",
+  "flow.quick": "Elección rápida",
+  "flow.surprise": "Sorpréndeme",
   "flow.quick.hint": "Salta objetivo y época y recibe al instante una propuesta basada solo en tu emoción",
 
   "diary.title": "Mi diario",
@@ -295,6 +296,20 @@
   "badge.collezionista.desc": "30 check-ins en total",
 
   "widget.forYou": "Película para ti",
+
+  "detail.watch": "Dónde verla",
+  "detail.watch.stream": "Streaming",
+  "detail.watch.rent": "Alquiler",
+  "detail.watch.buy": "Compra",
+  "detail.watch.link": "Todas las opciones en TMDB",
+  "detail.watch.justwatch": "Datos de visualización de JustWatch",
+
+  "surprise.title": "Sorpréndeme",
+  "surprise.spinning": "Eligiendo una película para ti…",
+  "surprise.reveal": "¡Aquí está tu película! 🎉",
+  "surprise.details": "Ver ficha",
+  "surprise.again": "Girar otra vez",
+  "surprise.error": "No pude elegir una película. ¡Comprueba la conexión e inténtalo de nuevo!",
 
   "genre.28": "Acción",
   "genre.12": "Aventura",

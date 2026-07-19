@@ -4,12 +4,14 @@
 //
 
 import SwiftUI
+import StoreKit
 
 /// La mia lista tab: local "to watch" and "watched" lists with live updates.
 struct MyListView: View {
     @State private var selectedSection: ListSection = .watchlist
     @State private var trailerPlayback = TrailerPlayback()
     @Environment(MovieLibrary.self) private var library
+    @Environment(\.requestReview) private var requestReview
 
     var body: some View {
         NavigationStack {
@@ -65,6 +67,16 @@ struct MyListView: View {
         }
     }
 
+    /// Asks for an App Store rating right after marking a movie as watched,
+    /// respecting ReviewPrompter's cooldown rules.
+    private func maybeRequestReview() {
+        guard ReviewPrompter.shouldPrompt(lifetimeWatched: library.lifetimeWatchedCount) else { return }
+        Task {
+            try? await Task.sleep(for: .seconds(1.5))
+            requestReview()
+        }
+    }
+
     private var entryList: some View {
         ScrollView {
             LazyVStack(spacing: 14) {
@@ -75,6 +87,7 @@ struct MyListView: View {
                             withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
                                 library.markWatched(entry.id)
                             }
+                            maybeRequestReview()
                         } : nil,
                         onRemove: entry.status == .watched ? {
                             withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {

@@ -250,7 +250,8 @@
   "settings.notif.releases": "New releases for you",
   "settings.notif.footer2": "An evening check-in reminder, a gentle nudge about movies saved more than 5 days ago, and new releases matching your recent moods. Each alert can be switched off individually.",
 
-  "flow.quick": "Quick pick: suggest a movie right away",
+  "flow.quick": "Quick pick",
+  "flow.surprise": "Surprise me",
   "flow.quick.hint": "Skips goal and era and gives you an instant pick based on your mood alone",
 
   "diary.title": "My diary",
@@ -295,6 +296,20 @@
   "badge.collezionista.desc": "30 total check-ins",
 
   "widget.forYou": "Movie for you",
+
+  "detail.watch": "Where to watch",
+  "detail.watch.stream": "Streaming",
+  "detail.watch.rent": "Rent",
+  "detail.watch.buy": "Buy",
+  "detail.watch.link": "All options on TMDB",
+  "detail.watch.justwatch": "Watch data provided by JustWatch",
+
+  "surprise.title": "Surprise me",
+  "surprise.spinning": "Picking a movie for you…",
+  "surprise.reveal": "Here's your movie! 🎉",
+  "surprise.details": "See details",
+  "surprise.again": "Spin again",
+  "surprise.error": "I couldn't pick a movie. Check your connection and try again!",
 
   "genre.28": "Action",
   "genre.12": "Adventure",

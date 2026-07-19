@@ -250,7 +250,8 @@
   "settings.notif.releases": "Nuove uscite per te",
   "settings.notif.footer2": "Promemoria serale per il check-in, un gentile ricordo dei film salvati da più di 5 giorni e le nuove uscite in linea con le tue emozioni recenti. Ogni avviso si disattiva singolarmente.",
 
-  "flow.quick": "Scelta rapida: proponimi subito un film",
+  "flow.quick": "Scelta rapida",
+  "flow.surprise": "Sorprendimi",
   "flow.quick.hint": "Salta obiettivo ed epoca e ottieni subito una proposta basata solo sull'emozione",
 
   "diary.title": "Il mio diario",
@@ -295,6 +296,20 @@
   "badge.collezionista.desc": "30 check-in totali",
 
   "widget.forYou": "Film per te",
+
+  "detail.watch": "Dove guardarlo",
+  "detail.watch.stream": "Streaming",
+  "detail.watch.rent": "Noleggio",
+  "detail.watch.buy": "Acquisto",
+  "detail.watch.link": "Tutte le opzioni su TMDB",
+  "detail.watch.justwatch": "Dati di visione forniti da JustWatch",
+
+  "surprise.title": "Sorprendimi",
+  "surprise.spinning": "Sto pescando un film per te…",
+  "surprise.reveal": "Ecco il tuo film! 🎉",
+  "surprise.details": "Vedi la scheda",
+  "surprise.again": "Gira ancora",
+  "surprise.error": "Non sono riuscito a pescare un film. Controlla la connessione e riprova!",
 
   "genre.28": "Azione",
   "genre.12": "Avventura",

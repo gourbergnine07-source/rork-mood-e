@@ -15,6 +15,7 @@ struct MoodFlowView: View {
     @State private var selectedEra: MovieEra?
 
     @State private var resultSelection: MoodSelection?
+    @State private var showSurprise: Bool = false
 
     private let gridColumns: [GridItem] = [
         GridItem(.flexible(), spacing: 12),
@@ -48,6 +49,9 @@ struct MoodFlowView: View {
         }
         .navigationDestination(item: $resultSelection) { selection in
             MovieResultsView(selection: selection)
+        }
+        .sheet(isPresented: $showSurprise) {
+            SurpriseView()
         }
     }
 
@@ -206,29 +210,55 @@ struct MoodFlowView: View {
             .animation(.easeInOut(duration: 0.2), value: canAdvance)
 
             if step == 0 {
-                Button {
-                    startQuickPick()
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "bolt.fill")
-                            .font(.system(size: 12, weight: .semibold))
-                        Text(L("flow.quick"))
-                            .font(.footnote.weight(.semibold))
+                HStack(spacing: 8) {
+                    Button {
+                        startQuickPick()
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "bolt.fill")
+                                .font(.system(size: 12, weight: .semibold))
+                            Text(L("flow.quick"))
+                                .font(.footnote.weight(.semibold))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                        }
+                        .foregroundStyle(canAdvance ? Theme.amber : Theme.inkSoft.opacity(0.4))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 36)
+                        .background(
+                            Theme.amber.opacity(canAdvance ? 0.12 : 0.05),
+                            in: .rect(cornerRadius: 12)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Theme.amber.opacity(canAdvance ? 0.35 : 0.1), lineWidth: 1)
+                        )
                     }
-                    .foregroundStyle(canAdvance ? Theme.amber : Theme.inkSoft.opacity(0.4))
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 36)
-                    .background(
-                        Theme.amber.opacity(canAdvance ? 0.12 : 0.05),
-                        in: .rect(cornerRadius: 12)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Theme.amber.opacity(canAdvance ? 0.35 : 0.1), lineWidth: 1)
-                    )
+                    .disabled(!canAdvance)
+                    .accessibilityHint(L("flow.quick.hint"))
+
+                    Button {
+                        showSurprise = true
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "dice.fill")
+                                .font(.system(size: 12, weight: .semibold))
+                            Text(L("flow.surprise"))
+                                .font(.footnote.weight(.semibold))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                        }
+                        .foregroundStyle(Theme.rose)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 36)
+                        .background(Theme.rose.opacity(0.12), in: .rect(cornerRadius: 12))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Theme.rose.opacity(0.35), lineWidth: 1)
+                        )
+                    }
+                    .sensoryFeedback(.impact(weight: .light), trigger: showSurprise)
                 }
-                .disabled(!canAdvance)
-                .accessibilityHint(L("flow.quick.hint"))
             }
         }
     }

@@ -18,6 +18,7 @@ nonisolated struct TMDBMovieDetail: Codable {
     let genres: [TMDBGenreInfo]
     let credits: TMDBCredits
     let videos: TMDBVideoList
+    let watchProviders: TMDBWatchProviderResults?
 
     enum CodingKeys: String, CodingKey {
         case id, title, overview, runtime, genres, credits, videos
@@ -25,6 +26,7 @@ nonisolated struct TMDBMovieDetail: Codable {
         case voteAverage = "vote_average"
         case posterPath = "poster_path"
         case backdropPath = "backdrop_path"
+        case watchProviders = "watch/providers"
     }
 
     var releaseYear: String? {
@@ -72,7 +74,8 @@ nonisolated struct TMDBMovieDetail: Codable {
             backdropPath: backdropPath,
             genres: genres,
             credits: credits,
-            videos: videos
+            videos: videos,
+            watchProviders: watchProviders
         )
     }
 }

@@ -148,6 +148,23 @@ enum TMDBService {
         return response.results
     }
 
+    /// Random high-quality movie for the "Sorprendimi" slot machine:
+    /// popular titles rated 7+, excluding horror and already-watched ids.
+    static func surpriseMovie(excluding excluded: Set<Int> = []) async throws -> TMDBMovie? {
+        let queryItems: [URLQueryItem] = [
+            URLQueryItem(name: "sort_by", value: "popularity.desc"),
+            URLQueryItem(name: "vote_average.gte", value: "7"),
+            URLQueryItem(name: "vote_count.gte", value: "1000"),
+            URLQueryItem(name: "include_adult", value: "false"),
+            URLQueryItem(name: "without_genres", value: String(TMDBGenre.horror)),
+            URLQueryItem(name: "page", value: String(Int.random(in: 1...15)))
+        ]
+        let response: TMDBMovieListResponse = try await request(path: "/discover/movie", queryItems: queryItems)
+        let filled = await fillingMissingOverviews(response, path: "/discover/movie", queryItems: queryItems)
+        let fresh = filled.results.filter { !excluded.contains($0.id) }
+        return fresh.randomElement() ?? filled.results.randomElement()
+    }
+
     /// Videos (trailers) only — lightweight call for quick access from result cards.
     /// Requests trailers in the user's language plus English as fallback.
     static func movieVideos(id: Int) async throws -> TMDBVideoList {
@@ -161,7 +178,7 @@ enum TMDBService {
     /// Falls back to the English overview when the localized one is missing.
     static func movieDetail(id: Int) async throws -> TMDBMovieDetail {
         let queryItems = [
-            URLQueryItem(name: "append_to_response", value: "credits,videos"),
+            URLQueryItem(name: "append_to_response", value: "credits,videos,watch/providers"),
             URLQueryItem(name: "include_video_language", value: videoLanguageParam)
         ]
         let detail: TMDBMovieDetail = try await request(path: "/movie/\(id)", queryItems: queryItems)
