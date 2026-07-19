@@ -41,6 +41,10 @@ struct DiaryView: View {
 
                     StreakCard(streak: diary.streak, wasInterrupted: diary.streakWasInterrupted)
 
+                    if !planner.pendingPastScheduled.isEmpty {
+                        pendingBanner
+                    }
+
                     calendarCard
 
                     dayDetail
@@ -150,6 +154,7 @@ struct DiaryView: View {
                         day: day,
                         emoji: diary.moodEmoji(on: day),
                         hasMovie: planner.hasScheduled(on: day),
+                        isPending: planner.hasPendingSchedule(on: day),
                         isSelected: Calendar.current.isDate(day, inSameDayAs: selectedDay),
                         isToday: Calendar.current.isDateInToday(day)
                     ) {
@@ -189,6 +194,7 @@ struct DiaryView: View {
             if let plan = planner.scheduledMovie(on: selectedDay) {
                 ScheduledMovieCard(
                     plan: plan,
+                    isPending: planner.hasPendingSchedule(on: selectedDay),
                     onWatched: { watchedTarget = plan },
                     onMove: { moveTarget = plan },
                     onRemove: { removePlan(plan) }
@@ -242,6 +248,51 @@ struct DiaryView: View {
             RoundedRectangle(cornerRadius: 20)
                 .stroke(Theme.primary.opacity(0.10), lineWidth: 1)
         )
+    }
+
+    // MARK: - Pending banner
+
+    /// Tappable notice listing how many past plans still need to be marked
+    /// as watched; tapping jumps the calendar to the oldest one.
+    private var pendingBanner: some View {
+        let pending = planner.pendingPastScheduled
+        return Button {
+            guard let oldest = pending.first else { return }
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                displayedMonth = Calendar.current.startOfMonth(for: oldest.day)
+                selectedDay = oldest.day
+            }
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "bell.badge.fill")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(Theme.amber)
+                    .symbolRenderingMode(.hierarchical)
+
+                Text(
+                    pending.count == 1
+                        ? L("planner.pending.one")
+                        : LF("planner.pending.many", pending.count)
+                )
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Theme.ink)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Theme.amber)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(Theme.amber.opacity(0.12), in: .rect(cornerRadius: 16))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Theme.amber.opacity(0.35), lineWidth: 1)
+            )
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .transition(.opacity.combined(with: .move(edge: .top)))
     }
 
     private func removePlan(_ plan: ScheduledMovie) {
@@ -380,11 +431,13 @@ enum DiaryRoute: Hashable {
 }
 
 /// Single day cell: number, mood emoji marker for check-ins, and a small
-/// clapper marker when a movie is planned. Both can coexist.
+/// clapper marker when a movie is planned. Both can coexist. A small amber
+/// badge appears on past days whose movie was never marked as watched.
 private struct DiaryDayCell: View {
     let day: Date
     let emoji: String?
     let hasMovie: Bool
+    let isPending: Bool
     let isSelected: Bool
     let isToday: Bool
     let onTap: () -> Void
@@ -423,6 +476,19 @@ private struct DiaryDayCell: View {
                 RoundedRectangle(cornerRadius: 10)
                     .stroke(isSelected ? Theme.primary.opacity(0.5) : .clear, lineWidth: 1.5)
             )
+            .overlay(alignment: .topTrailing) {
+                if isPending {
+                    Circle()
+                        .fill(Theme.amber)
+                        .frame(width: 8, height: 8)
+                        .overlay(
+                            Circle().stroke(Theme.card, lineWidth: 1.5)
+                        )
+                        .padding(4)
+                        .transition(.scale.combined(with: .opacity))
+                        .accessibilityLabel(L("planner.pending.one"))
+                }
+            }
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
@@ -433,6 +499,7 @@ private struct DiaryDayCell: View {
 /// actions (watched → memory form, move to another day, remove).
 private struct ScheduledMovieCard: View {
     let plan: ScheduledMovie
+    let isPending: Bool
     let onWatched: () -> Void
     let onMove: () -> Void
     let onRemove: () -> Void
@@ -442,6 +509,21 @@ private struct ScheduledMovieCard: View {
             Label(L("planner.scheduled"), systemImage: "movieclapper")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(Theme.rose)
+
+            if isPending {
+                HStack(spacing: 6) {
+                    Image(systemName: "bell.badge.fill")
+                        .font(.system(size: 11, weight: .semibold))
+                        .symbolRenderingMode(.hierarchical)
+                    Text(L("planner.pendingHint"))
+                        .font(.caption.weight(.semibold))
+                }
+                .foregroundStyle(Theme.amber)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Theme.amber.opacity(0.12), in: .rect(cornerRadius: 9))
+            }
 
             HStack(spacing: 10) {
                 poster

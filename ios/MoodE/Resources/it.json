@@ -292,6 +292,9 @@
   "planner.remove": "Rimuovi",
   "planner.move.title": "Scegli il nuovo giorno",
   "planner.move.confirm": "Sposta qui",
+  "planner.pending.one": "1 film programmato da segnare come visto",
+  "planner.pending.many": "%d film programmati da segnare come visti",
+  "planner.pendingHint": "Questo giorno è passato: l'hai visto?",
 
   "watched.title": "Com'è stato?",
   "watched.ratingHint": "La tua valutazione",

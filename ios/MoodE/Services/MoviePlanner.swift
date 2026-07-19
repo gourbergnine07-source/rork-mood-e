@@ -57,6 +57,22 @@ final class MoviePlanner {
         scheduledMovie(on: day) != nil
     }
 
+    /// Plans whose day is already past and were never marked as watched,
+    /// oldest first — they still need an outcome (watched or removed).
+    var pendingPastScheduled: [ScheduledMovie] {
+        let today = Calendar.current.startOfDay(for: Date())
+        return scheduled
+            .filter { $0.day < today }
+            .sorted { $0.day < $1.day }
+    }
+
+    /// True when the movie planned on `day` is in the past and still
+    /// waiting to be marked as watched.
+    func hasPendingSchedule(on day: Date) -> Bool {
+        guard let plan = scheduledMovie(on: day) else { return false }
+        return plan.day < Calendar.current.startOfDay(for: Date())
+    }
+
     /// Memories newest first, for "I miei ricordi cinematografici".
     var sortedMemories: [MovieMemory] {
         memories.sorted { $0.watchedDate > $1.watchedDate }

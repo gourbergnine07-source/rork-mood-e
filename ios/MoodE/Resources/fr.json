@@ -292,6 +292,9 @@
   "planner.remove": "Retirer",
   "planner.move.title": "Choisis le nouveau jour",
   "planner.move.confirm": "Déplacer ici",
+  "planner.pending.one": "1 film prévu à marquer comme vu",
+  "planner.pending.many": "%d films prévus à marquer comme vus",
+  "planner.pendingHint": "Ce jour est passé : tu l'as vu ?",
 
   "watched.title": "C'était comment ?",
   "watched.ratingHint": "Ta note",

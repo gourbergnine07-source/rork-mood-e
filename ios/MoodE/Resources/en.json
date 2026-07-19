@@ -292,6 +292,9 @@
   "planner.remove": "Remove",
   "planner.move.title": "Pick the new day",
   "planner.move.confirm": "Move here",
+  "planner.pending.one": "1 planned movie to mark as watched",
+  "planner.pending.many": "%d planned movies to mark as watched",
+  "planner.pendingHint": "This day has passed — did you watch it?",
 
   "watched.title": "How was it?",
   "watched.ratingHint": "Your rating",
