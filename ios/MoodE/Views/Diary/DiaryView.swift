@@ -13,6 +13,7 @@ struct DiaryView: View {
     @State private var displayedMonth: Date = Calendar.current.startOfMonth(for: Date())
     @State private var selectedDay: Date = Calendar.current.startOfDay(for: Date())
     @State private var recap: WeeklyRecap?
+    @State private var noteTarget: MoodCheckIn?
 
     var body: some View {
         ZStack {
@@ -50,6 +51,9 @@ struct DiaryView: View {
         .toolbarTitleDisplayMode(.inline)
         .task {
             recap = diary.pendingWeeklyRecap(watched: library.watched)
+        }
+        .sheet(item: $noteTarget) { checkIn in
+            CheckInNoteEditor(checkIn: checkIn)
         }
     }
 
@@ -159,7 +163,9 @@ struct DiaryView: View {
             }
 
             ForEach(checkIns) { checkIn in
-                DiaryCheckInRow(checkIn: checkIn)
+                DiaryCheckInRow(checkIn: checkIn) {
+                    noteTarget = checkIn
+                }
             }
 
             if !watchedThatDay.isEmpty {
@@ -317,9 +323,11 @@ private struct DiaryDayCell: View {
     }
 }
 
-/// One check-in inside the day detail: mood, goal and proposed movies.
+/// One check-in inside the day detail: mood, goal, proposed movies and
+/// the optional personal note with its add/edit button.
 private struct DiaryCheckInRow: View {
     let checkIn: MoodCheckIn
+    let onEditNote: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -356,6 +364,34 @@ private struct DiaryCheckInRow: View {
                     .foregroundStyle(Theme.inkSoft)
                     .lineLimit(2)
             }
+
+            if let note = checkIn.note {
+                HStack(alignment: .top, spacing: 6) {
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(Theme.primary.opacity(0.45))
+                        .frame(width: 3)
+                    Text(note)
+                        .font(.footnote.italic())
+                        .foregroundStyle(Theme.ink.opacity(0.85))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .padding(.top, 2)
+            }
+
+            Button(action: onEditNote) {
+                HStack(spacing: 5) {
+                    Image(systemName: checkIn.note == nil ? "square.and.pencil" : "pencil")
+                        .font(.system(size: 11, weight: .semibold))
+                    Text(checkIn.note == nil ? L("diary.note.add") : L("diary.note.edit"))
+                        .font(.caption.weight(.semibold))
+                }
+                .foregroundStyle(Theme.primary)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(Theme.primary.opacity(0.10), in: .capsule)
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 2)
         }
         .padding(10)
         .background(Theme.surface.opacity(0.6), in: .rect(cornerRadius: 12))
@@ -465,6 +501,93 @@ private struct WeeklyRecapCard: View {
             }
         }
         return text
+    }
+}
+
+/// Small sheet to write or edit the personal note of a check-in.
+private struct CheckInNoteEditor: View {
+    let checkIn: MoodCheckIn
+
+    @Environment(MoodDiary.self) private var diary
+    @Environment(\.dismiss) private var dismiss
+    @State private var text: String = ""
+    @State private var didSave: Bool = false
+    @FocusState private var isFocused: Bool
+
+    private static let maxLength = 180
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Theme.background.ignoresSafeArea()
+
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(spacing: 8) {
+                        Text(checkIn.mood?.emoji ?? "🎬")
+                            .font(.system(size: 24))
+                        Text(checkIn.mood?.title ?? "—")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Theme.ink)
+                        Spacer()
+                        Text("\(text.count)/\(Self.maxLength)")
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(text.count >= Self.maxLength ? Theme.rose : Theme.inkSoft)
+                            .monospacedDigit()
+                            .contentTransition(.numericText())
+                    }
+
+                    TextField(L("diary.note.placeholder"), text: $text, axis: .vertical)
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.ink)
+                        .lineLimit(4...7)
+                        .focused($isFocused)
+                        .padding(12)
+                        .background(Theme.card, in: .rect(cornerRadius: 14))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14)
+                                .stroke(Theme.primary.opacity(0.18), lineWidth: 1)
+                        )
+                        .onChange(of: text) { _, newValue in
+                            if newValue.count > Self.maxLength {
+                                text = String(newValue.prefix(Self.maxLength))
+                            }
+                        }
+
+                    Button {
+                        diary.setNote(text, for: checkIn.id)
+                        didSave.toggle()
+                        dismiss()
+                    } label: {
+                        Text(L("diary.note.save"))
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 48)
+                            .background(Theme.primary, in: .rect(cornerRadius: 14))
+                    }
+                    .sensoryFeedback(.success, trigger: didSave)
+
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
+            }
+            .navigationTitle(L("diary.note.title"))
+            .toolbarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button(L("common.cancel")) { dismiss() }
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.inkSoft)
+                }
+            }
+        }
+        .presentationDetents([.height(320), .medium])
+        .presentationDragIndicator(.visible)
+        .onAppear {
+            text = checkIn.note ?? ""
+            isFocused = true
+        }
     }
 }
 

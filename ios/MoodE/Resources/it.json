@@ -272,6 +272,11 @@
   "diary.recap.mood": "Questa settimana sei stato soprattutto %@ %@, con %d check-in.",
   "diary.recap.watched": "Hai guardato %d film.",
   "diary.recap.favorite": "Tra questi: «%@».",
+  "diary.note.add": "Aggiungi nota",
+  "diary.note.edit": "Modifica nota",
+  "diary.note.title": "La tua nota",
+  "diary.note.placeholder": "Com'è andata? Scrivi due righe sul tuo umore…",
+  "diary.note.save": "Salva",
 
   "badges.title": "I miei traguardi",
   "badges.subtitle": "Piccoli traguardi personali, senza classifiche: sono solo per te.",

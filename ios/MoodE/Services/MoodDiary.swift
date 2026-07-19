@@ -138,6 +138,14 @@ final class MoodDiary {
         publishWidgetSnapshot()
     }
 
+    /// Sets, edits or clears (empty text → nil) the personal note of a check-in.
+    func setNote(_ note: String, for id: UUID) {
+        guard let index = checkIns.firstIndex(where: { $0.id == id }) else { return }
+        let trimmed = note.trimmingCharacters(in: .whitespacesAndNewlines)
+        checkIns[index].note = trimmed.isEmpty ? nil : trimmed
+        persist()
+    }
+
     private func persist() {
         do {
             let data = try JSONEncoder().encode(checkIns)

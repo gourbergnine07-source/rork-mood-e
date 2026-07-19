@@ -28,6 +28,9 @@ nonisolated struct MoodCheckIn: Codable, Identifiable {
     let eraRaw: String
     let isQuickPick: Bool
     var proposed: [ProposedMovie]
+    /// Optional short personal note ("why I felt this way"), added from the diary.
+    /// Optional so older saved check-ins keep decoding fine.
+    var note: String?
 }
 
 /// UI accessors (main-actor: they resolve localized enum cases).

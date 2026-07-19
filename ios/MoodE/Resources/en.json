@@ -272,6 +272,11 @@
   "diary.recap.mood": "This week you mostly felt %@ %@, with %d check-ins.",
   "diary.recap.watched": "You watched %d movies.",
   "diary.recap.favorite": "Among them: \"%@\".",
+  "diary.note.add": "Add note",
+  "diary.note.edit": "Edit note",
+  "diary.note.title": "Your note",
+  "diary.note.placeholder": "How did it go? Write a few words about your mood…",
+  "diary.note.save": "Save",
 
   "badges.title": "My milestones",
   "badges.subtitle": "Small personal milestones, no leaderboards: they're just for you.",
