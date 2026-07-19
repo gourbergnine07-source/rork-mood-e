@@ -362,20 +362,27 @@ final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification
     ) async -> UNNotificationPresentationOptions {
-        [.banner, .sound]
+        let record = NotificationHistory.payload(from: notification)
+        await MainActor.run {
+            NotificationHistory.shared.add(record)
+        }
+        return [.banner, .sound]
     }
 
     nonisolated func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse
     ) async {
-        let userInfo = response.notification.request.content.userInfo
-        guard let route = userInfo["route"] as? String else { return }
+        let record = NotificationHistory.payload(from: response.notification, isRead: true)
+        let route = response.notification.request.content.userInfo["route"] as? String
         await MainActor.run {
-            NotificationCenter.default.post(
-                name: NotificationRoute.notificationName,
-                object: route
-            )
+            NotificationHistory.shared.add(record)
+            if let route {
+                NotificationCenter.default.post(
+                    name: NotificationRoute.notificationName,
+                    object: route
+                )
+            }
         }
     }
 }

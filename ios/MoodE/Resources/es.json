@@ -311,6 +311,11 @@
   "surprise.again": "Girar otra vez",
   "surprise.error": "No pude elegir una película. ¡Comprueba la conexión e inténtalo de nuevo!",
 
+  "inbox.title": "Notificaciones",
+  "inbox.empty.title": "Sin notificaciones",
+  "inbox.empty.msg": "Las notificaciones de Mood-E que recibas se guardarán aquí para que puedas releerlas cuando quieras.",
+  "inbox.clear": "Borrar todo",
+
   "genre.28": "Acción",
   "genre.12": "Aventura",
   "genre.16": "Animación",

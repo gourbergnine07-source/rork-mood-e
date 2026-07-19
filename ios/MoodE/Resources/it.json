@@ -311,6 +311,11 @@
   "surprise.again": "Gira ancora",
   "surprise.error": "Non sono riuscito a pescare un film. Controlla la connessione e riprova!",
 
+  "inbox.title": "Notifiche",
+  "inbox.empty.title": "Nessuna notifica",
+  "inbox.empty.msg": "Le notifiche di Mood-E che ricevi verranno salvate qui, così puoi rileggerle quando vuoi.",
+  "inbox.clear": "Cancella tutto",
+
   "genre.28": "Azione",
   "genre.12": "Avventura",
   "genre.16": "Animazione",

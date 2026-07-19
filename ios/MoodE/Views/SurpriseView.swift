@@ -110,7 +110,13 @@ struct SurpriseView: View {
                     .foregroundStyle(Theme.ink)
 
                 if let movie {
-                    posterCard(movie)
+                    Button {
+                        detailMovie = movie
+                    } label: {
+                        posterCard(movie)
+                    }
+                    .buttonStyle(PressableCardStyle())
+                    .accessibilityLabel(L("surprise.details"))
 
                     VStack(spacing: 6) {
                         Text(movie.title)
@@ -287,6 +293,13 @@ struct SurpriseView: View {
                 phase = .failed
             }
         }
+
+        // Auto-open the movie detail shortly after the reveal so the user
+        // doesn't have to look for it. Going back returns to the reveal card.
+        guard let revealed = result, phase == .revealed else { return }
+        try? await Task.sleep(for: .seconds(1.2))
+        guard !Task.isCancelled, phase == .revealed, detailMovie == nil else { return }
+        detailMovie = revealed
     }
 }
 

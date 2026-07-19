@@ -9,6 +9,7 @@ import SwiftUI
 /// plus quick access to the emotional diary and the current streak.
 struct HomeView: View {
     @Environment(MoodDiary.self) private var diary
+    private let history = NotificationHistory.shared
 
     var body: some View {
         NavigationStack {
@@ -40,6 +41,17 @@ struct HomeView: View {
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
+                    NavigationLink(value: HomeRoute.notifications) {
+                        Image(systemName: history.unreadCount > 0 ? "bell.badge" : "bell")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(history.unreadCount > 0 ? Theme.rose : Theme.primary, Theme.primary)
+                            .symbolRenderingMode(.palette)
+                            .contentTransition(.symbolEffect(.replace))
+                    }
+                    .accessibilityLabel(L("inbox.title"))
+                }
+
+                ToolbarItem(placement: .topBarTrailing) {
                     NavigationLink(value: HomeRoute.diary) {
                         Image(systemName: "calendar")
                             .font(.system(size: 15, weight: .semibold))
@@ -51,6 +63,7 @@ struct HomeView: View {
             .navigationDestination(for: HomeRoute.self) { route in
                 switch route {
                 case .diary: DiaryView()
+                case .notifications: NotificationInboxView()
                 }
             }
             .navigationDestination(for: DiaryRoute.self) { route in
@@ -66,6 +79,7 @@ struct HomeView: View {
 /// Navigation destinations reachable from the Home tab root.
 enum HomeRoute: Hashable {
     case diary
+    case notifications
 }
 
 #Preview {

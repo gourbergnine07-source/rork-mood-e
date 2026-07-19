@@ -311,6 +311,11 @@
   "surprise.again": "Spin again",
   "surprise.error": "I couldn't pick a movie. Check your connection and try again!",
 
+  "inbox.title": "Notifications",
+  "inbox.empty.title": "No notifications",
+  "inbox.empty.msg": "Mood-E notifications you receive are saved here, so you can read them again anytime.",
+  "inbox.clear": "Clear all",
+
   "genre.28": "Action",
   "genre.12": "Adventure",
   "genre.16": "Animation",

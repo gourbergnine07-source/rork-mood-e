@@ -311,6 +311,11 @@
   "surprise.again": "Relance",
   "surprise.error": "Je n'ai pas réussi à piocher un film. Vérifie ta connexion et réessaie !",
 
+  "inbox.title": "Notifications",
+  "inbox.empty.title": "Aucune notification",
+  "inbox.empty.msg": "Les notifications de Mood-E que tu reçois sont enregistrées ici, pour les relire quand tu veux.",
+  "inbox.clear": "Tout effacer",
+
   "genre.28": "Action",
   "genre.12": "Aventure",
   "genre.16": "Animation",

@@ -31,6 +31,7 @@ struct MoodEApp: App {
                     guard newPhase == .active else { return }
                     Task {
                         await notifications.refreshAuthorizationStatus()
+                        await NotificationHistory.shared.syncDelivered()
                         await notifications.refreshSchedules(
                             toWatch: library.toWatch,
                             topGenres: diary.topGenreIds
