@@ -8,6 +8,11 @@
       "settings": {
         "displayName": "Mood-E"
       }
+    },
+    {
+      "name": "Functions",
+      "path": "functions",
+      "framework": "cloudflare"
     }
   ]
 }

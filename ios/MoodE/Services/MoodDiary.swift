@@ -11,6 +11,7 @@ import WidgetKit
 enum Badge: String, CaseIterable, Identifiable {
     case primoPasso, primaSettimana, esploratore, cinefilo
     case nottambulo, mattiniero, fiammaViva, collezionista
+    case buonConsigliere, parteDellaCommunity
 
     var id: String { rawValue }
 
@@ -27,6 +28,8 @@ enum Badge: String, CaseIterable, Identifiable {
         case .mattiniero: return "🌅"
         case .fiammaViva: return "🔥"
         case .collezionista: return "🏆"
+        case .buonConsigliere: return "🤝"
+        case .parteDellaCommunity: return "💬"
         }
     }
 
@@ -41,6 +44,8 @@ enum Badge: String, CaseIterable, Identifiable {
         case .mattiniero: return stats.morningCheckIns >= 5
         case .fiammaViva: return stats.bestStreak >= 7
         case .collezionista: return stats.checkInCount >= 30
+        case .buonConsigliere: return stats.helpfulGiven >= 5
+        case .parteDellaCommunity: return stats.requestsPublished >= 1
         }
     }
 
@@ -56,6 +61,8 @@ enum Badge: String, CaseIterable, Identifiable {
         case .mattiniero: ratio = Double(stats.morningCheckIns) / 5
         case .fiammaViva: ratio = Double(stats.bestStreak) / 7
         case .collezionista: ratio = Double(stats.checkInCount) / 30
+        case .buonConsigliere: ratio = Double(stats.helpfulGiven) / 5
+        case .parteDellaCommunity: ratio = Double(stats.requestsPublished) / 1
         }
         return min(ratio, 1)
     }
@@ -69,6 +76,10 @@ struct DiaryStats {
     let nightCheckIns: Int
     let morningCheckIns: Int
     let bestStreak: Int
+    /// Replies given on the community board that were marked as helpful.
+    let helpfulGiven: Int
+    /// Advice requests published on the community board.
+    let requestsPublished: Int
 }
 
 /// Summary of the previous week, shown once at the start of a new week.
@@ -92,6 +103,11 @@ final class MoodDiary {
     private static let checkInsKey = "diary.checkIns"
     private static let genreAffinityKey = "diary.genreAffinity"
     private static let lastRecapWeekKey = "diary.lastRecapWeek"
+    private static let communityDaysKey = "diary.communityDays"
+
+    /// Days with at least one community action (asking or giving advice):
+    /// they count toward the streak exactly like emotional check-ins.
+    private(set) var communityDays: Set<Date>
 
     private let defaults = UserDefaults.standard
 
@@ -101,6 +117,22 @@ final class MoodDiary {
             checkIns = stored.sorted { $0.date > $1.date }
         } else {
             checkIns = []
+        }
+        if let data = UserDefaults.standard.data(forKey: Self.communityDaysKey),
+           let stored = try? JSONDecoder().decode([Date].self, from: data) {
+            communityDays = Set(stored)
+        } else {
+            communityDays = []
+        }
+    }
+
+    /// Records today as a community-action day (ask/give advice) for the streak.
+    func recordCommunityAction() {
+        let today = Calendar.current.startOfDay(for: Date())
+        guard !communityDays.contains(today) else { return }
+        communityDays.insert(today)
+        if let data = try? JSONEncoder().encode(Array(communityDays)) {
+            defaults.set(data, forKey: Self.communityDaysKey)
         }
     }
 
@@ -173,7 +205,8 @@ final class MoodDiary {
     /// Consecutive days (ending today or yesterday) with at least one check-in.
     var streak: Int {
         let calendar = Calendar.current
-        let days = Set(checkIns.map { calendar.startOfDay(for: $0.date) })
+        var days = Set(checkIns.map { calendar.startOfDay(for: $0.date) })
+        days.formUnion(communityDays.map { calendar.startOfDay(for: $0) })
         guard !days.isEmpty else { return 0 }
 
         var day = calendar.startOfDay(for: Date())
@@ -195,7 +228,9 @@ final class MoodDiary {
     /// Longest streak ever, for the "Fiamma viva" badge.
     var bestStreak: Int {
         let calendar = Calendar.current
-        let days = Set(checkIns.map { calendar.startOfDay(for: $0.date) }).sorted()
+        var daySet = Set(checkIns.map { calendar.startOfDay(for: $0.date) })
+        daySet.formUnion(communityDays.map { calendar.startOfDay(for: $0) })
+        let days = daySet.sorted()
         guard !days.isEmpty else { return 0 }
 
         var best = 1
@@ -215,7 +250,22 @@ final class MoodDiary {
     /// True when a previous streak just ended: used for the gentle,
     /// guilt-free "restart whenever you like" message.
     var streakWasInterrupted: Bool {
-        streak == 0 && !checkIns.isEmpty
+        streak == 0 && !(checkIns.isEmpty && communityDays.isEmpty)
+    }
+
+    /// Most frequent mood of the last 30 days, used for the community
+    /// "people feel like you" daily notification. Nil with no history.
+    var topMood: Mood? {
+        let calendar = Calendar.current
+        guard let monthAgo = calendar.date(byAdding: .day, value: -30, to: Date()) else { return nil }
+        let recent = checkIns.filter { $0.date >= monthAgo }
+        guard !recent.isEmpty else { return nil }
+        var counts: [String: Int] = [:]
+        for checkIn in recent {
+            counts[checkIn.moodRaw, default: 0] += 1
+        }
+        guard let top = counts.max(by: { $0.value < $1.value })?.key else { return nil }
+        return Mood(rawValue: top)
     }
 
     // MARK: - Stats & badges
@@ -229,7 +279,9 @@ final class MoodDiary {
             watchedTotal: watchedTotal,
             nightCheckIns: hours.filter { $0 >= 22 || $0 < 4 }.count,
             morningCheckIns: hours.filter { $0 >= 5 && $0 < 9 }.count,
-            bestStreak: bestStreak
+            bestStreak: bestStreak,
+            helpfulGiven: defaults.integer(forKey: CommunityService.helpfulReceivedKey),
+            requestsPublished: defaults.integer(forKey: CommunityService.requestsPublishedKey)
         )
     }
 

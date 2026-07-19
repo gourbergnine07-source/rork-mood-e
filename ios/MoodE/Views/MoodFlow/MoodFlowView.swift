@@ -7,8 +7,10 @@ import SwiftUI
 
 /// Guided 3-step flow: emotion → goal → era, with animated transitions.
 struct MoodFlowView: View {
+    @Environment(MoodDiary.self) private var diary
     @State private var step: Int = 0
     @State private var isMovingForward: Bool = true
+    @State private var showQuickPickHint: Bool = false
 
     @State private var selectedMood: Mood?
     @State private var selectedGoal: ViewingGoal?
@@ -52,6 +54,11 @@ struct MoodFlowView: View {
         }
         .sheet(isPresented: $showSurprise) {
             SurpriseView()
+        }
+        .alert(L("flow.quick.alert.title"), isPresented: $showQuickPickHint) {
+            Button(L("common.ok"), role: .cancel) {}
+        } message: {
+            Text(L("flow.quick.alert.msg"))
         }
     }
 
@@ -223,19 +230,15 @@ struct MoodFlowView: View {
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.8)
                         }
-                        .foregroundStyle(canAdvance ? Theme.amber : Theme.inkSoft.opacity(0.4))
+                        .foregroundStyle(Theme.amber)
                         .frame(maxWidth: .infinity)
                         .frame(height: 36)
-                        .background(
-                            Theme.amber.opacity(canAdvance ? 0.12 : 0.05),
-                            in: .rect(cornerRadius: 12)
-                        )
+                        .background(Theme.amber.opacity(0.12), in: .rect(cornerRadius: 12))
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
-                                .stroke(Theme.amber.opacity(canAdvance ? 0.35 : 0.1), lineWidth: 1)
+                                .stroke(Theme.amber.opacity(0.35), lineWidth: 1)
                         )
                     }
-                    .disabled(!canAdvance)
                     .accessibilityHint(L("flow.quick.hint"))
 
                     Button {
@@ -295,8 +298,13 @@ struct MoodFlowView: View {
     }
 
     /// One-tap mode: skips goal and era, deriving them from the mood alone.
+    /// Works even without a selected card: falls back to today's check-in
+    /// mood, then to the most frequent recent mood from the diary.
     private func startQuickPick() {
-        guard let mood = selectedMood else { return }
+        guard let mood = selectedMood ?? inferredQuickPickMood else {
+            showQuickPickHint = true
+            return
+        }
         let selection = MoodSelection(
             mood: mood,
             goal: mood.quickPickGoal,
@@ -306,6 +314,20 @@ struct MoodFlowView: View {
         AdsManager.shared.showSearchInterstitialIfDue {
             resultSelection = selection
         }
+    }
+
+    /// Mood inferred from the diary when none is selected on screen.
+    private var inferredQuickPickMood: Mood? {
+        let calendar = Calendar.current
+        if let today = diary.checkIns.first(where: { calendar.isDate($0.date, inSameDayAs: Date()) })?.mood {
+            return today
+        }
+        var counts: [String: Int] = [:]
+        for checkIn in diary.checkIns.prefix(60) {
+            counts[checkIn.moodRaw, default: 0] += 1
+        }
+        guard let top = counts.max(by: { $0.value < $1.value })?.key else { return nil }
+        return Mood(rawValue: top)
     }
 
     private func goBack() {

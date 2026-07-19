@@ -5,10 +5,18 @@
 
 import SwiftUI
 
-/// Tendenze tab: trending movies from TMDB with a week/day selector.
+/// Sections hosted by the Tendenze tab.
+enum TrendTabSection: Hashable {
+    case trending
+    case advice
+}
+
+/// Tendenze tab: trending movies from TMDB with a week/day selector,
+/// plus the community "Consigli" board.
 struct TrendingView: View {
     @State private var viewModel = TrendingViewModel()
     @State private var trailerPlayback = TrailerPlayback()
+    @State private var section: TrendTabSection = .trending
     @Environment(MovieLibrary.self) private var library
     @Environment(\.scenePhase) private var scenePhase
 
@@ -21,17 +29,36 @@ struct TrendingView: View {
         NavigationStack {
             ZStack {
                 Theme.background.ignoresSafeArea()
-                content
+                VStack(spacing: 0) {
+                    sectionSelector
+                        .padding(.horizontal, 24)
+                        .padding(.top, 4)
+                        .padding(.bottom, 8)
+
+                    switch section {
+                    case .trending: content
+                    case .advice: AdviceBoardView()
+                    }
+                }
             }
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 AdBannerView()
             }
-            .navigationTitle(L("tab.trending"))
+            .navigationTitle(section == .advice ? L("advice.title") : L("tab.trending"))
             .toolbarTitleDisplayMode(.large)
             .navigationDestination(for: TMDBMovie.self) { movie in
                 MovieDetailView(movie: movie)
             }
+            .navigationDestination(for: AdviceRequest.self) { request in
+                AdviceDetailView(request: request)
+            }
             .trailerPlayer(trailerPlayback)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NotificationRoute.notificationName)) { note in
+            guard let route = note.object as? String, route == NotificationRoute.community else { return }
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                section = .advice
+            }
         }
         .tint(Theme.tabTrending)
         .task {
@@ -46,6 +73,34 @@ struct TrendingView: View {
         .onChange(of: LocalizationManager.shared.language) { _, _ in
             // Language switch: refetch trending data localized in the new language.
             Task { await viewModel.reloadForLanguage() }
+        }
+    }
+
+    // MARK: - Section selector
+
+    private var sectionSelector: some View {
+        HStack(spacing: 8) {
+            WindowSelectorChip(
+                label: L("tab.trending"),
+                icon: "flame.fill",
+                isSelected: section == .trending
+            ) {
+                guard section != .trending else { return }
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                    section = .trending
+                }
+            }
+            WindowSelectorChip(
+                label: L("advice.title"),
+                icon: "bubble.left.and.bubble.right.fill",
+                isSelected: section == .advice
+            ) {
+                guard section != .advice else { return }
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                    section = .advice
+                }
+            }
+            Spacer(minLength: 0)
         }
     }
 

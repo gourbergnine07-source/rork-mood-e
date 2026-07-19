@@ -41,6 +41,7 @@ struct SettingsView: View {
     @Environment(MoodDiary.self) private var diary
     @State private var showPermissionAlert = false
     @State private var showOnboarding = false
+    @State private var nicknameRefreshTrigger = false
     @AppStorage("onboarding.completed") private var hasCompletedOnboarding: Bool = true
     private var theme: ThemeManager { ThemeManager.shared }
 
@@ -54,6 +55,7 @@ struct SettingsView: View {
             List {
                 appInfoSection
                 journeySection
+                communitySection
                 appearanceSection
                 languageSection
                 notificationsSection
@@ -283,6 +285,74 @@ struct SettingsView: View {
         .listRowBackground(Theme.card)
     }
 
+    // MARK: - Community
+
+    private var communitySection: some View {
+        Section {
+            HStack(spacing: 12) {
+                Image(systemName: "person.crop.circle.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 29, height: 29)
+                    .background(Theme.tabTrending, in: .rect(cornerRadius: 7))
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(L("settings.community.nickname"))
+                        .font(.body)
+                        .foregroundStyle(Theme.ink)
+                    Text(CommunityService.shared.nickname)
+                        .font(.caption)
+                        .foregroundStyle(Theme.inkSoft)
+                }
+
+                Spacer()
+
+                Button {
+                    CommunityService.shared.regenerateNickname()
+                    nicknameRefreshTrigger.toggle()
+                } label: {
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Theme.tabTrending)
+                        .frame(width: 32, height: 32)
+                        .background(Theme.tabTrending.opacity(0.12), in: .circle)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(L("settings.community.regenerate"))
+                .sensoryFeedback(.impact(weight: .light), trigger: nicknameRefreshTrigger)
+            }
+
+            HStack(spacing: 12) {
+                Image(systemName: "hand.thumbsup.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 29, height: 29)
+                    .background(Theme.seenGreen, in: .rect(cornerRadius: 7))
+
+                Text(L("settings.community.helpful"))
+                    .font(.body)
+                    .foregroundStyle(Theme.ink)
+
+                Spacer()
+
+                Text("\(CommunityService.shared.profile.helpfulReceived)")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(Theme.inkSoft)
+                    .monospacedDigit()
+            }
+        } header: {
+            Text(L("settings.community.header"))
+        } footer: {
+            Text(L("settings.community.footer"))
+                .font(.footnote)
+                .foregroundStyle(Theme.inkSoft)
+        }
+        .listRowBackground(Theme.card)
+        .task {
+            await CommunityService.shared.refreshProfile()
+        }
+    }
+
     // MARK: - Notifiche
 
     private var notificationsBinding: Binding<Bool> {
@@ -345,6 +415,13 @@ struct SettingsView: View {
         )
     }
 
+    private var communityNotifBinding: Binding<Bool> {
+        Binding(
+            get: { notifications.communityEnabled },
+            set: { notifications.setCommunityEnabled($0) }
+        )
+    }
+
     private var notificationsSection: some View {
         Section {
             Toggle(isOn: notificationsBinding) {
@@ -394,6 +471,15 @@ struct SettingsView: View {
                         icon: "sparkles",
                         iconColor: Theme.amber,
                         title: L("settings.notif.releases")
+                    )
+                }
+                .tint(Theme.tabSettings)
+
+                Toggle(isOn: communityNotifBinding) {
+                    SettingsRow(
+                        icon: "bubble.left.and.bubble.right.fill",
+                        iconColor: Theme.tabTrending,
+                        title: L("settings.notif.community")
                     )
                 }
                 .tint(Theme.tabSettings)

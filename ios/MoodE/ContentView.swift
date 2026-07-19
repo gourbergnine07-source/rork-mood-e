@@ -63,6 +63,7 @@ struct ContentView: View {
             guard let route = note.object as? String else { return }
             switch route {
             case NotificationRoute.moodFlow: selectedTab = 0
+            case NotificationRoute.community: selectedTab = 1
             case NotificationRoute.watchlist: selectedTab = 3
             default: break
             }

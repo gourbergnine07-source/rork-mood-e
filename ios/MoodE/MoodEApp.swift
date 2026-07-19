@@ -39,6 +39,10 @@ struct MoodEApp: App {
                             topGenres: diary.topGenreIds,
                             scheduled: planner.scheduled
                         )
+                        await CommunityService.shared.checkActivity(
+                            notifications: notifications,
+                            topMood: diary.topMood
+                        )
                     }
                 }
         }

@@ -12,6 +12,7 @@ enum NotificationRoute {
     static let notificationName = Notification.Name("moodE.notificationRoute")
     static let moodFlow = "moodflow"
     static let watchlist = "watchlist"
+    static let community = "community"
 }
 
 /// Manages every local notification of Mood-E:
@@ -32,6 +33,7 @@ final class NotificationService {
     private(set) var eveningEnabled: Bool
     private(set) var watchlistEnabled: Bool
     private(set) var releasesEnabled: Bool
+    private(set) var communityEnabled: Bool
 
     /// Evening reminder time (persisted, default 20:00).
     private(set) var eveningHour: Int
@@ -43,6 +45,8 @@ final class NotificationService {
     private static let eveningMinuteKey = "notifications.evening.minute"
     private static let watchlistEnabledKey = "notifications.watchlist.enabled"
     private static let releasesEnabledKey = "notifications.releases.enabled"
+    private static let communityEnabledKey = "notifications.community.enabled"
+    private static let communityDigestDayKey = "notifications.community.lastDigestDay"
     private static let watchlistNotifiedKey = "notifications.watchlist.notifiedIds"
     private static let knownIdsKey = "notifications.knownMovieIds"
     private static let lastSyncKey = "notifications.lastSyncDate"
@@ -62,6 +66,7 @@ final class NotificationService {
         eveningEnabled = (defaults.object(forKey: Self.eveningEnabledKey) as? Bool) ?? true
         watchlistEnabled = (defaults.object(forKey: Self.watchlistEnabledKey) as? Bool) ?? true
         releasesEnabled = (defaults.object(forKey: Self.releasesEnabledKey) as? Bool) ?? true
+        communityEnabled = (defaults.object(forKey: Self.communityEnabledKey) as? Bool) ?? true
         eveningHour = (defaults.object(forKey: Self.eveningHourKey) as? Int) ?? 20
         eveningMinute = (defaults.object(forKey: Self.eveningMinuteKey) as? Int) ?? 0
         Task { await refreshAuthorizationStatus() }
@@ -134,6 +139,11 @@ final class NotificationService {
         }
     }
 
+    func setCommunityEnabled(_ enabled: Bool) {
+        communityEnabled = enabled
+        defaults.set(enabled, forKey: Self.communityEnabledKey)
+    }
+
     func setReleasesEnabled(_ enabled: Bool) {
         releasesEnabled = enabled
         defaults.set(enabled, forKey: Self.releasesEnabledKey)
@@ -155,6 +165,58 @@ final class NotificationService {
         scheduleWatchlistReminder(toWatch: toWatch)
         syncMovieNightReminders(scheduled)
         await sync(topGenres: topGenres)
+    }
+
+    // MARK: - Community (Consigli) notifications
+
+    /// Immediate banner when someone replied to the user's advice request.
+    func notifyCommunityReplies(_ count: Int) {
+        guard isEnabled, communityEnabled, count > 0 else { return }
+
+        let content = UNMutableNotificationContent()
+        content.title = L("notif.community.reply.title")
+        content.body = count == 1
+            ? L("notif.community.reply.body")
+            : LF("notif.community.reply.many", count)
+        content.sound = .default
+        content.userInfo = ["route": NotificationRoute.community]
+
+        let request = UNNotificationRequest(
+            identifier: "community-reply-\(Int(Date().timeIntervalSince1970))",
+            content: content,
+            trigger: UNTimeIntervalNotificationTrigger(timeInterval: 2, repeats: false)
+        )
+        UNUserNotificationCenter.current().add(request)
+    }
+
+    /// Daily digest (at most once per day) about new requests published by
+    /// people feeling the user's most frequent mood.
+    func notifyCommunityMoodMatches(count: Int, mood: Mood) {
+        guard isEnabled, communityEnabled, count > 0 else { return }
+
+        let today = Self.dayKey(for: Date())
+        guard defaults.string(forKey: Self.communityDigestDayKey) != today else { return }
+        defaults.set(today, forKey: Self.communityDigestDayKey)
+
+        let content = UNMutableNotificationContent()
+        content.title = L("notif.community.mood.title")
+        content.body = count == 1
+            ? LF("notif.community.mood.one", mood.title)
+            : LF("notif.community.mood.body", count, mood.title)
+        content.sound = .default
+        content.userInfo = ["route": NotificationRoute.community]
+
+        let request = UNNotificationRequest(
+            identifier: "community-digest-\(today)",
+            content: content,
+            trigger: UNTimeIntervalNotificationTrigger(timeInterval: 3, repeats: false)
+        )
+        UNUserNotificationCenter.current().add(request)
+    }
+
+    private static func dayKey(for date: Date) -> String {
+        let components = Calendar.current.dateComponents([.year, .month, .day], from: date)
+        return "\(components.year ?? 0)-\(components.month ?? 0)-\(components.day ?? 0)"
     }
 
     // MARK: - Movie night reminders
