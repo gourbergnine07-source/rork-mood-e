@@ -7,31 +7,66 @@ import Foundation
 import UserNotifications
 import Observation
 
-/// Manages local notifications for new TMDB arrivals and cinema release days.
-/// The user switches notifications on/off from the Impostazioni tab.
+/// Deep-link routes attached to local notifications, handled by ContentView.
+enum NotificationRoute {
+    static let notificationName = Notification.Name("moodE.notificationRoute")
+    static let moodFlow = "moodflow"
+    static let watchlist = "watchlist"
+}
+
+/// Manages every local notification of Mood-E:
+/// - evening mood reminder (configurable time, default 20:00)
+/// - watchlist reminders for movies saved 5+ days ago
+/// - new releases in line with the user's recent mood/genre history
+/// Each trigger can be switched on/off individually from Impostazioni.
 @Observable
 final class NotificationService {
-    /// Whether the user has notifications switched on (persisted).
+    /// Master switch (persisted).
     private(set) var isEnabled: Bool
     /// Current system permission status, refreshed on scene activation.
     private(set) var authorizationStatus: UNAuthorizationStatus = .notDetermined
     /// True while a permission request or TMDB sync is running.
     private(set) var isWorking = false
 
+    /// Per-trigger switches (persisted, default on when the master is on).
+    private(set) var eveningEnabled: Bool
+    private(set) var watchlistEnabled: Bool
+    private(set) var releasesEnabled: Bool
+
+    /// Evening reminder time (persisted, default 20:00).
+    private(set) var eveningHour: Int
+    private(set) var eveningMinute: Int
+
     private static let enabledKey = "notifications.enabled"
+    private static let eveningEnabledKey = "notifications.evening.enabled"
+    private static let eveningHourKey = "notifications.evening.hour"
+    private static let eveningMinuteKey = "notifications.evening.minute"
+    private static let watchlistEnabledKey = "notifications.watchlist.enabled"
+    private static let releasesEnabledKey = "notifications.releases.enabled"
+    private static let watchlistNotifiedKey = "notifications.watchlist.notifiedIds"
     private static let knownIdsKey = "notifications.knownMovieIds"
     private static let lastSyncKey = "notifications.lastSyncDate"
     /// Minimum time between two TMDB checks (6 hours, like the data cache).
     private static let syncInterval: TimeInterval = 6 * 60 * 60
+    /// Days a watchlist movie sits unwatched before the reminder.
+    private static let watchlistReminderDays = 5
+
+    private static let eveningIdentifier = "evening-reminder"
 
     private let defaults = UserDefaults.standard
 
     init() {
+        let defaults = UserDefaults.standard
         isEnabled = defaults.bool(forKey: Self.enabledKey)
+        eveningEnabled = (defaults.object(forKey: Self.eveningEnabledKey) as? Bool) ?? true
+        watchlistEnabled = (defaults.object(forKey: Self.watchlistEnabledKey) as? Bool) ?? true
+        releasesEnabled = (defaults.object(forKey: Self.releasesEnabledKey) as? Bool) ?? true
+        eveningHour = (defaults.object(forKey: Self.eveningHourKey) as? Int) ?? 20
+        eveningMinute = (defaults.object(forKey: Self.eveningMinuteKey) as? Int) ?? 0
         Task { await refreshAuthorizationStatus() }
     }
 
-    // MARK: - Permission & toggle
+    // MARK: - Permission & master toggle
 
     func refreshAuthorizationStatus() async {
         let settings = await UNUserNotificationCenter.current().notificationSettings()
@@ -69,17 +104,139 @@ final class NotificationService {
 
         isEnabled = true
         defaults.set(true, forKey: Self.enabledKey)
-        await sync(force: true)
         return true
     }
 
-    // MARK: - Sync with TMDB
+    // MARK: - Per-trigger toggles
+
+    func setEveningEnabled(_ enabled: Bool) {
+        eveningEnabled = enabled
+        defaults.set(enabled, forKey: Self.eveningEnabledKey)
+        scheduleEveningReminder()
+    }
+
+    func setEveningTime(hour: Int, minute: Int) {
+        eveningHour = hour
+        eveningMinute = minute
+        defaults.set(hour, forKey: Self.eveningHourKey)
+        defaults.set(minute, forKey: Self.eveningMinuteKey)
+        scheduleEveningReminder()
+    }
+
+    func setWatchlistEnabled(_ enabled: Bool, toWatch: [LibraryEntry]) {
+        watchlistEnabled = enabled
+        defaults.set(enabled, forKey: Self.watchlistEnabledKey)
+        if enabled {
+            scheduleWatchlistReminder(toWatch: toWatch)
+        } else {
+            cancelWatchlistReminders()
+        }
+    }
+
+    func setReleasesEnabled(_ enabled: Bool) {
+        releasesEnabled = enabled
+        defaults.set(enabled, forKey: Self.releasesEnabledKey)
+        if !enabled {
+            Task {
+                let center = UNUserNotificationCenter.current()
+                let pending = await center.pendingNotificationRequests()
+                let releaseIds = pending.map(\.identifier).filter { $0.hasPrefix("release-") }
+                center.removePendingNotificationRequests(withIdentifiers: releaseIds)
+            }
+        }
+    }
+
+    /// Re-applies every schedule; called on scene activation and after the
+    /// master toggle turns on.
+    func refreshSchedules(toWatch: [LibraryEntry], topGenres: [Int]) async {
+        guard isEnabled else { return }
+        scheduleEveningReminder()
+        scheduleWatchlistReminder(toWatch: toWatch)
+        await sync(topGenres: topGenres)
+    }
+
+    // MARK: - Evening mood reminder
+
+    /// Daily repeating reminder at the user's chosen time. Tapping it opens
+    /// the app straight on step 1 of the mood flow.
+    private func scheduleEveningReminder() {
+        let center = UNUserNotificationCenter.current()
+        center.removePendingNotificationRequests(withIdentifiers: [Self.eveningIdentifier])
+        guard isEnabled, eveningEnabled else { return }
+
+        let content = UNMutableNotificationContent()
+        content.title = L("notif.evening.title")
+        content.body = L("notif.evening.body")
+        content.sound = .default
+        content.userInfo = ["route": NotificationRoute.moodFlow]
+
+        var components = DateComponents()
+        components.hour = eveningHour
+        components.minute = eveningMinute
+
+        let request = UNNotificationRequest(
+            identifier: Self.eveningIdentifier,
+            content: content,
+            trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
+        )
+        center.add(request)
+    }
+
+    // MARK: - Watchlist reminders
+
+    /// Gentle reminder for the oldest movie saved 5+ days ago and never
+    /// notified before. Fires at 18:30 (today if still ahead, else tomorrow).
+    private func scheduleWatchlistReminder(toWatch: [LibraryEntry]) {
+        guard isEnabled, watchlistEnabled else { return }
+
+        let notified = Set(defaults.array(forKey: Self.watchlistNotifiedKey) as? [Int] ?? [])
+        let cutoff = Date().addingTimeInterval(-Double(Self.watchlistReminderDays) * 24 * 60 * 60)
+
+        guard let candidate = toWatch
+            .filter({ $0.addedDate <= cutoff && !notified.contains($0.id) })
+            .min(by: { $0.addedDate < $1.addedDate }) else { return }
+
+        let calendar = Calendar.current
+        var fireDate = calendar.date(
+            bySettingHour: 18, minute: 30, second: 0, of: Date()
+        ) ?? Date().addingTimeInterval(3600)
+        if fireDate.timeIntervalSinceNow < 60 * 30 {
+            fireDate = calendar.date(byAdding: .day, value: 1, to: fireDate) ?? fireDate
+        }
+        let components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: fireDate)
+
+        let content = UNMutableNotificationContent()
+        content.title = L("notif.watchlist.title")
+        content.body = LF("notif.watchlist.body", candidate.title)
+        content.sound = .default
+        content.userInfo = ["route": NotificationRoute.watchlist]
+
+        let request = UNNotificationRequest(
+            identifier: "watchlist-\(candidate.id)",
+            content: content,
+            trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+        )
+        UNUserNotificationCenter.current().add(request)
+
+        defaults.set(Array(notified.union([candidate.id])), forKey: Self.watchlistNotifiedKey)
+    }
+
+    private func cancelWatchlistReminders() {
+        Task {
+            let center = UNUserNotificationCenter.current()
+            let pending = await center.pendingNotificationRequests()
+            let ids = pending.map(\.identifier).filter { $0.hasPrefix("watchlist-") }
+            center.removePendingNotificationRequests(withIdentifiers: ids)
+        }
+    }
+
+    // MARK: - New releases (TMDB sync)
 
     /// Checks TMDB for new arrivals and upcoming cinema releases.
-    /// Fires an immediate notification for genuinely new movies and
-    /// schedules release-day reminders for upcoming films.
-    func sync(force: Bool = false) async {
-        guard isEnabled else { return }
+    /// When the user has a mood history, releases are prioritized by their
+    /// most recurring genres of the last month.
+    func sync(force: Bool = false, topGenres: [Int] = []) async {
+        guard isEnabled, releasesEnabled else { return }
 
         if !force,
            let last = defaults.object(forKey: Self.lastSyncKey) as? Date,
@@ -101,7 +258,16 @@ final class NotificationService {
 
             var seenInBatch = Set<Int>()
             let allMovies = (nowPlaying + upcoming).filter { seenInBatch.insert($0.id).inserted }
-            let newMovies = allMovies.filter { !known.contains($0.id) }
+            var newMovies = allMovies.filter { !known.contains($0.id) }
+
+            // With enough history, favor movies matching the user's top genres.
+            if !topGenres.isEmpty {
+                let preferred = newMovies.filter { movie in
+                    guard let genres = movie.genreIds else { return false }
+                    return !Set(genres).isDisjoint(with: topGenres)
+                }
+                if !preferred.isEmpty { newMovies = preferred }
+            }
 
             defaults.set(Array(known.union(allMovies.map(\.id))), forKey: Self.knownIdsKey)
 
@@ -110,7 +276,7 @@ final class NotificationService {
                 notifyNewArrivals(Array(newMovies.prefix(3)), totalCount: newMovies.count)
             }
 
-            await scheduleReleaseReminders(for: upcoming)
+            await scheduleReleaseReminders(for: upcoming, topGenres: topGenres)
         } catch {
             print("[Notifications] Sync failed: \(error.localizedDescription)")
         }
@@ -144,7 +310,8 @@ final class NotificationService {
     }
 
     /// Schedules a local reminder at 10:00 on each upcoming movie's release day.
-    private func scheduleReleaseReminders(for movies: [TMDBMovie]) async {
+    /// With history available, only releases matching the user's top genres.
+    private func scheduleReleaseReminders(for movies: [TMDBMovie], topGenres: [Int]) async {
         let center = UNUserNotificationCenter.current()
         let pendingIds = Set(await center.pendingNotificationRequests().map(\.identifier))
 
@@ -152,7 +319,16 @@ final class NotificationService {
         parser.dateFormat = "yyyy-MM-dd"
         parser.locale = Locale(identifier: "en_US_POSIX")
 
-        for movie in movies.prefix(30) {
+        var candidates = Array(movies.prefix(30))
+        if !topGenres.isEmpty {
+            let preferred = candidates.filter { movie in
+                guard let genres = movie.genreIds else { return false }
+                return !Set(genres).isDisjoint(with: topGenres)
+            }
+            if !preferred.isEmpty { candidates = preferred }
+        }
+
+        for movie in candidates {
             let identifier = "release-\(movie.id)"
             guard !pendingIds.contains(identifier),
                   let dateString = movie.releaseDate,
@@ -177,7 +353,8 @@ final class NotificationService {
     }
 }
 
-/// Shows notification banners even while the app is in the foreground.
+/// Shows notification banners in the foreground and routes notification taps
+/// (evening reminder → mood flow, watchlist reminder → La mia lista).
 final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
     static let shared = NotificationDelegate()
 
@@ -186,5 +363,19 @@ final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
         willPresent notification: UNNotification
     ) async -> UNNotificationPresentationOptions {
         [.banner, .sound]
+    }
+
+    nonisolated func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse
+    ) async {
+        let userInfo = response.notification.request.content.userInfo
+        guard let route = userInfo["route"] as? String else { return }
+        await MainActor.run {
+            NotificationCenter.default.post(
+                name: NotificationRoute.notificationName,
+                object: route
+            )
+        }
     }
 }

@@ -7,6 +7,17 @@
 	<string>ca-app-pub-7245682186872516~9021400460</string>
 	<key>NSUserTrackingUsageDescription</key>
 	<string>Ti mostreremo annunci più pertinenti ai tuoi interessi.</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>app.rork.d9jknb2uwvfyntp4w88dj</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>moode</string>
+			</array>
+		</dict>
+	</array>
 	<key>SKAdNetworkItems</key>
 	<array>
 		<dict><key>SKAdNetworkIdentifier</key><string>cstr6suwn9.skadnetwork</string></dict>

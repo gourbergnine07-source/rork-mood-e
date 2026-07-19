@@ -12,6 +12,7 @@ import UserNotifications
 struct MoodEApp: App {
     @State private var library = MovieLibrary()
     @State private var notifications = NotificationService()
+    @State private var diary = MoodDiary()
     @State private var theme = ThemeManager.shared
     @Environment(\.scenePhase) private var scenePhase
 
@@ -24,12 +25,16 @@ struct MoodEApp: App {
             RootView()
                 .environment(library)
                 .environment(notifications)
+                .environment(diary)
                 .preferredColorScheme(theme.appearance.colorScheme)
                 .onChange(of: scenePhase) { _, newPhase in
                     guard newPhase == .active else { return }
                     Task {
                         await notifications.refreshAuthorizationStatus()
-                        await notifications.sync()
+                        await notifications.refreshSchedules(
+                            toWatch: library.toWatch,
+                            topGenres: diary.topGenreIds
+                        )
                     }
                 }
         }

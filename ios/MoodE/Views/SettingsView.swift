@@ -38,6 +38,7 @@ struct SettingsView: View {
     @Environment(\.openURL) private var openURL
     @Environment(NotificationService.self) private var notifications
     @Environment(MovieLibrary.self) private var library
+    @Environment(MoodDiary.self) private var diary
     @State private var showPermissionAlert = false
     @State private var showOnboarding = false
     @AppStorage("onboarding.completed") private var hasCompletedOnboarding: Bool = true
@@ -52,6 +53,7 @@ struct SettingsView: View {
         NavigationStack {
             List {
                 appInfoSection
+                journeySection
                 appearanceSection
                 languageSection
                 notificationsSection
@@ -68,6 +70,11 @@ struct SettingsView: View {
             .toolbarTitleDisplayMode(.large)
             .navigationDestination(for: LegalPage.self) { page in
                 LegalPageView(page: page)
+            }
+            .navigationDestination(for: DiaryRoute.self) { route in
+                switch route {
+                case .badges: BadgesView()
+                }
             }
             .fullScreenCover(isPresented: $showOnboarding) {
                 OnboardingView {
@@ -234,6 +241,47 @@ struct SettingsView: View {
         .listRowBackground(Theme.card)
     }
 
+    // MARK: - Il mio percorso
+
+    private var journeySection: some View {
+        Section {
+            HStack(spacing: 12) {
+            Text("\u{1F525}")
+                    .font(.system(size: 20))
+                    .frame(width: 29, height: 29)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(L("settings.journey.streak"))
+                        .font(.body)
+                        .foregroundStyle(Theme.ink)
+                    if diary.streak == 0 {
+                        Text(L("diary.streak.broken.msg"))
+                            .font(.caption2)
+                            .foregroundStyle(Theme.inkSoft)
+                    }
+                }
+                Spacer()
+                Text(diary.streak > 0 ? LF("diary.streak.days", diary.streak) : "—")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.inkSoft)
+            }
+
+            NavigationLink(value: DiaryRoute.badges) {
+                SettingsRow(
+                    icon: "rosette",
+                    iconColor: Theme.amber,
+                    title: L("settings.journey.badges")
+                )
+            }
+        } header: {
+            Text(L("settings.journey.header"))
+        } footer: {
+            Text(L("settings.journey.footer"))
+                .font(.footnote)
+                .foregroundStyle(Theme.inkSoft)
+        }
+        .listRowBackground(Theme.card)
+    }
+
     // MARK: - Notifiche
 
     private var notificationsBinding: Binding<Bool> {
@@ -244,9 +292,55 @@ struct SettingsView: View {
                     let success = await notifications.setEnabled(newValue)
                     if newValue && !success {
                         showPermissionAlert = true
+                    } else if newValue {
+                        await notifications.refreshSchedules(
+                            toWatch: library.toWatch,
+                            topGenres: diary.topGenreIds
+                        )
                     }
                 }
             }
+        )
+    }
+
+    private var eveningBinding: Binding<Bool> {
+        Binding(
+            get: { notifications.eveningEnabled },
+            set: { notifications.setEveningEnabled($0) }
+        )
+    }
+
+    private var eveningTimeBinding: Binding<Date> {
+        Binding(
+            get: {
+                Calendar.current.date(
+                    bySettingHour: notifications.eveningHour,
+                    minute: notifications.eveningMinute,
+                    second: 0,
+                    of: Date()
+                ) ?? Date()
+            },
+            set: { newValue in
+                let components = Calendar.current.dateComponents([.hour, .minute], from: newValue)
+                notifications.setEveningTime(
+                    hour: components.hour ?? 20,
+                    minute: components.minute ?? 0
+                )
+            }
+        )
+    }
+
+    private var watchlistNotifBinding: Binding<Bool> {
+        Binding(
+            get: { notifications.watchlistEnabled },
+            set: { notifications.setWatchlistEnabled($0, toWatch: library.toWatch) }
+        )
+    }
+
+    private var releasesBinding: Binding<Bool> {
+        Binding(
+            get: { notifications.releasesEnabled },
+            set: { notifications.setReleasesEnabled($0) }
         )
     }
 
@@ -261,6 +355,48 @@ struct SettingsView: View {
             }
             .tint(Theme.tabSettings)
             .disabled(notifications.isWorking)
+
+            if notifications.isEnabled {
+                Toggle(isOn: eveningBinding) {
+                    SettingsRow(
+                        icon: "moon.stars.fill",
+                        iconColor: Theme.tabCinema,
+                        title: L("settings.notif.evening")
+                    )
+                }
+                .tint(Theme.tabSettings)
+
+                if notifications.eveningEnabled {
+                    DatePicker(
+                        selection: eveningTimeBinding,
+                        displayedComponents: .hourAndMinute
+                    ) {
+                        SettingsRow(
+                            icon: "clock.fill",
+                            iconColor: Theme.tabList,
+                            title: L("settings.notif.evening.time")
+                        )
+                    }
+                }
+
+                Toggle(isOn: watchlistNotifBinding) {
+                    SettingsRow(
+                        icon: "bookmark.fill",
+                        iconColor: Theme.primary,
+                        title: L("settings.notif.watchlist")
+                    )
+                }
+                .tint(Theme.tabSettings)
+
+                Toggle(isOn: releasesBinding) {
+                    SettingsRow(
+                        icon: "sparkles",
+                        iconColor: Theme.amber,
+                        title: L("settings.notif.releases")
+                    )
+                }
+                .tint(Theme.tabSettings)
+            }
 
             if notifications.authorizationStatus == .denied {
                 Button {
@@ -277,7 +413,7 @@ struct SettingsView: View {
         } header: {
             Text(L("settings.notif.header"))
         } footer: {
-            Text(L("settings.notif.footer"))
+            Text(L("settings.notif.footer2"))
                 .font(.footnote)
                 .foregroundStyle(Theme.inkSoft)
         }
@@ -489,4 +625,5 @@ struct SettingsRow: View {
     SettingsView()
         .environment(NotificationService())
         .environment(MovieLibrary())
+        .environment(MoodDiary())
 }

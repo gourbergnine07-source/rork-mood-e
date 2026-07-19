@@ -65,6 +65,7 @@ final class MovieLibrary {
     }
 
     private static let entriesKey = "movieLibrary.entries"
+    private static let watchedTotalKey = "movieLibrary.watchedTotal"
     private static let legacyWatchlistKey = "movieLibrary.watchlist"
     private static let legacySeenKey = "movieLibrary.seen"
     private static let autoRemoveKey = "movieLibrary.autoRemoveWatched"
@@ -101,6 +102,17 @@ final class MovieLibrary {
     /// IDs of watched movies, used to exclude them from recommendations.
     var watchedIds: Set<Int> {
         Set(entries.filter { $0.status == .watched }.map(\.id))
+    }
+
+    /// Lifetime count of movies marked as watched (survives auto-removal),
+    /// used by the "Cinefilo" badge.
+    var lifetimeWatchedCount: Int {
+        max(UserDefaults.standard.integer(forKey: Self.watchedTotalKey), watched.count)
+    }
+
+    private func bumpLifetimeWatched() {
+        let current = UserDefaults.standard.integer(forKey: Self.watchedTotalKey)
+        UserDefaults.standard.set(current + 1, forKey: Self.watchedTotalKey)
     }
 
     // MARK: - Queries
@@ -145,11 +157,13 @@ final class MovieLibrary {
             } else {
                 entries[index].status = .watched
                 entries[index].watchedDate = Date()
+                bumpLifetimeWatched()
             }
         } else {
             var entry = makeEntry(from: movie, status: .watched)
             entry.watchedDate = Date()
             entries.insert(entry, at: 0)
+            bumpLifetimeWatched()
         }
         persist()
     }
@@ -159,6 +173,7 @@ final class MovieLibrary {
         guard let index = entries.firstIndex(where: { $0.id == entryID }) else { return }
         entries[index].status = .watched
         entries[index].watchedDate = Date()
+        bumpLifetimeWatched()
         persist()
     }
 

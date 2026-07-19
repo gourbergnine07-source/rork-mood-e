@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		XX31C08D89000476ACED2CXX /* MoodEWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = XX9BD89C46B35B92C99196XX /* MoodEWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		XX58A87C46960997EAFEF8XX /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = XX5EB48DBE87E012384FECXX /* GoogleMobileAds */; };
 /* End PBXBuildFile section */
 
@@ -25,13 +26,45 @@
 			remoteGlobalIDString = 105FC5792E9EAD3100EA8BCF;
 			remoteInfo = MoodE;
 		};
+		XX865CAF2D0895DE7DBA37XX /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 105FC5722E9EAD3100EA8BCF /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = XX6C64787E31B04B658D6AXX;
+			remoteInfo = MoodEWidget;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		XX8618DA762832199DA68BXX /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				XX31C08D89000476ACED2CXX /* MoodEWidget.appex in Embed Foundation Extensions */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			name = "Embed Foundation Extensions";
+			dstPath = "";
+			dstSubfolderSpec = 13;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		105FC57A2E9EAD3100EA8BCF /* MoodE.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MoodE.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		105FC5892E9EAD3200EA8BCF /* MoodETests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MoodETests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		105FC5932E9EAD3200EA8BCF /* MoodEUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MoodEUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		XX9BD89C46B35B92C99196XX /* MoodEWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = MoodEWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		XXBD60176B516A77BCAF72XX /* Exceptions for "MoodEWidget" folder in "MoodEWidget" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = XX6C64787E31B04B658D6AXX /* MoodEWidget */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		105FC57C2E9EAD3100EA8BCF /* MoodE */ = {
@@ -48,6 +81,14 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = MoodEUITests;
 			sourceTree = "<group>";
+		};
+		XX917B882E2913EA95330FXX /* MoodEWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = MoodEWidget;
+			sourceTree = "<group>";
+			exceptions = (
+				XXBD60176B516A77BCAF72XX /* Exceptions for "MoodEWidget" folder in "MoodEWidget" target */,
+			);
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
@@ -74,6 +115,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		XX3810B5C8BE3947CDEC7AXX /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -84,6 +132,7 @@
 				105FC58C2E9EAD3200EA8BCF /* MoodETests */,
 				105FC5962E9EAD3200EA8BCF /* MoodEUITests */,
 				105FC57B2E9EAD3100EA8BCF /* Products */,
+				XX917B882E2913EA95330FXX /* MoodEWidget */,
 			);
 			sourceTree = "<group>";
 		};
@@ -93,6 +142,7 @@
 				105FC57A2E9EAD3100EA8BCF /* MoodE.app */,
 				105FC5892E9EAD3200EA8BCF /* MoodETests.xctest */,
 				105FC5932E9EAD3200EA8BCF /* MoodEUITests.xctest */,
+				XX9BD89C46B35B92C99196XX /* MoodEWidget.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -107,10 +157,12 @@
 				105FC5762E9EAD3100EA8BCF /* Sources */,
 				105FC5772E9EAD3100EA8BCF /* Frameworks */,
 				105FC5782E9EAD3100EA8BCF /* Resources */,
+				XX8618DA762832199DA68BXX /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				XXD113E3901D01EB211976XX /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				105FC57C2E9EAD3100EA8BCF /* MoodE */,
@@ -169,6 +221,26 @@
 			productReference = 105FC5932E9EAD3200EA8BCF /* MoodEUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		XX6C64787E31B04B658D6AXX /* MoodEWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = XX5F5F1F91374B4105D46AXX /* Build configuration list for PBXNativeTarget "MoodEWidget" */;
+			buildPhases = (
+				XX6D7A6EF762BE4EB89ECEXX /* Sources */,
+				XX3810B5C8BE3947CDEC7AXX /* Frameworks */,
+				XX77F54C663FA4AEE3239BXX /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = MoodEWidget;
+			productName = MoodEWidget;
+			productReference = XX9BD89C46B35B92C99196XX /* MoodEWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
+			fileSystemSynchronizedGroups = (
+				XX917B882E2913EA95330FXX /* MoodEWidget */,
+			);
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -209,6 +281,7 @@
 				105FC5792E9EAD3100EA8BCF /* MoodE */,
 				105FC5882E9EAD3200EA8BCF /* MoodETests */,
 				105FC5922E9EAD3200EA8BCF /* MoodEUITests */,
+				XX6C64787E31B04B658D6AXX /* MoodEWidget */,
 			);
 			packageReferences = (
 				XX8F321EBFA973C6F11275XX /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */,
@@ -232,6 +305,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		105FC5912E9EAD3200EA8BCF /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		XX77F54C663FA4AEE3239BXX /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -262,6 +342,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		XX6D7A6EF762BE4EB89ECEXX /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -274,6 +361,11 @@
 			isa = PBXTargetDependency;
 			target = 105FC5792E9EAD3100EA8BCF /* MoodE */;
 			targetProxy = 105FC5942E9EAD3200EA8BCF /* PBXContainerItemProxy */;
+		};
+		XXD113E3901D01EB211976XX /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = XX6C64787E31B04B658D6AXX /* MoodEWidget */;
+			targetProxy = XX865CAF2D0895DE7DBA37XX /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -404,6 +496,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = MoodE/MoodE.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = "";
@@ -441,6 +534,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = MoodE/MoodE.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = "";
@@ -557,6 +651,52 @@
 			};
 			name = Release;
 		};
+		XX8408C18222A21E37DF19XX /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_BUNDLE_IDENTIFIER = app.rork.d9jknb2uwvfyntp4w88dj.moodewidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				CODE_SIGN_ENTITLEMENTS = MoodEWidget/MoodEWidget.entitlements;
+				SDKROOT = iphoneos;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MoodEWidget/Info.plist;
+				SWIFT_VERSION = 5.0;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 2;
+				MARKETING_VERSION = 1.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
+				INFOPLIST_KEY_CFBundleDisplayName = "$(PRODUCT_NAME)";
+			};
+			name = Debug;
+		};
+		XXD2C9DDB241F882B67134XX /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_BUNDLE_IDENTIFIER = app.rork.d9jknb2uwvfyntp4w88dj.moodewidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				CODE_SIGN_ENTITLEMENTS = MoodEWidget/MoodEWidget.entitlements;
+				SDKROOT = iphoneos;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MoodEWidget/Info.plist;
+				SWIFT_VERSION = 5.0;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 2;
+				MARKETING_VERSION = 1.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
+				INFOPLIST_KEY_CFBundleDisplayName = "$(PRODUCT_NAME)";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -592,6 +732,15 @@
 			buildConfigurations = (
 				105FC5A42E9EAD3200EA8BCF /* Debug */,
 				105FC5A52E9EAD3200EA8BCF /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		XX5F5F1F91374B4105D46AXX /* Build configuration list for PBXNativeTarget "MoodEWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				XX8408C18222A21E37DF19XX /* Debug */,
+				XXD2C9DDB241F882B67134XX /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

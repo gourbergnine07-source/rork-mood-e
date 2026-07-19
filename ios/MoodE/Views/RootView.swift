@@ -67,4 +67,5 @@ struct RootView: View {
     RootView()
         .environment(MovieLibrary())
         .environment(NotificationService())
+        .environment(MoodDiary())
 }

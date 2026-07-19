@@ -178,31 +178,59 @@ struct MoodFlowView: View {
     }
 
     private var bottomBar: some View {
-        Button {
-            advance()
-        } label: {
-            HStack(spacing: 7) {
-                Text(step == 2 ? L("flow.find") : L("flow.continue"))
-                    .font(.subheadline.weight(.semibold))
-                if step == 2 {
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 13, weight: .semibold))
-                } else {
-                    Image(systemName: "arrow.right")
-                        .font(.system(size: 13, weight: .semibold))
+        VStack(spacing: 8) {
+            Button {
+                advance()
+            } label: {
+                HStack(spacing: 7) {
+                    Text(step == 2 ? L("flow.find") : L("flow.continue"))
+                        .font(.subheadline.weight(.semibold))
+                    if step == 2 {
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 13, weight: .semibold))
+                    } else {
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 13, weight: .semibold))
+                    }
                 }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 42)
+                .background(
+                    canAdvance ? Theme.primary : Theme.primary.opacity(0.35),
+                    in: .rect(cornerRadius: 14)
+                )
             }
-            .foregroundStyle(.white)
-            .frame(maxWidth: .infinity)
-            .frame(height: 42)
-            .background(
-                canAdvance ? Theme.primary : Theme.primary.opacity(0.35),
-                in: .rect(cornerRadius: 14)
-            )
+            .disabled(!canAdvance)
+            .sensoryFeedback(.impact(weight: .medium), trigger: step)
+            .animation(.easeInOut(duration: 0.2), value: canAdvance)
+
+            if step == 0 {
+                Button {
+                    startQuickPick()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "bolt.fill")
+                            .font(.system(size: 12, weight: .semibold))
+                        Text(L("flow.quick"))
+                            .font(.footnote.weight(.semibold))
+                    }
+                    .foregroundStyle(canAdvance ? Theme.amber : Theme.inkSoft.opacity(0.4))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 36)
+                    .background(
+                        Theme.amber.opacity(canAdvance ? 0.12 : 0.05),
+                        in: .rect(cornerRadius: 12)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Theme.amber.opacity(canAdvance ? 0.35 : 0.1), lineWidth: 1)
+                    )
+                }
+                .disabled(!canAdvance)
+                .accessibilityHint(L("flow.quick.hint"))
+            }
         }
-        .disabled(!canAdvance)
-        .sensoryFeedback(.impact(weight: .medium), trigger: step)
-        .animation(.easeInOut(duration: 0.2), value: canAdvance)
     }
 
     // MARK: - Logic
@@ -232,6 +260,20 @@ struct MoodFlowView: View {
             AdsManager.shared.showSearchInterstitialIfDue {
                 resultSelection = selection
             }
+        }
+    }
+
+    /// One-tap mode: skips goal and era, deriving them from the mood alone.
+    private func startQuickPick() {
+        guard let mood = selectedMood else { return }
+        let selection = MoodSelection(
+            mood: mood,
+            goal: mood.quickPickGoal,
+            era: .noPreference,
+            isQuickPick: true
+        )
+        AdsManager.shared.showSearchInterstitialIfDue {
+            resultSelection = selection
         }
     }
 

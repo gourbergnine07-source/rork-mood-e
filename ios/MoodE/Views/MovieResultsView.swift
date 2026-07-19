@@ -12,6 +12,7 @@ struct MovieResultsView: View {
     @State private var viewModel = MovieResultsViewModel()
     @State private var trailerPlayback = TrailerPlayback()
     @Environment(MovieLibrary.self) private var library
+    @Environment(MoodDiary.self) private var diary
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
@@ -42,6 +43,10 @@ struct MovieResultsView: View {
         }
         .task {
             await viewModel.load(selection: selection, excluding: library.watchedIds)
+            // Diary check-in: records date, mood, goal and proposed movies locally.
+            if case .loaded(let movies) = viewModel.state, !movies.isEmpty {
+                diary.record(selection: selection, proposed: movies)
+            }
         }
         .onChange(of: scenePhase) { _, newPhase in
             guard newPhase == .active else { return }
@@ -487,4 +492,5 @@ struct QuickActionChip: View {
         )
     }
     .environment(MovieLibrary())
+    .environment(MoodDiary())
 }

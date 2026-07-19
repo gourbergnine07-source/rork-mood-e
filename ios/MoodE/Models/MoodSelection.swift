@@ -164,4 +164,25 @@ struct MoodSelection: Hashable {
     let mood: Mood
     let goal: ViewingGoal
     let era: MovieEra
+    var isQuickPick: Bool = false
+}
+
+extension Mood {
+    /// Goal inferred from the mood for the one-tap "Scelta rapida" mode.
+    var quickPickGoal: ViewingGoal {
+        switch self {
+        case .felice: return .ridere
+        case .triste: return .emozionarmi
+        case .stressato: return .rilassarmi
+        case .annoiato: return .distrarmi
+        case .innamorato: return .innamorarmi
+        case .nostalgico: return .sognare
+        case .arrabbiato: return .distrarmi
+        case .motivato: return .ispirarmi
+        case .malinconico: return .riflettere
+        case .spensierato: return .ridere
+        case .curioso: return .riflettere
+        case .impaurito: return .paura
+        }
+    }
 }
