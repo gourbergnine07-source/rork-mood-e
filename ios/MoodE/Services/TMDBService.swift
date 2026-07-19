@@ -165,6 +165,18 @@ enum TMDBService {
         return fresh.randomElement() ?? filled.results.randomElement()
     }
 
+    /// Free-text movie search, used when planning a movie on a diary day.
+    static func searchMovies(query: String) async throws -> [TMDBMovie] {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return [] }
+        let queryItems = [
+            URLQueryItem(name: "query", value: trimmed),
+            URLQueryItem(name: "include_adult", value: "false")
+        ]
+        let response: TMDBMovieListResponse = try await request(path: "/search/movie", queryItems: queryItems)
+        return response.results
+    }
+
     /// Videos (trailers) only — lightweight call for quick access from result cards.
     /// Requests trailers in the user's language plus English as fallback.
     static func movieVideos(id: Int) async throws -> TMDBVideoList {

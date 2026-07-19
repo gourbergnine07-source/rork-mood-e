@@ -9,11 +9,16 @@ import SwiftUI
 struct DiaryView: View {
     @Environment(MoodDiary.self) private var diary
     @Environment(MovieLibrary.self) private var library
+    @Environment(MoviePlanner.self) private var planner
+    @Environment(NotificationService.self) private var notifications
 
     @State private var displayedMonth: Date = Calendar.current.startOfMonth(for: Date())
     @State private var selectedDay: Date = Calendar.current.startOfDay(for: Date())
     @State private var recap: WeeklyRecap?
     @State private var noteTarget: MoodCheckIn?
+    @State private var showScheduleSheet: Bool = false
+    @State private var watchedTarget: ScheduledMovie?
+    @State private var moveTarget: ScheduledMovie?
 
     var body: some View {
         ZStack {
@@ -30,11 +35,20 @@ struct DiaryView: View {
                         }
                     }
 
+                    if let monthly = planner.monthlyRecap(for: Date(), checkIns: diary.checkIns) {
+                        MonthlyRecapCard(recap: monthly, monthTitle: currentMonthTitle)
+                    }
+
                     StreakCard(streak: diary.streak, wasInterrupted: diary.streakWasInterrupted)
 
                     calendarCard
 
                     dayDetail
+
+                    NavigationLink(value: DiaryRoute.memories) {
+                        memoriesRow
+                    }
+                    .buttonStyle(PressableCardStyle())
 
                     NavigationLink(value: DiaryRoute.badges) {
                         badgesRow
@@ -54,6 +68,15 @@ struct DiaryView: View {
         }
         .sheet(item: $noteTarget) { checkIn in
             CheckInNoteEditor(checkIn: checkIn)
+        }
+        .sheet(isPresented: $showScheduleSheet) {
+            ScheduleMovieView(day: selectedDay)
+        }
+        .sheet(item: $watchedTarget) { plan in
+            MarkWatchedSheet(scheduled: plan)
+        }
+        .sheet(item: $moveTarget) { plan in
+            MoveScheduleSheet(scheduled: plan)
         }
     }
 
@@ -126,6 +149,7 @@ struct DiaryView: View {
                     DiaryDayCell(
                         day: day,
                         emoji: diary.moodEmoji(on: day),
+                        hasMovie: planner.hasScheduled(on: day),
                         isSelected: Calendar.current.isDate(day, inSameDayAs: selectedDay),
                         isToday: Calendar.current.isDateInToday(day)
                     ) {
@@ -155,11 +179,41 @@ struct DiaryView: View {
                 .font(.subheadline.weight(.bold))
                 .foregroundStyle(Theme.ink)
 
-            if checkIns.isEmpty && watchedThatDay.isEmpty {
+            if checkIns.isEmpty && watchedThatDay.isEmpty && !planner.hasScheduled(on: selectedDay) {
                 Text(L("diary.day.empty"))
                     .font(.footnote)
                     .foregroundStyle(Theme.inkSoft)
                     .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            if let plan = planner.scheduledMovie(on: selectedDay) {
+                ScheduledMovieCard(
+                    plan: plan,
+                    onWatched: { watchedTarget = plan },
+                    onMove: { moveTarget = plan },
+                    onRemove: { removePlan(plan) }
+                )
+            } else {
+                Button {
+                    showScheduleSheet = true
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 13, weight: .semibold))
+                        Text(L("planner.scheduleButton"))
+                            .font(.footnote.weight(.semibold))
+                    }
+                    .foregroundStyle(Theme.primary)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 40)
+                    .background(Theme.primary.opacity(0.08), in: .rect(cornerRadius: 12))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Theme.primary.opacity(0.30), style: StrokeStyle(lineWidth: 1, dash: [5, 4]))
+                    )
+                    .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
             }
 
             ForEach(checkIns) { checkIn in
@@ -187,6 +241,40 @@ struct DiaryView: View {
         .overlay(
             RoundedRectangle(cornerRadius: 20)
                 .stroke(Theme.primary.opacity(0.10), lineWidth: 1)
+        )
+    }
+
+    private func removePlan(_ plan: ScheduledMovie) {
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+            planner.removeSchedule(plan.id)
+        }
+        notifications.syncMovieNightReminders(planner.scheduled)
+    }
+
+    // MARK: - Memories row
+
+    private var memoriesRow: some View {
+        HStack(spacing: 12) {
+            Text("🎞️")
+                .font(.system(size: 26))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(L("memories.row.title"))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.ink)
+                Text(LF("memories.row.subtitle", planner.memories.count))
+                    .font(.caption)
+                    .foregroundStyle(Theme.inkSoft)
+            }
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Theme.inkSoft)
+        }
+        .padding(16)
+        .background(Theme.card, in: .rect(cornerRadius: 20))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(Theme.rose.opacity(0.25), lineWidth: 1)
         )
     }
 
@@ -230,6 +318,13 @@ struct DiaryView: View {
         formatter.locale = LocalizationManager.shared.locale
         formatter.dateFormat = "LLLL yyyy"
         return formatter.string(from: displayedMonth).capitalized
+    }
+
+    private var currentMonthTitle: String {
+        let formatter = DateFormatter()
+        formatter.locale = LocalizationManager.shared.locale
+        formatter.dateFormat = "LLLL yyyy"
+        return formatter.string(from: Date()).capitalized
     }
 
     private var dayDetailTitle: String {
@@ -281,12 +376,15 @@ struct DiaryView: View {
 /// Navigation destinations reachable from the diary.
 enum DiaryRoute: Hashable {
     case badges
+    case memories
 }
 
-/// Single day cell: number + mood emoji marker when a check-in exists.
+/// Single day cell: number, mood emoji marker for check-ins, and a small
+/// clapper marker when a movie is planned. Both can coexist.
 private struct DiaryDayCell: View {
     let day: Date
     let emoji: String?
+    let hasMovie: Bool
     let isSelected: Bool
     let isToday: Bool
     let onTap: () -> Void
@@ -297,9 +395,17 @@ private struct DiaryDayCell: View {
                 Text("\(Calendar.current.component(.day, from: day))")
                     .font(.caption.weight(isToday ? .bold : .medium))
                     .foregroundStyle(isToday ? Theme.primary : Theme.ink)
-                if let emoji {
-                    Text(emoji)
-                        .font(.system(size: 13))
+                if emoji != nil || hasMovie {
+                    HStack(spacing: 1) {
+                        if let emoji {
+                            Text(emoji)
+                                .font(.system(size: hasMovie ? 11 : 13))
+                        }
+                        if hasMovie {
+                            Text("🎬")
+                                .font(.system(size: emoji == nil ? 12 : 9))
+                        }
+                    }
                 } else {
                     Circle()
                         .fill(Theme.inkSoft.opacity(0.15))
@@ -320,6 +426,105 @@ private struct DiaryDayCell: View {
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
+    }
+}
+
+/// Planned movie inside the day detail: poster, title and the three
+/// actions (watched → memory form, move to another day, remove).
+private struct ScheduledMovieCard: View {
+    let plan: ScheduledMovie
+    let onWatched: () -> Void
+    let onMove: () -> Void
+    let onRemove: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label(L("planner.scheduled"), systemImage: "movieclapper")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Theme.rose)
+
+            HStack(spacing: 10) {
+                poster
+                Text(plan.title)
+                    .font(.footnote.weight(.bold))
+                    .foregroundStyle(Theme.ink)
+                    .lineLimit(3)
+                Spacer()
+            }
+
+            Button(action: onWatched) {
+                HStack(spacing: 6) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                    Text(L("planner.markWatched"))
+                        .font(.footnote.weight(.semibold))
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 38)
+                .background(Theme.seenGreen, in: .rect(cornerRadius: 11))
+                .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+
+            HStack(spacing: 8) {
+                Button(action: onMove) {
+                    HStack(spacing: 5) {
+                        Image(systemName: "arrow.right.circle")
+                            .font(.system(size: 11, weight: .semibold))
+                        Text(L("planner.move"))
+                            .font(.caption.weight(.semibold))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                    }
+                    .foregroundStyle(Theme.primary)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 32)
+                    .background(Theme.primary.opacity(0.10), in: .capsule)
+                    .contentShape(.capsule)
+                }
+                .buttonStyle(.plain)
+
+                Button(action: onRemove) {
+                    HStack(spacing: 5) {
+                        Image(systemName: "xmark.circle")
+                            .font(.system(size: 11, weight: .semibold))
+                        Text(L("planner.remove"))
+                            .font(.caption.weight(.semibold))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                    }
+                    .foregroundStyle(Theme.rose)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 32)
+                    .background(Theme.rose.opacity(0.10), in: .capsule)
+                    .contentShape(.capsule)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(10)
+        .background(Theme.surface.opacity(0.6), in: .rect(cornerRadius: 12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Theme.rose.opacity(0.25), lineWidth: 1)
+        )
+    }
+
+    private var poster: some View {
+        Group {
+            if let url = plan.posterURL {
+                AsyncImage(url: url) { image in
+                    image.resizable().aspectRatio(contentMode: .fill)
+                } placeholder: {
+                    Theme.surface
+                }
+            } else {
+                Theme.surface.overlay { Text("🎬") }
+            }
+        }
+        .frame(width: 46, height: 69)
+        .clipShape(.rect(cornerRadius: 8))
     }
 }
 
@@ -605,4 +810,6 @@ extension Calendar {
     }
     .environment(MoodDiary())
     .environment(MovieLibrary())
+    .environment(MoviePlanner())
+    .environment(NotificationService())
 }

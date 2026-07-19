@@ -69,6 +69,7 @@ struct HomeView: View {
             .navigationDestination(for: DiaryRoute.self) { route in
                 switch route {
                 case .badges: BadgesView()
+                case .memories: MemoriesView()
                 }
             }
         }

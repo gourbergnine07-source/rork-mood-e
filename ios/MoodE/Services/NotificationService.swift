@@ -52,6 +52,7 @@ final class NotificationService {
     private static let watchlistReminderDays = 5
 
     private static let eveningIdentifier = "evening-reminder"
+    private static let movieNightPrefix = "movienight-"
 
     private let defaults = UserDefaults.standard
 
@@ -148,11 +149,50 @@ final class NotificationService {
 
     /// Re-applies every schedule; called on scene activation and after the
     /// master toggle turns on.
-    func refreshSchedules(toWatch: [LibraryEntry], topGenres: [Int]) async {
+    func refreshSchedules(toWatch: [LibraryEntry], topGenres: [Int], scheduled: [ScheduledMovie] = []) async {
         guard isEnabled else { return }
         scheduleEveningReminder()
         scheduleWatchlistReminder(toWatch: toWatch)
+        syncMovieNightReminders(scheduled)
         await sync(topGenres: topGenres)
+    }
+
+    // MARK: - Movie night reminders
+
+    /// One reminder per planned movie, on its day at the user's evening
+    /// time ("Stasera hai in programma … 🍿"). Rebuilt from scratch on every
+    /// call so moves and removals are always reflected.
+    func syncMovieNightReminders(_ scheduled: [ScheduledMovie]) {
+        Task {
+            let center = UNUserNotificationCenter.current()
+            let pending = await center.pendingNotificationRequests()
+            let staleIds = pending.map(\.identifier).filter { $0.hasPrefix(Self.movieNightPrefix) }
+            center.removePendingNotificationRequests(withIdentifiers: staleIds)
+
+            guard isEnabled else { return }
+
+            let calendar = Calendar.current
+            for movie in scheduled {
+                guard let fireDate = calendar.date(
+                    bySettingHour: eveningHour, minute: eveningMinute, second: 0, of: movie.day
+                ), fireDate > Date() else { continue }
+
+                let content = UNMutableNotificationContent()
+                content.title = L("notif.movienight.title")
+                content.body = LF("notif.movienight.body", movie.title)
+                content.sound = .default
+                content.userInfo = ["route": NotificationRoute.watchlist]
+
+                let components = calendar.dateComponents(
+                    [.year, .month, .day, .hour, .minute], from: fireDate
+                )
+                try? await center.add(UNNotificationRequest(
+                    identifier: Self.movieNightPrefix + movie.id.uuidString,
+                    content: content,
+                    trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+                ))
+            }
+        }
     }
 
     // MARK: - Evening mood reminder
