@@ -178,7 +178,7 @@ struct AdviceComposerView: View {
                 in: .rect(cornerRadius: 14)
             )
         }
-        .disabled(!canPublish || isPublishing)
+        .disabled(isPublishing)
         .sensoryFeedback(.success, trigger: isPublishing)
     }
 
@@ -193,7 +193,15 @@ struct AdviceComposerView: View {
     }
 
     private func publish() {
-        guard let mood = selectedMood, !trimmedText.isEmpty else { return }
+        textFocused = false
+        guard let mood = selectedMood else {
+            errorMessage = L("advice.composer.needMood")
+            return
+        }
+        guard !trimmedText.isEmpty else {
+            errorMessage = L("advice.composer.needText")
+            return
+        }
         errorMessage = nil
         isPublishing = true
         Task {

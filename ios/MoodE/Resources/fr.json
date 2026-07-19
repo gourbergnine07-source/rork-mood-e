@@ -404,6 +404,8 @@
   "advice.composer.placeholder": "Ex. Je me sens nostalgique ce soir, que me conseillez-vous ?",
   "advice.composer.publish": "Publier",
   "advice.composer.anon": "Tu publieras en tant que %@ — 100%% anonyme",
+  "advice.composer.needMood": "Choisis d'abord l'émotion qui décrit comment tu te sens.",
+  "advice.composer.needText": "Écris quelques mots pour ta demande.",
   "advice.detail.title": "Demande",
   "advice.detail.repliesHeader": "Conseils reçus",
   "advice.detail.noReplies": "Pas encore de conseils. Sois le premier à suggérer un film !",

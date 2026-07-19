@@ -404,6 +404,8 @@
   "advice.composer.placeholder": "Es. Mi sento nostalgico stasera, cosa mi consigliate?",
   "advice.composer.publish": "Pubblica",
   "advice.composer.anon": "Pubblicherai come %@ — anonimo al 100%%",
+  "advice.composer.needMood": "Scegli prima l'emozione che descrive come ti senti.",
+  "advice.composer.needText": "Scrivi qualche parola per la tua richiesta.",
   "advice.detail.title": "Richiesta",
   "advice.detail.repliesHeader": "Consigli ricevuti",
   "advice.detail.noReplies": "Ancora nessun consiglio. Suggerisci tu un film!",

@@ -404,6 +404,8 @@
   "advice.composer.placeholder": "E.g. Feeling nostalgic tonight, what should I watch?",
   "advice.composer.publish": "Publish",
   "advice.composer.anon": "You'll post as %@ — 100%% anonymous",
+  "advice.composer.needMood": "First pick the emotion that describes how you feel.",
+  "advice.composer.needText": "Write a few words for your request.",
   "advice.detail.title": "Request",
   "advice.detail.repliesHeader": "Suggestions received",
   "advice.detail.noReplies": "No suggestions yet. Be the first to recommend a movie!",
