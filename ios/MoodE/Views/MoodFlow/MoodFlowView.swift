@@ -112,6 +112,7 @@ struct MoodFlowView: View {
                 ForEach(MovieEra.allCases) { era in
                     SelectableRow(
                         emoji: era.emoji,
+                        icon: era.icon,
                         title: era.title,
                         subtitle: era.subtitle,
                         isSelected: selectedEra == era,

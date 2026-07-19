@@ -144,6 +144,17 @@ enum MovieEra: String, CaseIterable, Identifiable, Hashable {
         }
     }
 
+    /// SF Symbol used when the emoji font is unavailable (stripped simulators).
+    var icon: String {
+        switch self {
+        case .seventiesEighties: return "recordingtape"
+        case .nineties: return "opticaldisc"
+        case .twoThousands: return "iphone"
+        case .lastFiveYears: return "popcorn"
+        case .noPreference: return "movieclapper"
+        }
+    }
+
     /// Localized subtitle from the active language table.
     var subtitle: String { L("era.\(rawValue).sub") }
 

@@ -25,19 +25,20 @@ struct SelectableCard: View {
         Button(action: action) {
             VStack(spacing: 10) {
                 ZStack(alignment: .topTrailing) {
-                    Text(emoji)
-                        .font(.system(size: 38))
+                    glyph
                         .scaleEffect(isFloating ? 1.08 : 1.0)
                         .offset(y: isFloating ? -3 : 2)
-                    Image(systemName: icon)
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(isSelected ? .white : tint)
-                        .padding(6)
-                        .background(
-                            isSelected ? tint : Theme.cardStrong,
-                            in: .circle
-                        )
-                        .offset(x: 18, y: -6)
+                    if EmojiSupport.isAvailable {
+                        Image(systemName: icon)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(isSelected ? .white : tint)
+                            .padding(6)
+                            .background(
+                                isSelected ? tint : Theme.cardStrong,
+                                in: .circle
+                            )
+                            .offset(x: 18, y: -6)
+                    }
                 }
 
                 Text(title)
@@ -83,6 +84,21 @@ struct SelectableCard: View {
         .onAppear { startAnimations() }
     }
 
+    /// Emoji when the emoji font exists, otherwise the tinted SF Symbol
+    /// (preview simulators without Apple Color Emoji would show "?").
+    @ViewBuilder
+    private var glyph: some View {
+        if EmojiSupport.isAvailable {
+            Text(emoji)
+                .font(.system(size: 38))
+        } else {
+            Image(systemName: icon)
+                .font(.system(size: 30, weight: .semibold))
+                .foregroundStyle(tint)
+                .frame(height: 44)
+        }
+    }
+
     private func startAnimations() {
         guard animatesEmoji else {
             hasAppeared = true
@@ -109,6 +125,7 @@ struct SelectableCard: View {
 /// Full-width row card used for the era step.
 struct SelectableRow: View {
     let emoji: String
+    var icon: String = "film"
     let title: String
     let subtitle: String
     let isSelected: Bool
@@ -118,13 +135,21 @@ struct SelectableRow: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 16) {
-                Text(emoji)
-                    .font(.system(size: 30))
-                    .frame(width: 52, height: 52)
-                    .background(
-                        isSelected ? tint.opacity(0.30) : tint.opacity(0.16),
-                        in: .rect(cornerRadius: 16)
-                    )
+                Group {
+                    if EmojiSupport.isAvailable {
+                        Text(emoji)
+                            .font(.system(size: 30))
+                    } else {
+                        Image(systemName: icon)
+                            .font(.system(size: 22, weight: .semibold))
+                            .foregroundStyle(tint)
+                    }
+                }
+                .frame(width: 52, height: 52)
+                .background(
+                    isSelected ? tint.opacity(0.30) : tint.opacity(0.16),
+                    in: .rect(cornerRadius: 16)
+                )
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text(title)
