@@ -13,6 +13,11 @@
       "name": "Functions",
       "path": "functions",
       "framework": "cloudflare"
+    },
+    {
+      "name": "Backend",
+      "path": "backend",
+      "framework": "supabase"
     }
   ]
 }
