@@ -20,24 +20,30 @@ struct HomeView: View {
             .navigationTitle("Mood-E")
             .toolbarTitleDisplayMode(.inline)
             .toolbar {
-                if diary.streak > 0 {
-                    ToolbarItem(placement: .topBarLeading) {
-                        NavigationLink(value: HomeRoute.diary) {
-                            HStack(spacing: 4) {
-                                Text("🔥")
-                                    .font(.system(size: 14))
-                                Text("\(diary.streak)")
-                                    .font(.subheadline.weight(.bold))
-                                    .foregroundStyle(Theme.primary)
-                                    .contentTransition(.numericText())
-                                    .monospacedDigit()
-                            }
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 5)
-                            .background(Theme.primary.opacity(0.12), in: .capsule)
+                ToolbarItem(placement: .topBarLeading) {
+                    NavigationLink(value: HomeRoute.diary) {
+                        HStack(spacing: 4) {
+                            Text("🔥")
+                                .font(.system(size: 14))
+                                .opacity(diary.streak > 0 ? 1 : 0.4)
+                            Text("\(diary.streak)")
+                                .font(.subheadline.weight(.bold))
+                                .foregroundStyle(diary.streak > 0 ? Theme.primary : Theme.inkSoft)
+                                .contentTransition(.numericText())
+                                .monospacedDigit()
                         }
-                        .accessibilityLabel(LF("diary.streak.days", diary.streak))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(
+                            (diary.streak > 0 ? Theme.primary : Theme.inkSoft).opacity(0.12),
+                            in: .capsule
+                        )
                     }
+                    .accessibilityLabel(
+                        diary.streak > 0
+                            ? LF("diary.streak.days", diary.streak)
+                            : L("diary.streak.start.title")
+                    )
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
