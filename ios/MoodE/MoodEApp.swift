@@ -14,6 +14,7 @@ struct MoodEApp: App {
     @State private var notifications = NotificationService()
     @State private var diary = MoodDiary()
     @State private var planner = MoviePlanner()
+    @State private var auth = AuthManager()
     @State private var theme = ThemeManager.shared
     @Environment(\.scenePhase) private var scenePhase
 
@@ -28,7 +29,18 @@ struct MoodEApp: App {
                 .environment(notifications)
                 .environment(diary)
                 .environment(planner)
+                .environment(auth)
                 .preferredColorScheme(theme.appearance.colorScheme)
+                .task {
+                    CloudSyncService.shared.configure(
+                        auth: auth,
+                        diary: diary,
+                        library: library,
+                        planner: planner
+                    )
+                    await auth.checkAuth()
+                    await CloudSyncService.shared.syncIfSignedIn()
+                }
                 .onChange(of: scenePhase) { _, newPhase in
                     guard newPhase == .active else { return }
                     Task {
@@ -43,6 +55,7 @@ struct MoodEApp: App {
                             notifications: notifications,
                             topMood: diary.topMood
                         )
+                        await CloudSyncService.shared.syncIfSignedIn()
                     }
                 }
         }

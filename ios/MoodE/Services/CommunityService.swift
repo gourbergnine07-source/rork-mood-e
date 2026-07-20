@@ -177,6 +177,11 @@ final class CommunityService {
         ])
     }
 
+    /// Anonymous aggregate stats for the "moods of the week" card.
+    func loadStats() async throws -> AdviceStats {
+        try await get("/advice/stats")
+    }
+
     /// Refreshes the personal counters and persists them for badge checks.
     func refreshProfile() async {
         guard let fresh: CommunityProfile = try? await get("/advice/profile?deviceId=\(deviceId)") else { return }

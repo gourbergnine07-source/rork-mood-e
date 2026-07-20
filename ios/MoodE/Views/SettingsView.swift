@@ -39,9 +39,13 @@ struct SettingsView: View {
     @Environment(NotificationService.self) private var notifications
     @Environment(MovieLibrary.self) private var library
     @Environment(MoodDiary.self) private var diary
+    @Environment(AuthManager.self) private var auth
     @State private var showPermissionAlert = false
     @State private var showOnboarding = false
     @State private var nicknameRefreshTrigger = false
+    @State private var showAccountSheet = false
+    @State private var showSignOutConfirm = false
+    private var cloudSync: CloudSyncService { CloudSyncService.shared }
     @AppStorage("onboarding.completed") private var hasCompletedOnboarding: Bool = true
     private var theme: ThemeManager { ThemeManager.shared }
 
@@ -54,6 +58,7 @@ struct SettingsView: View {
         NavigationStack {
             List {
                 appInfoSection
+                accountSection
                 journeySection
                 communitySection
                 appearanceSection
@@ -79,6 +84,20 @@ struct SettingsView: View {
                 case .memories: MemoriesView()
                 }
             }
+            .sheet(isPresented: $showAccountSheet) {
+                AccountSheetView()
+            }
+            .confirmationDialog(L("account.signOut.confirm"), isPresented: $showSignOutConfirm, titleVisibility: .visible) {
+                Button(L("account.signOut"), role: .destructive) {
+                    Task {
+                        CloudSyncService.shared.cancelPendingUpload()
+                        await auth.signOut()
+                    }
+                }
+                Button(L("common.cancel"), role: .cancel) {}
+            } message: {
+                Text(L("account.signOut.msg"))
+            }
             .fullScreenCover(isPresented: $showOnboarding) {
                 OnboardingView {
                     hasCompletedOnboarding = true
@@ -93,6 +112,106 @@ struct SettingsView: View {
             }
         }
         .tint(Theme.tabSettings)
+    }
+
+    // MARK: - Account e sincronizzazione
+
+    private var accountSection: some View {
+        Section {
+            if let user = auth.user {
+                HStack(spacing: 12) {
+                    Image(systemName: "person.crop.circle.badge.checkmark")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 29, height: 29)
+                        .background(Theme.seenGreen, in: .rect(cornerRadius: 7))
+
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(user.name ?? user.email)
+                            .font(.body)
+                            .foregroundStyle(Theme.ink)
+                            .lineLimit(1)
+                        if user.name != nil, !user.email.isEmpty {
+                            Text(user.email)
+                                .font(.caption)
+                                .foregroundStyle(Theme.inkSoft)
+                                .lineLimit(1)
+                        }
+                    }
+                }
+
+                HStack(spacing: 12) {
+                    Image(systemName: cloudSync.status == .error ? "exclamationmark.icloud.fill" : "checkmark.icloud.fill")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 29, height: 29)
+                        .background(cloudSync.status == .error ? Theme.rose : Theme.tabSettings, in: .rect(cornerRadius: 7))
+
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(L("account.lastSync"))
+                            .font(.body)
+                            .foregroundStyle(Theme.ink)
+                        Text(lastSyncLabel)
+                            .font(.caption)
+                            .foregroundStyle(cloudSync.status == .error ? Theme.rose : Theme.inkSoft)
+                    }
+
+                    Spacer()
+
+                    if cloudSync.status == .syncing {
+                        ProgressView()
+                    } else {
+                        Button {
+                            Task { await CloudSyncService.shared.syncNow() }
+                        } label: {
+                            Image(systemName: "arrow.triangle.2.circlepath")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(Theme.tabSettings)
+                                .frame(width: 32, height: 32)
+                                .background(Theme.tabSettings.opacity(0.12), in: .circle)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(L("account.syncNow"))
+                    }
+                }
+
+                Button(role: .destructive) {
+                    showSignOutConfirm = true
+                } label: {
+                    SettingsRow(
+                        icon: "rectangle.portrait.and.arrow.right",
+                        iconColor: Theme.rose,
+                        title: L("account.signOut")
+                    )
+                }
+            } else {
+                Button {
+                    showAccountSheet = true
+                } label: {
+                    SettingsRow(
+                        icon: "icloud.fill",
+                        iconColor: Theme.tabSettings,
+                        title: L("account.signIn")
+                    )
+                }
+            }
+        } header: {
+            Text(L("account.header"))
+        } footer: {
+            Text(L("account.footer"))
+                .font(.footnote)
+                .foregroundStyle(Theme.inkSoft)
+        }
+        .listRowBackground(Theme.card)
+    }
+
+    private var lastSyncLabel: String {
+        if cloudSync.status == .error { return L("account.error") }
+        guard let lastSync = cloudSync.lastSync else { return L("account.never") }
+        let formatter = RelativeDateTimeFormatter()
+        formatter.locale = LocalizationManager.shared.locale
+        formatter.unitsStyle = .short
+        return formatter.localizedString(for: lastSync, relativeTo: Date())
     }
 
     // MARK: - Pubblicità
@@ -713,4 +832,5 @@ struct SettingsRow: View {
         .environment(NotificationService())
         .environment(MovieLibrary())
         .environment(MoodDiary())
+        .environment(AuthManager())
 }

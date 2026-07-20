@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		XX31C08D89000476ACED2CXX /* MoodEWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = XX9BD89C46B35B92C99196XX /* MoodEWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		XX58A87C46960997EAFEF8XX /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = XX5EB48DBE87E012384FECXX /* GoogleMobileAds */; };
+		XXCB0C833A4E7DDE353CE0XX /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = XX17F496E7391AF4178246XX /* Supabase */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -98,6 +99,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				XX58A87C46960997EAFEF8XX /* GoogleMobileAds in Frameworks */,
+				XXCB0C833A4E7DDE353CE0XX /* Supabase in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -170,6 +172,7 @@
 			name = MoodE;
 			packageProductDependencies = (
 				XX5EB48DBE87E012384FECXX /* GoogleMobileAds */,
+				XX17F496E7391AF4178246XX /* Supabase */,
 			);
 			productName = MoodE;
 			productReference = 105FC57A2E9EAD3100EA8BCF /* MoodE.app */;
@@ -285,6 +288,7 @@
 			);
 			packageReferences = (
 				XX8F321EBFA973C6F11275XX /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */,
+				XXA26CCC1C14E04A80BED3XX /* XCRemoteSwiftPackageReference "supabase-swift" */,
 			);
 		};
 /* End PBXProject section */
@@ -756,9 +760,22 @@
 				minimumVersion = 12.0.0;
 			};
 		};
+		XXA26CCC1C14E04A80BED3XX /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		XX17F496E7391AF4178246XX /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = XXA26CCC1C14E04A80BED3XX /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
 		XX5EB48DBE87E012384FECXX /* GoogleMobileAds */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = XX8F321EBFA973C6F11275XX /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */;

@@ -118,6 +118,9 @@ export class AdviceBoard extends DurableObject {
       if (method === "GET" && path === "/advice/activity") {
         return this.activity(url);
       }
+      if (method === "GET" && path === "/advice/stats") {
+        return this.stats();
+      }
       return new Response("not found", { status: 404 });
     } catch (error) {
       console.error("AdviceBoard error", path, error);
@@ -368,6 +371,37 @@ export class AdviceBoard extends DurableObject {
     }
 
     return Response.json({ newReplies, moodMatches, now: Date.now() });
+  }
+
+  /**
+   * Anonymous aggregate stats for the "moods of the week" card:
+   * request counts per mood over the last 7 days plus all-time totals.
+   * No device ids or texts are exposed.
+   */
+  private stats(): Response {
+    const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+
+    const moods = this.ctx.storage.sql
+      .exec<{ mood: string; n: number }>(
+        `SELECT mood, COUNT(*) AS n FROM requests
+         WHERE hidden = 0 AND created_at > ?
+         GROUP BY mood ORDER BY n DESC`,
+        weekAgo,
+      )
+      .toArray();
+
+    const totalRequests = this.ctx.storage.sql
+      .exec<{ n: number }>("SELECT COUNT(*) AS n FROM requests WHERE hidden = 0")
+      .one().n;
+    const totalReplies = this.ctx.storage.sql
+      .exec<{ n: number }>("SELECT COUNT(*) AS n FROM replies WHERE hidden = 0")
+      .one().n;
+
+    return Response.json({
+      moods: moods.map((row) => ({ mood: row.mood, count: row.n })),
+      totalRequests,
+      totalReplies,
+    });
   }
 
   private requestJSON(row: RequestRow, deviceId: string) {

@@ -11,6 +11,7 @@ struct AdviceBoardView: View {
     private var community: CommunityService { CommunityService.shared }
 
     @State private var requests: [AdviceRequest] = []
+    @State private var stats: AdviceStats?
     @State private var isLoading: Bool = false
     @State private var errorMessage: String?
     @State private var filterMood: Mood?
@@ -27,6 +28,12 @@ struct AdviceBoardView: View {
 
                 askButton
                     .padding(.horizontal, 24)
+
+                if let stats, !stats.moods.isEmpty {
+                    MoodStatsCard(stats: stats)
+                        .padding(.horizontal, 24)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                }
 
                 moodFilter
 
@@ -232,6 +239,11 @@ struct AdviceBoardView: View {
             requests = try await community.loadRequests(mood: filterMood)
         } catch {
             errorMessage = error.localizedDescription
+        }
+        if let fresh = try? await community.loadStats() {
+            withAnimation(.spring(duration: 0.35)) {
+                stats = fresh
+            }
         }
     }
 

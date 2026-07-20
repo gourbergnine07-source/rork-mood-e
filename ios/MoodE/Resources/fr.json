@@ -1,10 +1,8 @@
 {
   "app.tagline": "Le bon film pour chaque émotion",
-
   "lang.title": "Choisis ta langue",
   "lang.subtitle": "Tu peux la changer à tout moment dans les Réglages.",
   "lang.continue": "Continuer",
-
   "onb.skip": "Passer",
   "onb.next": "Suivant",
   "onb.start": "Commencer",
@@ -15,13 +13,11 @@
   "onb.s2.msg": "Choisis ce que tu veux ressentir en regardant le film — rire, être ému, te détendre — et l'époque que tu préfères, des classiques aux nouveautés.",
   "onb.s3.title": "Ta sélection sur mesure",
   "onb.s3.msg": "Reçois immédiatement des films choisis pour toi : regarde la bande-annonce, enregistre-les dans ta liste et découvre ce qui passe au cinéma près de chez toi.",
-
   "tab.home": "Accueil",
   "tab.trending": "Tendances",
   "tab.cinema": "Au Cinéma",
   "tab.list": "Ma Liste",
   "tab.settings": "Réglages",
-
   "mood.felice": "Heureux",
   "mood.triste": "Triste",
   "mood.stressato": "Stressé",
@@ -34,7 +30,6 @@
   "mood.spensierato": "Insouciant",
   "mood.curioso": "Curieux",
   "mood.impaurito": "Effrayé",
-
   "goal.ridere": "Rire",
   "goal.piangere": "Pleurer / me défouler",
   "goal.rilassarmi": "Me détendre",
@@ -45,7 +40,6 @@
   "goal.paura": "Avoir peur / frissonner",
   "goal.sognare": "Rêver / m'évader",
   "goal.innamorarmi": "Tomber amoureux de l'histoire",
-
   "era.seventiesEighties": "Années 70–80",
   "era.seventiesEighties.sub": "Grands classiques et films cultes",
   "era.nineties": "Années 90",
@@ -56,7 +50,6 @@
   "era.lastFiveYears.sub": "Les sorties les plus récentes",
   "era.noPreference": "Aucune préférence",
   "era.noPreference.sub": "Surprends-moi avec n'importe quelle époque",
-
   "flow.s1.title": "Comment te sens-tu aujourd'hui ?",
   "flow.s1.sub": "Choisis l'émotion qui te représente le mieux en ce moment.",
   "flow.s2.title": "Que veux-tu ressentir en regardant un film ?",
@@ -65,7 +58,6 @@
   "flow.s3.sub": "Une dernière touche : de quelle période veux-tu que vienne ton film ?",
   "flow.continue": "Continuer",
   "flow.find": "Trouver mon film",
-
   "results.title": "Ton film",
   "results.searching": "Je cherche le film parfait pour toi…",
   "results.chosen": "Choisis pour toi",
@@ -73,7 +65,6 @@
   "results.empty.msg": "Essaie de changer d'époque ou d'objectif : avec des choix différents, nous trouverons sûrement quelque chose.",
   "results.newBatch": "Nouvelles propositions",
   "results.rewarded": "Regarde une courte vidéo pour 5 propositions de plus",
-
   "common.retry": "Réessayer",
   "common.oops": "Oups !",
   "common.cancel": "Annuler",
@@ -81,34 +72,28 @@
   "common.delete": "Supprimer",
   "common.loading": "Chargement en cours",
   "common.comingSoon": "Bientôt disponible",
-
   "card.save": "Enregistrer",
   "card.saved": "Enregistré",
   "card.seen": "Déjà vu",
   "card.watched": "Vu",
-
   "trailer.watch": "Bande-annonce",
   "trailer.watchLong": "Voir la bande-annonce",
   "trailer.close": "Fermer la bande-annonce",
   "trailer.unavailable.title": "Bande-annonce indisponible",
   "trailer.unavailable.msg": "Nous n'avons pas trouvé de bande-annonce pour ce film.",
-
   "share.a11y": "Partager %@",
   "share.ratingFormat": "⭐ %@/10 sur TMDB",
-
   "detail.loading": "Chargement des détails…",
   "detail.addList": "Ajouter à ma liste",
   "detail.inList": "Dans ta liste",
   "detail.plot": "Synopsis",
   "detail.cast": "Casting principal",
-
   "trending.week": "Cette semaine",
   "trending.day": "Aujourd'hui",
   "trending.empty.title": "Aucun film en tendance trouvé",
   "trending.empty.msg": "Réessaie bientôt : le classement se met à jour en continu.",
   "trending.a11y.show": "Afficher les tendances : %@",
   "trending.a11y.rank": "Position %d au classement",
-
   "cinema.perm.title": "Films à l'affiche près de chez toi",
   "cinema.perm.msg": "Nous utilisons ta position uniquement pour savoir dans quel pays tu te trouves et t'afficher les films actuellement au cinéma dans ta région. Nous ne la sauvegardons pas et ne la partageons avec personne.",
   "cinema.perm.allow": "Autoriser la position",
@@ -133,7 +118,6 @@
   "cinema.directions": "Itinéraire",
   "cinema.a11y.directions": "Ouvrir l'itinéraire vers %@",
   "cinema.a11y.genre": "Filtrer par genre %@",
-
   "list.section": "Section",
   "list.toWatch": "À voir",
   "list.seen": "Déjà vus",
@@ -147,7 +131,6 @@
   "list.empty.watch.msg": "Tu n'as pas encore de films à voir : explore les propositions dans l'Accueil et enregistre ceux qui t'intriguent !",
   "list.empty.seen.title": "Aucun film déjà vu",
   "list.empty.seen.msg": "Quand tu termines un film, marque-le comme vu : tu le retrouveras ici et nous ne te le proposerons plus.",
-
   "settings.title": "Réglages",
   "settings.info": "Infos sur l'app",
   "settings.appearance": "Apparence",
@@ -191,7 +174,6 @@
   "settings.legal.terms": "Conditions d'utilisation",
   "settings.legal.footer": "Cette app utilise des données fournies par TMDB mais n'est ni approuvée ni certifiée par TMDB. Les documents légaux sont actuellement disponibles en italien.",
   "settings.external": "S'ouvre dans le navigateur",
-
   "faq.title": "Questions fréquentes",
   "faq.q1": "Comment fonctionnent les recommandations de films ?",
   "faq.a1": "Choisis comment tu te sens, ce que tu veux obtenir du film et l'époque que tu préfères : Mood-E combine ces choix et interroge la base de données TMDB pour te proposer jusqu'à 15 films adaptés à ton état d'esprit. Avec \"Nouvelles propositions\", tu reçois d'autres titres avec les mêmes filtres.",
@@ -211,7 +193,6 @@
   "faq.a8": "Depuis la section \"Support et assistance\" dans les Réglages, touche \"Signaler un problème\" : la page GitHub s'ouvrira où tu peux décrire le problème ou demander une nouvelle fonctionnalité. Nous te répondrons dès que possible.",
   "faq.a11y.open": "Touche pour lire la réponse",
   "faq.a11y.close": "Touche pour fermer la réponse",
-
   "legal.privacy": "Politique de confidentialité",
   "legal.terms": "Conditions d'utilisation",
   "legal.back": "Retour",
@@ -219,14 +200,12 @@
   "legal.loading": "Chargement de la page…",
   "legal.failed.title": "Page indisponible",
   "legal.failed.msg": "Impossible de charger la page. Vérifie ta connexion et réessaie.",
-
   "error.missingKey": "Clé API TMDB manquante. Configure-la dans les paramètres du projet.",
   "error.invalidURL": "Adresse de la requête non valide.",
   "error.badResponse": "TMDB a répondu avec une erreur (code %d). Réessaie dans un instant.",
   "error.decoding": "Impossible de lire les données des films. Réessaie.",
   "error.generic": "Quelque chose s'est mal passé. Vérifie ta connexion et réessaie.",
   "error.cinema": "Impossible de charger les films à l'affiche. Vérifie ta connexion et réessaie.",
-
   "notif.new.title": "Nouveautés sur TMDB 🎬",
   "notif.new.one": "« %@ » vient d'arriver : jette-y un œil !",
   "notif.new.many": "%@ viennent d'arriver !",
@@ -237,24 +216,19 @@
   "notif.evening.body": "Dis-moi ton humeur et trouve le bon film en quelques secondes.",
   "notif.watchlist.title": "Un film t'attend 🍿",
   "notif.watchlist.body": "Tu as enregistré « %@ » il y a quelques jours : c'est le bon soir ?",
-
   "common.close": "Fermer",
-
   "settings.journey.header": "Mon parcours",
   "settings.journey.streak": "Jours d'affilée",
   "settings.journey.badges": "Mes récompenses",
   "settings.journey.footer": "Les récompenses sont juste pour toi : pas de classement, pas de comparaison.",
-
   "settings.notif.evening": "Rappel du soir",
   "settings.notif.evening.time": "Heure du rappel",
   "settings.notif.watchlist": "Films enregistrés à voir",
   "settings.notif.releases": "Nouveautés pour toi",
   "settings.notif.footer2": "Un rappel du soir pour le check-in, un petit clin d'œil aux films enregistrés depuis plus de 5 jours et les nouveautés en phase avec tes émotions récentes. Chaque alerte se désactive séparément.",
-
   "flow.quick": "Choix rapide",
   "flow.surprise": "Surprends-moi",
   "flow.quick.hint": "Saute l'objectif et l'époque pour une proposition immédiate basée sur ta seule émotion",
-
   "diary.title": "Mon journal",
   "diary.today": "Aujourd'hui",
   "diary.day.empty": "Aucun check-in ce jour-là. Ouvre l'accueil et dis-moi comment tu te sens 🎬",
@@ -278,7 +252,6 @@
   "diary.note.title": "Ta note",
   "diary.note.placeholder": "Comment ça s'est passé ? Écris quelques mots sur ton humeur…",
   "diary.note.save": "Enregistrer",
-
   "planner.scheduleButton": "Programme un film pour ce jour",
   "planner.fromList": "De ma liste",
   "planner.search": "Chercher un film",
@@ -295,12 +268,10 @@
   "planner.pending.one": "1 film prévu à marquer comme vu",
   "planner.pending.many": "%d films prévus à marquer comme vus",
   "planner.pendingHint": "Ce jour est passé : tu l'as vu ?",
-
   "watched.title": "C'était comment ?",
   "watched.ratingHint": "Ta note",
   "watched.commentPlaceholder": "Une pensée personnelle… (optionnel)",
   "watched.save": "Enregistrer le souvenir",
-
   "memories.title": "Mes souvenirs",
   "memories.row.title": "Mes souvenirs de cinéma",
   "memories.row.subtitle": "%d films vécus et racontés",
@@ -308,16 +279,13 @@
   "memories.empty.msg": "Programme un film depuis le calendrier et marque-le comme vu : il apparaîtra ici avec ta note.",
   "memories.share": "Partager",
   "card.watchedOn": "Vu le %@",
-
   "recap.month.title": "Ton mois de cinéma",
   "recap.month.watched": "films vus ce mois-ci",
   "recap.month.mood": "Émotion la plus fréquente : %@ %@",
   "recap.month.genre": "Genre le plus vu : %@",
   "recap.month.favorite": "Film le plus aimé : « %@ »",
-
   "notif.movienight.title": "Soirée ciné",
   "notif.movienight.body": "Ce soir tu as prévu %@ 🍿 Bon film !",
-
   "badges.title": "Mes récompenses",
   "badges.subtitle": "Des petites récompenses personnelles, sans classement : elles sont juste pour toi.",
   "badges.unlockedCount": "%d sur %d débloquées",
@@ -339,28 +307,23 @@
   "badge.fiammaViva.desc": "7 jours d'affilée avec un check-in",
   "badge.collezionista.title": "Collectionneur",
   "badge.collezionista.desc": "30 check-ins au total",
-
   "widget.forYou": "Film pour toi",
-
   "detail.watch": "Où le regarder",
   "detail.watch.stream": "Streaming",
   "detail.watch.rent": "Location",
   "detail.watch.buy": "Achat",
   "detail.watch.link": "Toutes les options sur TMDB",
   "detail.watch.justwatch": "Données de visionnage fournies par JustWatch",
-
   "surprise.title": "Surprends-moi",
   "surprise.spinning": "Je pioche un film pour toi…",
   "surprise.reveal": "Voici ton film ! 🎉",
   "surprise.details": "Voir la fiche",
   "surprise.again": "Relance",
   "surprise.error": "Je n'ai pas réussi à piocher un film. Vérifie ta connexion et réessaie !",
-
   "inbox.title": "Notifications",
   "inbox.empty.title": "Aucune notification",
   "inbox.empty.msg": "Les notifications de Mood-E que tu reçois sont enregistrées ici, pour les relire quand tu veux.",
   "inbox.clear": "Tout effacer",
-
   "genre.28": "Action",
   "genre.12": "Aventure",
   "genre.16": "Animation",
@@ -380,10 +343,8 @@
   "genre.10752": "Guerre",
   "genre.37": "Western",
   "genre.10770": "Téléfilm",
-
   "flow.quick.alert.title": "Choisis une émotion",
   "flow.quick.alert.msg": "Touche d'abord l'émotion que tu ressens : le choix rapide fera le reste.",
-
   "advice.title": "Conseils",
   "advice.ask": "Demander un conseil",
   "advice.filter.all": "Toutes",
@@ -417,23 +378,42 @@
   "advice.moderation.blocked": "Le texte contient un langage non autorisé. Modifie-le et réessaie.",
   "advice.rateLimited": "Tu as atteint la limite quotidienne. Réessaie demain.",
   "advice.error": "Impossible de joindre la communauté. Vérifie ta connexion et réessaie.",
-
   "settings.notif.community": "Communauté et conseils",
   "settings.community.header": "Communauté",
   "settings.community.nickname": "Pseudo anonyme",
   "settings.community.regenerate": "Générer un nouveau pseudo",
   "settings.community.helpful": "Conseils utiles donnés",
   "settings.community.footer": "Ce compteur est personnel et visible uniquement par toi : pas de classement public, pas de comparaison avec les autres.",
-
   "notif.community.reply.title": "Nouveau conseil pour toi 🎬",
   "notif.community.reply.body": "Quelqu'un t'a conseillé un film pour ce soir",
   "notif.community.reply.many": "%d nouveaux conseils t'attendent dans la communauté",
   "notif.community.mood.title": "Humeurs en phase 💬",
   "notif.community.mood.one": "Une personne se sent %@ comme toi aujourd'hui — jette un œil à ses conseils",
   "notif.community.mood.body": "%d personnes se sentent %@ comme toi aujourd'hui — jette un œil à leurs conseils",
-
   "badge.buonConsigliere.title": "Bon conseiller",
   "badge.buonConsigliere.desc": "5 de tes conseils marqués comme utiles",
   "badge.parteDellaCommunity.title": "Membre de la communauté",
-  "badge.parteDellaCommunity.desc": "Première demande de conseil publiée"
+  "badge.parteDellaCommunity.desc": "Première demande de conseil publiée",
+  "account.header": "Compte et sauvegarde cloud",
+  "account.footer": "Facultatif : connecte-toi pour sauvegarder ton journal, ta liste et ton planning dans le cloud et les retrouver sur un nouvel iPhone. Sans connexion, tout reste uniquement sur cet appareil.",
+  "account.signIn": "Se connecter pour la sauvegarde cloud",
+  "account.sheet.title": "Ta sauvegarde dans le cloud",
+  "account.sheet.msg": "Connecte-toi avec Apple ou Google pour sauvegarder tes données et les retrouver en changeant d'iPhone. La communauté reste anonyme comme toujours.",
+  "account.sync.diary": "Journal des émotions et série",
+  "account.sync.list": "Ma liste (à voir et déjà vus)",
+  "account.sync.planner": "Planning des films et souvenirs",
+  "account.privacy": "Nous utilisons uniquement ton e-mail pour reconnaître ton compte. Pas de pub basée sur ton identité, rien de partagé avec la communauté.",
+  "account.google": "Continuer avec Google",
+  "account.lastSync": "Dernière synchronisation",
+  "account.never": "Jamais",
+  "account.error": "Échec de la synchronisation. Réessaie.",
+  "account.error.title": "Erreur de connexion",
+  "account.syncNow": "Synchroniser maintenant",
+  "account.signOut": "Se déconnecter",
+  "account.signOut.confirm": "Se déconnecter ?",
+  "account.signOut.msg": "Tes données restent sur cet appareil et dans le cloud. Tu peux te reconnecter quand tu veux.",
+  "advice.stats.title": "Les moods de la semaine",
+  "advice.stats.empty": "Aucune demande cette semaine. Brise la glace !",
+  "advice.stats.requests": "demandes au total",
+  "advice.stats.replies": "conseils donnés"
 }

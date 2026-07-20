@@ -204,6 +204,7 @@ final class MoviePlanner {
         } catch {
             print("MoviePlanner: persist scheduled failed: \(error.localizedDescription)")
         }
+        CloudSyncService.shared.noteLocalChange()
     }
 
     private func persistMemories() {
@@ -213,5 +214,14 @@ final class MoviePlanner {
         } catch {
             print("MoviePlanner: persist memories failed: \(error.localizedDescription)")
         }
+        CloudSyncService.shared.noteLocalChange()
+    }
+
+    /// Replaces plans and memories with the cloud-merged copy (sync only).
+    func replaceAll(scheduled newScheduled: [ScheduledMovie], memories newMemories: [MovieMemory]) {
+        scheduled = newScheduled.sorted { $0.day < $1.day }
+        memories = newMemories.sorted { $0.watchedDate > $1.watchedDate }
+        persistScheduled()
+        persistMemories()
     }
 }

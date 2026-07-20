@@ -185,6 +185,14 @@ final class MoodDiary {
         } catch {
             print("MoodDiary: persist failed: \(error.localizedDescription)")
         }
+        CloudSyncService.shared.noteLocalChange()
+    }
+
+    /// Replaces the whole diary with the cloud-merged copy (sync only).
+    func replaceAll(_ merged: [MoodCheckIn]) {
+        checkIns = merged.sorted { $0.date > $1.date }
+        persist()
+        publishWidgetSnapshot()
     }
 
     // MARK: - Calendar queries

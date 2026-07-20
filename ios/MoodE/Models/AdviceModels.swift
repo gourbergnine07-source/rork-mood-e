@@ -54,3 +54,19 @@ nonisolated struct AdviceDetail: Codable {
     let request: AdviceRequest
     let replies: [AdviceReply]
 }
+
+/// One mood with its request count over the last 7 days.
+nonisolated struct AdviceMoodCount: Codable, Identifiable, Hashable {
+    let mood: String
+    let count: Int
+
+    var id: String { mood }
+    var moodValue: Mood? { Mood(rawValue: mood) }
+}
+
+/// Anonymous aggregate community stats ("moods of the week").
+nonisolated struct AdviceStats: Codable, Hashable {
+    let moods: [AdviceMoodCount]
+    let totalRequests: Int
+    let totalReplies: Int
+}

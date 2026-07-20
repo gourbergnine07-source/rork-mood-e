@@ -215,6 +215,13 @@ final class MovieLibrary {
         } catch {
             print("MovieLibrary: failed to persist entries: \(error.localizedDescription)")
         }
+        CloudSyncService.shared.noteLocalChange()
+    }
+
+    /// Replaces the whole library with the cloud-merged copy (sync only).
+    func replaceAll(_ merged: [LibraryEntry]) {
+        entries = merged
+        persist()
     }
 
     private static func loadEntries() -> [LibraryEntry] {

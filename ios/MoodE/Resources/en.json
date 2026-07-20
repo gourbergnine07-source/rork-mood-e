@@ -1,10 +1,8 @@
 {
   "app.tagline": "The right movie for every emotion",
-
   "lang.title": "Choose your language",
   "lang.subtitle": "You can change it anytime in Settings.",
   "lang.continue": "Continue",
-
   "onb.skip": "Skip",
   "onb.next": "Next",
   "onb.start": "Get started",
@@ -15,13 +13,11 @@
   "onb.s2.msg": "Choose what you want to feel while watching — laugh, be moved, relax — and the era you prefer, from classics to new releases.",
   "onb.s3.title": "Your tailored picks",
   "onb.s3.msg": "Get movies chosen for you right away: watch the trailer, save them to your list and discover what's playing in cinemas near you.",
-
   "tab.home": "Home",
   "tab.trending": "Trending",
   "tab.cinema": "In Theatres",
   "tab.list": "My List",
   "tab.settings": "Settings",
-
   "mood.felice": "Happy",
   "mood.triste": "Sad",
   "mood.stressato": "Stressed",
@@ -34,7 +30,6 @@
   "mood.spensierato": "Carefree",
   "mood.curioso": "Curious",
   "mood.impaurito": "Scared",
-
   "goal.ridere": "Laugh",
   "goal.piangere": "Cry / let it out",
   "goal.rilassarmi": "Relax",
@@ -45,7 +40,6 @@
   "goal.paura": "Get scared / thrills",
   "goal.sognare": "Dream / escape",
   "goal.innamorarmi": "Fall in love with the story",
-
   "era.seventiesEighties": "'70s–'80s",
   "era.seventiesEighties.sub": "Great classics and cult movies",
   "era.nineties": "'90s",
@@ -56,7 +50,6 @@
   "era.lastFiveYears.sub": "The most recent releases",
   "era.noPreference": "No preference",
   "era.noPreference.sub": "Surprise me with any era",
-
   "flow.s1.title": "How do you feel today?",
   "flow.s1.sub": "Pick the emotion that best describes you right now.",
   "flow.s2.title": "What do you want from a movie?",
@@ -65,7 +58,6 @@
   "flow.s3.sub": "One last touch: which period should your movie come from?",
   "flow.continue": "Continue",
   "flow.find": "Find my movie",
-
   "results.title": "Your movie",
   "results.searching": "Finding the perfect movie for you…",
   "results.chosen": "Picked for you",
@@ -73,7 +65,6 @@
   "results.empty.msg": "Try changing era or goal: with different choices we'll surely find something.",
   "results.newBatch": "New picks",
   "results.rewarded": "Watch a short video for 5 more picks",
-
   "common.retry": "Try again",
   "common.oops": "Oops!",
   "common.cancel": "Cancel",
@@ -81,34 +72,28 @@
   "common.delete": "Delete",
   "common.loading": "Loading",
   "common.comingSoon": "Coming soon",
-
   "card.save": "Save",
   "card.saved": "Saved",
   "card.seen": "Seen it",
   "card.watched": "Watched",
-
   "trailer.watch": "Watch Trailer",
   "trailer.watchLong": "Watch trailer",
   "trailer.close": "Close trailer",
   "trailer.unavailable.title": "Trailer unavailable",
   "trailer.unavailable.msg": "We couldn't find a trailer for this movie.",
-
   "share.a11y": "Share %@",
   "share.ratingFormat": "⭐ %@/10 on TMDB",
-
   "detail.loading": "Loading details…",
   "detail.addList": "Add to my list",
   "detail.inList": "In your list",
   "detail.plot": "Plot",
   "detail.cast": "Main cast",
-
   "trending.week": "This week",
   "trending.day": "Today",
   "trending.empty.title": "No trending movies found",
   "trending.empty.msg": "Try again soon: the chart updates all the time.",
   "trending.a11y.show": "Show trending: %@",
   "trending.a11y.rank": "Ranked %d",
-
   "cinema.perm.title": "Movies in theatres near you",
   "cinema.perm.msg": "We only use your location to understand which country you're in and show you the movies currently playing in your area. We never store it or share it with anyone.",
   "cinema.perm.allow": "Allow location",
@@ -133,7 +118,6 @@
   "cinema.directions": "Directions",
   "cinema.a11y.directions": "Open directions to %@",
   "cinema.a11y.genre": "Filter by genre %@",
-
   "list.section": "Section",
   "list.toWatch": "To watch",
   "list.seen": "Watched",
@@ -147,7 +131,6 @@
   "list.empty.watch.msg": "You have no movies to watch yet: explore the picks in Home and save the ones that intrigue you!",
   "list.empty.seen.title": "No watched movies",
   "list.empty.seen.msg": "When you finish a movie, mark it as watched: you'll find it here and we won't suggest it again.",
-
   "settings.title": "Settings",
   "settings.info": "App info",
   "settings.appearance": "Appearance",
@@ -191,7 +174,6 @@
   "settings.legal.terms": "Terms of Use",
   "settings.legal.footer": "This app uses data provided by TMDB but is not endorsed or certified by TMDB. Legal documents are currently available in Italian.",
   "settings.external": "Opens in the browser",
-
   "faq.title": "Frequently asked questions",
   "faq.q1": "How do movie recommendations work?",
   "faq.a1": "Pick how you feel, what you want from the movie and the era you prefer: Mood-E combines these choices and queries the TMDB database to suggest up to 15 movies matching your mood. With \"New picks\" you get more titles with the same filters.",
@@ -211,7 +193,6 @@
   "faq.a8": "From the \"Support\" section in Settings tap \"Report a problem\": the GitHub page will open where you can describe the issue or request a new feature. We'll get back to you as soon as possible.",
   "faq.a11y.open": "Tap to read the answer",
   "faq.a11y.close": "Tap to close the answer",
-
   "legal.privacy": "Privacy Policy",
   "legal.terms": "Terms of Use",
   "legal.back": "Back",
@@ -219,14 +200,12 @@
   "legal.loading": "Loading page…",
   "legal.failed.title": "Page unavailable",
   "legal.failed.msg": "The page could not be loaded. Check your connection and try again.",
-
   "error.missingKey": "TMDB API key missing. Configure it in the project settings.",
   "error.invalidURL": "Invalid request address.",
   "error.badResponse": "TMDB returned an error (code %d). Try again shortly.",
   "error.decoding": "Couldn't read the movie data. Try again.",
   "error.generic": "Something went wrong. Check your connection and try again.",
   "error.cinema": "We can't load the movies in theatres. Check your connection and try again.",
-
   "notif.new.title": "New on TMDB 🎬",
   "notif.new.one": "\"%@\" just arrived: check it out!",
   "notif.new.many": "%@ just arrived!",
@@ -237,24 +216,19 @@
   "notif.evening.body": "Tell me your mood and find the right movie in seconds.",
   "notif.watchlist.title": "A movie is waiting for you 🍿",
   "notif.watchlist.body": "You saved \"%@\" a few days ago: is tonight the night?",
-
   "common.close": "Close",
-
   "settings.journey.header": "My journey",
   "settings.journey.streak": "Days in a row",
   "settings.journey.badges": "My milestones",
   "settings.journey.footer": "Milestones are just for you: no leaderboards, no comparing with others.",
-
   "settings.notif.evening": "Evening reminder",
   "settings.notif.evening.time": "Reminder time",
   "settings.notif.watchlist": "Saved movies to watch",
   "settings.notif.releases": "New releases for you",
   "settings.notif.footer2": "An evening check-in reminder, a gentle nudge about movies saved more than 5 days ago, and new releases matching your recent moods. Each alert can be switched off individually.",
-
   "flow.quick": "Quick pick",
   "flow.surprise": "Surprise me",
   "flow.quick.hint": "Skips goal and era and gives you an instant pick based on your mood alone",
-
   "diary.title": "My diary",
   "diary.today": "Today",
   "diary.day.empty": "No check-in on this day. Open the Home tab and tell me how you feel 🎬",
@@ -278,7 +252,6 @@
   "diary.note.title": "Your note",
   "diary.note.placeholder": "How did it go? Write a few words about your mood…",
   "diary.note.save": "Save",
-
   "planner.scheduleButton": "Plan a movie for this day",
   "planner.fromList": "From my list",
   "planner.search": "Search a movie",
@@ -295,12 +268,10 @@
   "planner.pending.one": "1 planned movie to mark as watched",
   "planner.pending.many": "%d planned movies to mark as watched",
   "planner.pendingHint": "This day has passed — did you watch it?",
-
   "watched.title": "How was it?",
   "watched.ratingHint": "Your rating",
   "watched.commentPlaceholder": "A personal thought… (optional)",
   "watched.save": "Save memory",
-
   "memories.title": "My memories",
   "memories.row.title": "My movie memories",
   "memories.row.subtitle": "%d movies lived and remembered",
@@ -308,16 +279,13 @@
   "memories.empty.msg": "Plan a movie from the calendar and mark it as watched: it will appear here with your rating.",
   "memories.share": "Share",
   "card.watchedOn": "Watched on %@",
-
   "recap.month.title": "Your month at the movies",
   "recap.month.watched": "movies watched this month",
   "recap.month.mood": "Top emotion: %@ %@",
   "recap.month.genre": "Top genre: %@",
   "recap.month.favorite": "Most loved: \"%@\"",
-
   "notif.movienight.title": "Movie night",
   "notif.movienight.body": "Tonight you planned %@ 🍿 Enjoy the show!",
-
   "badges.title": "My milestones",
   "badges.subtitle": "Small personal milestones, no leaderboards: they're just for you.",
   "badges.unlockedCount": "%d of %d unlocked",
@@ -339,28 +307,23 @@
   "badge.fiammaViva.desc": "7 days in a row with a check-in",
   "badge.collezionista.title": "Collector",
   "badge.collezionista.desc": "30 total check-ins",
-
   "widget.forYou": "Movie for you",
-
   "detail.watch": "Where to watch",
   "detail.watch.stream": "Streaming",
   "detail.watch.rent": "Rent",
   "detail.watch.buy": "Buy",
   "detail.watch.link": "All options on TMDB",
   "detail.watch.justwatch": "Watch data provided by JustWatch",
-
   "surprise.title": "Surprise me",
   "surprise.spinning": "Picking a movie for you…",
   "surprise.reveal": "Here's your movie! 🎉",
   "surprise.details": "See details",
   "surprise.again": "Spin again",
   "surprise.error": "I couldn't pick a movie. Check your connection and try again!",
-
   "inbox.title": "Notifications",
   "inbox.empty.title": "No notifications",
   "inbox.empty.msg": "Mood-E notifications you receive are saved here, so you can read them again anytime.",
   "inbox.clear": "Clear all",
-
   "genre.28": "Action",
   "genre.12": "Adventure",
   "genre.16": "Animation",
@@ -380,10 +343,8 @@
   "genre.10752": "War",
   "genre.37": "Western",
   "genre.10770": "TV Movie",
-
   "flow.quick.alert.title": "Pick an emotion",
   "flow.quick.alert.msg": "Tap the emotion you feel first: quick pick will do the rest.",
-
   "advice.title": "Advice",
   "advice.ask": "Ask for advice",
   "advice.filter.all": "All",
@@ -417,23 +378,42 @@
   "advice.moderation.blocked": "The text contains language that isn't allowed. Edit it and try again.",
   "advice.rateLimited": "You've reached today's limit. Try again tomorrow.",
   "advice.error": "Can't reach the community. Check your connection and try again.",
-
   "settings.notif.community": "Community and advice",
   "settings.community.header": "Community",
   "settings.community.nickname": "Anonymous nickname",
   "settings.community.regenerate": "Generate new nickname",
   "settings.community.helpful": "Helpful advice given",
   "settings.community.footer": "This counter is personal and visible only to you: no public leaderboards, no comparisons with others.",
-
   "notif.community.reply.title": "New advice for you 🎬",
   "notif.community.reply.body": "Someone recommended you a movie for tonight",
   "notif.community.reply.many": "%d new suggestions are waiting in the community",
   "notif.community.mood.title": "Moods in tune 💬",
   "notif.community.mood.one": "One person feels %@ like you today — check out their advice",
   "notif.community.mood.body": "%d people feel %@ like you today — check out their advice",
-
   "badge.buonConsigliere.title": "Good advisor",
   "badge.buonConsigliere.desc": "5 of your suggestions marked as helpful",
   "badge.parteDellaCommunity.title": "Part of the community",
-  "badge.parteDellaCommunity.desc": "First advice request published"
+  "badge.parteDellaCommunity.desc": "First advice request published",
+  "account.header": "Account & cloud backup",
+  "account.footer": "Optional: sign in to back up your diary, list and planner to the cloud and get them back on a new iPhone. Without signing in everything stays on this device only.",
+  "account.signIn": "Sign in for cloud backup",
+  "account.sheet.title": "Your cloud backup",
+  "account.sheet.msg": "Sign in with Apple or Google to back up your data and restore it when you switch iPhones. The community stays anonymous as always.",
+  "account.sync.diary": "Emotion diary and streak",
+  "account.sync.list": "My list (to watch and watched)",
+  "account.sync.planner": "Movie planner and memories",
+  "account.privacy": "We only use your email to recognize your account. No identity-based ads, nothing shared with the community.",
+  "account.google": "Continue with Google",
+  "account.lastSync": "Last sync",
+  "account.never": "Never",
+  "account.error": "Sync failed. Please try again.",
+  "account.error.title": "Sign-in error",
+  "account.syncNow": "Sync now",
+  "account.signOut": "Sign out",
+  "account.signOut.confirm": "Sign out?",
+  "account.signOut.msg": "Your data stays both on this device and in the cloud. You can sign back in anytime.",
+  "advice.stats.title": "This week's moods",
+  "advice.stats.empty": "No requests yet this week. Break the ice!",
+  "advice.stats.requests": "total requests",
+  "advice.stats.replies": "tips shared"
 }
