@@ -40,6 +40,7 @@ struct SettingsView: View {
     @Environment(MovieLibrary.self) private var library
     @Environment(MoodDiary.self) private var diary
     @Environment(AuthManager.self) private var auth
+    @Environment(QuizStore.self) private var quiz
     @State private var showPermissionAlert = false
     @State private var showOnboarding = false
     @State private var nicknameRefreshTrigger = false
@@ -62,6 +63,7 @@ struct SettingsView: View {
                 journeySection
                 communitySection
                 appearanceSection
+                personalizationSection
                 languageSection
                 notificationsSection
                 librarySection
@@ -326,6 +328,48 @@ struct SettingsView: View {
         .listRowBackground(Theme.card)
     }
 
+    // MARK: - Personalizzazione e profilo spettatore
+
+    private var personalizationSection: some View {
+        Section {
+            NavigationLink {
+                PersonalizationView()
+            } label: {
+                SettingsRow(
+                    icon: "paintpalette.fill",
+                    iconColor: Theme.amber,
+                    title: L("settings.perso.row")
+                )
+            }
+
+            NavigationLink {
+                SpectatorQuizView()
+            } label: {
+                HStack(spacing: 12) {
+                    Text(quiz.profile?.emoji ?? "\u{1F3AD}")
+                        .font(.system(size: 20))
+                        .frame(width: 29, height: 29)
+
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(L("quiz.settings.row"))
+                            .font(.body)
+                            .foregroundStyle(Theme.ink)
+                        Text(quiz.profile?.title ?? L("quiz.settings.sub.none"))
+                            .font(.caption)
+                            .foregroundStyle(Theme.inkSoft)
+                    }
+                }
+            }
+        } header: {
+            Text(L("settings.perso.header"))
+        } footer: {
+            Text(L("settings.perso.footer"))
+                .font(.footnote)
+                .foregroundStyle(Theme.inkSoft)
+        }
+        .listRowBackground(Theme.card)
+    }
+
     // MARK: - Lingua
 
     private var languageBinding: Binding<AppLanguage> {
@@ -486,7 +530,8 @@ struct SettingsView: View {
                     } else if newValue {
                         await notifications.refreshSchedules(
                             toWatch: library.toWatch,
-                            topGenres: diary.topGenreIds
+                            topGenres: diary.topGenreIds,
+                            checkIns: diary.checkIns
                         )
                     }
                 }
@@ -539,6 +584,27 @@ struct SettingsView: View {
         Binding(
             get: { notifications.communityEnabled },
             set: { notifications.setCommunityEnabled($0) }
+        )
+    }
+
+    private var forecastBinding: Binding<Bool> {
+        Binding(
+            get: { notifications.forecastEnabled },
+            set: { notifications.setForecastEnabled($0, checkIns: diary.checkIns) }
+        )
+    }
+
+    private var eventsBinding: Binding<Bool> {
+        Binding(
+            get: { notifications.eventsEnabled },
+            set: { notifications.setEventsEnabled($0) }
+        )
+    }
+
+    private var eventsHeadsUpBinding: Binding<Bool> {
+        Binding(
+            get: { notifications.eventsHeadsUpEnabled },
+            set: { notifications.setEventsHeadsUpEnabled($0) }
         )
     }
 
@@ -603,6 +669,35 @@ struct SettingsView: View {
                     )
                 }
                 .tint(Theme.tabSettings)
+
+                Toggle(isOn: forecastBinding) {
+                    SettingsRow(
+                        icon: "cloud.sun.fill",
+                        iconColor: Theme.tabHome,
+                        title: L("settings.notif.forecast")
+                    )
+                }
+                .tint(Theme.tabSettings)
+
+                Toggle(isOn: eventsBinding) {
+                    SettingsRow(
+                        icon: "trophy.fill",
+                        iconColor: Theme.amber,
+                        title: L("settings.notif.events")
+                    )
+                }
+                .tint(Theme.tabSettings)
+
+                if notifications.eventsEnabled {
+                    Toggle(isOn: eventsHeadsUpBinding) {
+                        SettingsRow(
+                            icon: "calendar.badge.clock",
+                            iconColor: Theme.tabList,
+                            title: L("settings.notif.events.pre")
+                        )
+                    }
+                    .tint(Theme.tabSettings)
+                }
             }
 
             if notifications.authorizationStatus == .denied {
@@ -834,4 +929,7 @@ struct SettingsRow: View {
         .environment(MovieLibrary())
         .environment(MoodDiary())
         .environment(AuthManager())
+        .environment(QuizStore())
+        .environment(PersonalizationStore())
+        .environment(MoviePlanner())
 }

@@ -155,7 +155,8 @@ final class MovieResultsViewModel {
                 page = currentPage + 1
             } while true
 
-            let batch = Array(collected.prefix(batchSize))
+            // Light spectator-profile boost: refines, never replaces, the flow.
+            let batch = QuizStore.rerank(Array(collected.prefix(batchSize)))
             state = .loaded(batch)
             batchId += 1
             TMDBCache.save(

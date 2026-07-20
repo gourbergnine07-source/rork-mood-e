@@ -16,6 +16,8 @@ struct MoodEApp: App {
     @State private var planner = MoviePlanner()
     @State private var auth = AuthManager()
     @State private var statsStore = MovieStatsStore()
+    @State private var personalization = PersonalizationStore()
+    @State private var quiz = QuizStore()
     @State private var theme = ThemeManager.shared
     @Environment(\.scenePhase) private var scenePhase
 
@@ -32,6 +34,8 @@ struct MoodEApp: App {
                 .environment(planner)
                 .environment(auth)
                 .environment(statsStore)
+                .environment(personalization)
+                .environment(quiz)
                 .preferredColorScheme(theme.appearance.colorScheme)
                 .task {
                     CloudSyncService.shared.configure(
@@ -51,7 +55,8 @@ struct MoodEApp: App {
                         await notifications.refreshSchedules(
                             toWatch: library.toWatch,
                             topGenres: diary.topGenreIds,
-                            scheduled: planner.scheduled
+                            scheduled: planner.scheduled,
+                            checkIns: diary.checkIns
                         )
                         await CommunityService.shared.checkActivity(
                             notifications: notifications,

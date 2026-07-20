@@ -12,6 +12,10 @@ struct ContentView: View {
     @State private var selectedTab: Int = 0
     @State private var deepLinkMovie: TMDBMovie?
     @Environment(MovieLibrary.self) private var library
+    @Environment(MoodDiary.self) private var diary
+    @Environment(MoviePlanner.self) private var planner
+    @Environment(PersonalizationStore.self) private var personalization
+    @Environment(QuizStore.self) private var quiz
 
     private var selectedTint: Color {
         switch selectedTab {
@@ -59,12 +63,29 @@ struct ContentView: View {
         .tint(selectedTint)
         .sensoryFeedback(.selection, trigger: selectedTab)
         .animation(.easeInOut(duration: 0.25), value: selectedTab)
+        .overlay(alignment: .top) {
+            if let reward = personalization.pendingRewards.first {
+                UnlockToastView(reward: reward) {
+                    personalization.dismissReward(reward)
+                }
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .id(reward.id)
+            }
+        }
+        .animation(
+            .spring(response: 0.45, dampingFraction: 0.8),
+            value: personalization.pendingRewards
+        )
+        .task { evaluateUnlocks() }
+        .onChange(of: diary.checkIns.count) { _, _ in evaluateUnlocks() }
+        .onChange(of: library.lifetimeWatchedCount) { _, _ in evaluateUnlocks() }
         .onReceive(NotificationCenter.default.publisher(for: NotificationRoute.notificationName)) { note in
             guard let route = note.object as? String else { return }
             switch route {
             case NotificationRoute.moodFlow: selectedTab = 0
             case NotificationRoute.community: selectedTab = 1
             case NotificationRoute.watchlist: selectedTab = 3
+            case NotificationRoute.forecast: handleForecastTap(note.userInfo)
             default: break
             }
         }
@@ -88,6 +109,31 @@ struct ContentView: View {
                     }
             }
             .tint(Theme.primary)
+        }
+    }
+
+    /// Re-checks streak/watched milestones for icons and themes.
+    private func evaluateUnlocks() {
+        personalization.evaluate(
+            diary: diary,
+            library: library,
+            planner: planner,
+            quizCompleted: quiz.profile != nil
+        )
+    }
+
+    /// Forecast notification tap: jump to Home and open the results screen
+    /// with the pre-computed mood + goal for that weekday pattern.
+    private func handleForecastTap(_ userInfo: [AnyHashable: Any]?) {
+        selectedTab = 0
+        guard let moodRaw = userInfo?["mood"] as? String,
+              let mood = Mood(rawValue: moodRaw) else { return }
+        let goal = (userInfo?["goal"] as? String).flatMap(ViewingGoal.init) ?? mood.quickPickGoal
+        let selection = MoodSelection(mood: mood, goal: goal, era: .noPreference, isQuickPick: true)
+        // Small delay so the tab switch settles before pushing the results.
+        Task {
+            try? await Task.sleep(for: .milliseconds(400))
+            NotificationCenter.default.post(name: ForecastLaunch.name, object: selection)
         }
     }
 
@@ -125,4 +171,7 @@ struct ContentView: View {
         .environment(MovieLibrary())
         .environment(MoodDiary())
         .environment(NotificationService())
+        .environment(MoviePlanner())
+        .environment(PersonalizationStore())
+        .environment(QuizStore())
 }

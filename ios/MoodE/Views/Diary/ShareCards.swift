@@ -221,6 +221,68 @@ struct MonthlyRecapShareCardView: View {
     }
 }
 
+/// Story-friendly card of the spectator-quiz result: profile emblem,
+/// title, description and the Mood-E brand. Fixed size for rendering.
+struct QuizShareCardView: View {
+    let profile: SpectatorProfile
+
+    private let cream = Color(red: 0.949, green: 0.918, blue: 0.890)
+
+    var body: some View {
+        VStack(spacing: 18) {
+            Text("\u{1F3AC} Mood-E")
+                .font(.system(size: 15, weight: .heavy, design: .rounded))
+                .foregroundStyle(cream.opacity(0.9))
+                .kerning(1.5)
+
+            Text(L("quiz.title"))
+                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .foregroundStyle(cream)
+
+            ZStack {
+                Circle()
+                    .fill(.white.opacity(0.16))
+                    .frame(width: 168, height: 168)
+                Circle()
+                    .strokeBorder(.white.opacity(0.35), lineWidth: 2)
+                    .frame(width: 168, height: 168)
+                Text(profile.emoji)
+                    .font(.system(size: 80))
+            }
+            .padding(.top, 8)
+
+            Text(profile.title)
+                .font(.system(size: 30, weight: .black, design: .rounded))
+                .foregroundStyle(.white)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .minimumScaleFactor(0.7)
+
+            Text(profile.detail)
+                .font(.system(size: 15, weight: .medium, design: .rounded))
+                .foregroundStyle(cream.opacity(0.92))
+                .multilineTextAlignment(.center)
+                .lineLimit(5)
+                .padding(.horizontal, 6)
+
+            Spacer(minLength: 0)
+
+            Text(L("quiz.card.footer"))
+                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .foregroundStyle(cream.opacity(0.75))
+        }
+        .padding(26)
+        .frame(width: 350, height: 600)
+        .background(
+            LinearGradient(
+                colors: profile.gradient,
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+    }
+}
+
 /// Wrapped-style shareable card summarising the lifetime cinema statistics
 /// ("Le mie statistiche"). Fixed size for deterministic on-device rendering.
 struct StatsShareCardView: View {

@@ -13,6 +13,7 @@ enum NotificationRoute {
     static let moodFlow = "moodflow"
     static let watchlist = "watchlist"
     static let community = "community"
+    static let forecast = "forecast"
 }
 
 /// Manages every local notification of Mood-E:
@@ -34,6 +35,9 @@ final class NotificationService {
     private(set) var watchlistEnabled: Bool
     private(set) var releasesEnabled: Bool
     private(set) var communityEnabled: Bool
+    private(set) var forecastEnabled: Bool
+    private(set) var eventsEnabled: Bool
+    private(set) var eventsHeadsUpEnabled: Bool
 
     /// Evening reminder time (persisted, default 20:00).
     private(set) var eveningHour: Int
@@ -46,6 +50,9 @@ final class NotificationService {
     private static let watchlistEnabledKey = "notifications.watchlist.enabled"
     private static let releasesEnabledKey = "notifications.releases.enabled"
     private static let communityEnabledKey = "notifications.community.enabled"
+    private static let forecastEnabledKey = "notifications.forecast.enabled"
+    private static let eventsEnabledKey = "notifications.events.enabled"
+    private static let eventsHeadsUpEnabledKey = "notifications.events.headsUp.enabled"
     private static let communityDigestDayKey = "notifications.community.lastDigestDay"
     private static let watchlistNotifiedKey = "notifications.watchlist.notifiedIds"
     private static let featuredScheduledKey = "notifications.featured.scheduledIds"
@@ -58,6 +65,11 @@ final class NotificationService {
 
     private static let eveningIdentifier = "evening-reminder"
     private static let movieNightPrefix = "movienight-"
+    private static let forecastPrefix = "forecast-"
+    private static let eventPrefix = "event-"
+    private static let eventHeadsUpPrefix = "eventpre-"
+    /// Days before a live event for the optional heads-up notification.
+    private static let eventHeadsUpDays = 3
 
     private let defaults = UserDefaults.standard
 
@@ -68,6 +80,9 @@ final class NotificationService {
         watchlistEnabled = (defaults.object(forKey: Self.watchlistEnabledKey) as? Bool) ?? true
         releasesEnabled = (defaults.object(forKey: Self.releasesEnabledKey) as? Bool) ?? true
         communityEnabled = (defaults.object(forKey: Self.communityEnabledKey) as? Bool) ?? true
+        forecastEnabled = (defaults.object(forKey: Self.forecastEnabledKey) as? Bool) ?? true
+        eventsEnabled = (defaults.object(forKey: Self.eventsEnabledKey) as? Bool) ?? true
+        eventsHeadsUpEnabled = (defaults.object(forKey: Self.eventsHeadsUpEnabledKey) as? Bool) ?? true
         eveningHour = (defaults.object(forKey: Self.eveningHourKey) as? Int) ?? 20
         eveningMinute = (defaults.object(forKey: Self.eveningMinuteKey) as? Int) ?? 0
         Task { await refreshAuthorizationStatus() }
@@ -147,6 +162,53 @@ final class NotificationService {
         defaults.set(enabled, forKey: Self.communityEnabledKey)
     }
 
+    /// Toggles the proactive weekday mood-forecast notification.
+    func setForecastEnabled(_ enabled: Bool, checkIns: [MoodCheckIn]) {
+        forecastEnabled = enabled
+        defaults.set(enabled, forKey: Self.forecastEnabledKey)
+        Task {
+            if enabled {
+                await syncMoodForecast(checkIns: checkIns)
+            } else {
+                await removePending(prefix: Self.forecastPrefix)
+            }
+        }
+    }
+
+    /// Toggles the live cinema event notifications (day-of).
+    func setEventsEnabled(_ enabled: Bool) {
+        eventsEnabled = enabled
+        defaults.set(enabled, forKey: Self.eventsEnabledKey)
+        Task {
+            if enabled {
+                await syncLiveEventReminders()
+            } else {
+                await removePending(prefix: Self.eventPrefix)
+                await removePending(prefix: Self.eventHeadsUpPrefix)
+            }
+        }
+    }
+
+    /// Toggles the optional 3-days-before heads-up for live events.
+    func setEventsHeadsUpEnabled(_ enabled: Bool) {
+        eventsHeadsUpEnabled = enabled
+        defaults.set(enabled, forKey: Self.eventsHeadsUpEnabledKey)
+        Task {
+            if enabled {
+                await syncLiveEventReminders()
+            } else {
+                await removePending(prefix: Self.eventHeadsUpPrefix)
+            }
+        }
+    }
+
+    private func removePending(prefix: String) async {
+        let center = UNUserNotificationCenter.current()
+        let pending = await center.pendingNotificationRequests()
+        let ids = pending.map(\.identifier).filter { $0.hasPrefix(prefix) }
+        center.removePendingNotificationRequests(withIdentifiers: ids)
+    }
+
     func setReleasesEnabled(_ enabled: Bool) {
         releasesEnabled = enabled
         defaults.set(enabled, forKey: Self.releasesEnabledKey)
@@ -162,13 +224,122 @@ final class NotificationService {
 
     /// Re-applies every schedule; called on scene activation and after the
     /// master toggle turns on.
-    func refreshSchedules(toWatch: [LibraryEntry], topGenres: [Int], scheduled: [ScheduledMovie] = []) async {
+    func refreshSchedules(
+        toWatch: [LibraryEntry],
+        topGenres: [Int],
+        scheduled: [ScheduledMovie] = [],
+        checkIns: [MoodCheckIn] = []
+    ) async {
         guard isEnabled else { return }
         scheduleEveningReminder()
         scheduleWatchlistReminder(toWatch: toWatch)
         syncMovieNightReminders(scheduled)
         await syncFeaturedThemeReminders()
+        await syncMoodForecast(checkIns: checkIns)
+        await syncLiveEventReminders()
         await sync(topGenres: topGenres)
+    }
+
+    // MARK: - Mood forecast
+
+    /// Weekly proactive notification for each detected weekday-mood pattern
+    /// ("Di solito il lunedì ti senti stressato…"), fired at the user's
+    /// typical check-in hour. Rebuilt from scratch so patterns stay current.
+    func syncMoodForecast(checkIns: [MoodCheckIn]) async {
+        await removePending(prefix: Self.forecastPrefix)
+        guard isEnabled, forecastEnabled else { return }
+
+        let patterns = MoodForecastAnalyzer.patterns(from: checkIns)
+        guard !patterns.isEmpty else { return }
+
+        let center = UNUserNotificationCenter.current()
+        for pattern in patterns {
+            guard let mood = Mood(rawValue: pattern.moodRaw) else { continue }
+
+            let content = UNMutableNotificationContent()
+            content.title = L("notif.forecast.title")
+            content.body = LF(
+                "notif.forecast.body",
+                MoodForecastAnalyzer.weekdayName(pattern.weekday),
+                mood.title.lowercased()
+            )
+            content.sound = .default
+            content.userInfo = [
+                "route": NotificationRoute.forecast,
+                "mood": pattern.moodRaw,
+                "goal": pattern.goalRaw
+            ]
+
+            var components = DateComponents()
+            components.weekday = pattern.weekday
+            components.hour = pattern.hour
+            components.minute = pattern.minute
+
+            try? await center.add(UNNotificationRequest(
+                identifier: Self.forecastPrefix + "\(pattern.weekday)",
+                content: content,
+                trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
+            ))
+        }
+    }
+
+    // MARK: - Live cinema events
+
+    /// Day-of notification (18:00) for each upcoming live event, plus an
+    /// optional heads-up 3 days before (10:00) when enabled.
+    func syncLiveEventReminders() async {
+        guard isEnabled, eventsEnabled else { return }
+
+        let center = UNUserNotificationCenter.current()
+        let pendingIds = Set(await center.pendingNotificationRequests().map(\.identifier))
+        let calendar = Calendar.current
+
+        for event in LiveEventCalendar.all {
+            guard let eventDay = event.nextDate(onOrAfter: Date()) else { continue }
+            let year = calendar.component(.year, from: eventDay)
+
+            let dayOfId = Self.eventPrefix + "\(event.id)-\(year)"
+            if !pendingIds.contains(dayOfId),
+               let fireDate = calendar.date(bySettingHour: 18, minute: 0, second: 0, of: eventDay),
+               fireDate > Date() {
+                let content = UNMutableNotificationContent()
+                content.title = L("notif.event.title")
+                content.body = L("notif.event.\(event.id)")
+                content.sound = .default
+                content.userInfo = ["route": NotificationRoute.moodFlow]
+
+                let components = calendar.dateComponents(
+                    [.year, .month, .day, .hour, .minute], from: fireDate
+                )
+                try? await center.add(UNNotificationRequest(
+                    identifier: dayOfId,
+                    content: content,
+                    trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+                ))
+            }
+
+            guard eventsHeadsUpEnabled else { continue }
+            let headsUpId = Self.eventHeadsUpPrefix + "\(event.id)-\(year)"
+            if !pendingIds.contains(headsUpId),
+               let headsUpDay = calendar.date(byAdding: .day, value: -Self.eventHeadsUpDays, to: eventDay),
+               let fireDate = calendar.date(bySettingHour: 10, minute: 0, second: 0, of: headsUpDay),
+               fireDate > Date() {
+                let content = UNMutableNotificationContent()
+                content.title = L("notif.event.title")
+                content.body = LF("notif.event.pre.body", event.title, Self.eventHeadsUpDays)
+                content.sound = .default
+                content.userInfo = ["route": NotificationRoute.moodFlow]
+
+                let components = calendar.dateComponents(
+                    [.year, .month, .day, .hour, .minute], from: fireDate
+                )
+                try? await center.add(UNNotificationRequest(
+                    identifier: headsUpId,
+                    content: content,
+                    trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+                ))
+            }
+        }
     }
 
     // MARK: - Seasonal collection reminders
@@ -518,13 +689,16 @@ final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
         didReceive response: UNNotificationResponse
     ) async {
         let record = NotificationHistory.payload(from: response.notification, isRead: true)
-        let route = response.notification.request.content.userInfo["route"] as? String
+        let userInfo = response.notification.request.content.userInfo
+        let route = userInfo["route"] as? String
+        let extras = userInfo as? [String: Any]
         await MainActor.run {
             NotificationHistory.shared.add(record)
             if let route {
                 NotificationCenter.default.post(
                     name: NotificationRoute.notificationName,
-                    object: route
+                    object: route,
+                    userInfo: extras
                 )
             }
         }

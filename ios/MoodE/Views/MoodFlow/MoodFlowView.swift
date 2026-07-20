@@ -8,6 +8,7 @@ import SwiftUI
 /// Guided 3-step flow: emotion → goal → era, with animated transitions.
 struct MoodFlowView: View {
     @Environment(MoodDiary.self) private var diary
+    @Environment(QuizStore.self) private var quiz
     @State private var step: Int = 0
     @State private var isMovingForward: Bool = true
     @State private var showQuickPickHint: Bool = false
@@ -18,6 +19,7 @@ struct MoodFlowView: View {
 
     @State private var resultSelection: MoodSelection?
     @State private var showSurprise: Bool = false
+    @State private var showQuiz: Bool = false
 
     private let gridColumns: [GridItem] = [
         GridItem(.flexible(), spacing: 12),
@@ -58,6 +60,16 @@ struct MoodFlowView: View {
         .sheet(isPresented: $showSurprise) {
             SurpriseView()
         }
+        .sheet(isPresented: $showQuiz) {
+            NavigationStack {
+                SpectatorQuizView(isPresentedAsSheet: true)
+            }
+            .tint(Theme.primary)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: ForecastLaunch.name)) { note in
+            guard let selection = note.object as? MoodSelection else { return }
+            resultSelection = selection
+        }
         .alert(L("flow.quick.alert.title"), isPresented: $showQuickPickHint) {
             Button(L("common.ok"), role: .cancel) {}
         } message: {
@@ -71,7 +83,7 @@ struct MoodFlowView: View {
         stepScreen(
             title: L("flow.s1.title"),
             subtitle: L("flow.s1.sub"),
-            header: { FeaturedStripView() }
+            header: { homeHeader }
         ) {
             LazyVGrid(columns: gridColumns, spacing: 12) {
                 ForEach(Array(Mood.allCases.enumerated()), id: \.element) { index, mood in
@@ -134,6 +146,64 @@ struct MoodFlowView: View {
                 }
             }
         }
+    }
+
+    /// Step-1 header: featured strip + live-event countdown + quiz banner.
+    private var homeHeader: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            FeaturedStripView()
+
+            if let upcoming = LiveEventCalendar.upcoming().first {
+                LiveEventCard(event: upcoming.event, days: upcoming.days)
+                    .padding(.horizontal, 24)
+            }
+
+            if quiz.profile == nil {
+                quizBanner
+                    .padding(.horizontal, 24)
+            }
+        }
+    }
+
+    /// Compact invitation to the spectator quiz, hidden once completed.
+    private var quizBanner: some View {
+        Button {
+            showQuiz = true
+        } label: {
+            HStack(spacing: 10) {
+                Text("\u{1F3AD}")
+                    .font(.system(size: 22))
+                    .frame(width: 38, height: 38)
+                    .background(Theme.primary.opacity(0.12), in: .circle)
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(L("quiz.banner.title"))
+                        .font(.footnote.weight(.bold))
+                        .foregroundStyle(Theme.ink)
+                    Text(L("quiz.banner.sub"))
+                        .font(.caption2)
+                        .foregroundStyle(Theme.inkSoft)
+                        .lineLimit(1)
+                }
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Theme.primary)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(Theme.card, in: .rect(cornerRadius: 16))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Theme.primary.opacity(0.22), lineWidth: 1)
+            )
+            .contentShape(.rect)
+        }
+        .buttonStyle(PressableCardStyle())
+        .sensoryFeedback(.impact(weight: .light), trigger: showQuiz)
+        .accessibilityLabel("\(L("quiz.banner.title")). \(L("quiz.banner.sub"))")
     }
 
     private func stepScreen<Content: View>(
