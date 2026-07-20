@@ -132,12 +132,26 @@ enum TMDBService {
     /// Movies for an editorial collection of the "In evidenza" strip.
     /// Trending-backed collections reuse the weekly trending endpoint;
     /// discover-backed ones translate the collection's query into filters.
-    static func featuredMovies(source: FeaturedSource, page: Int = 1) async throws -> [TMDBMovie] {
+    /// Results vary between sessions: a random page is fetched and the
+    /// list is shuffled so the collection feels fresh on every visit.
+    static func featuredMovies(source: FeaturedSource) async throws -> [TMDBMovie] {
         switch source {
         case .trendingWeek:
-            return try await trendingMovies(window: .week)
+            return try await trendingMovies(window: .week).shuffled()
 
         case .discover(let query):
+            let page = Int.random(in: 1...4)
+            let movies = try await discoverFeatured(query: query, page: page)
+            // Narrow queries (e.g. Oscar race) may not fill deeper pages —
+            // fall back to page 1 so the list is never sparse.
+            if movies.count < 8 && page > 1 {
+                return try await discoverFeatured(query: query, page: 1).shuffled()
+            }
+            return movies.shuffled()
+        }
+    }
+
+    private static func discoverFeatured(query: FeaturedQuery, page: Int) async throws -> [TMDBMovie] {
             var queryItems: [URLQueryItem] = [
                 URLQueryItem(name: "sort_by", value: query.sortBy),
                 URLQueryItem(name: "vote_count.gte", value: String(query.voteCountGte)),
@@ -177,7 +191,6 @@ enum TMDBService {
 
             let response: TMDBMovieListResponse = try await request(path: "/discover/movie", queryItems: queryItems)
             return await fillingMissingOverviews(response, path: "/discover/movie", queryItems: queryItems).results
-        }
     }
 
     /// Trending movies for the requested time window (week or day).
