@@ -9,9 +9,14 @@ import SwiftUI
 struct BadgesView: View {
     @Environment(MoodDiary.self) private var diary
     @Environment(MovieLibrary.self) private var library
+    @Environment(MoviePlanner.self) private var planner
+    @Environment(MovieStatsStore.self) private var statsStore
 
     private var stats: DiaryStats {
-        diary.stats(watchedTotal: library.lifetimeWatchedCount)
+        diary.stats(
+            watchedTotal: library.lifetimeWatchedCount,
+            genreWatched: statsStore.genreCounts(watched: library.watched, memories: planner.memories)
+        )
     }
 
     var body: some View {
@@ -50,6 +55,9 @@ struct BadgesView: View {
         }
         .navigationTitle(L("badges.title"))
         .toolbarTitleDisplayMode(.inline)
+        .task {
+            await statsStore.refresh(watched: library.watched, memories: planner.memories)
+        }
     }
 }
 
@@ -109,4 +117,6 @@ private struct BadgeCard: View {
     }
     .environment(MoodDiary())
     .environment(MovieLibrary())
+    .environment(MoviePlanner())
+    .environment(MovieStatsStore())
 }

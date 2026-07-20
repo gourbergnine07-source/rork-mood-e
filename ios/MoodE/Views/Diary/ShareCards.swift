@@ -220,3 +220,84 @@ struct MonthlyRecapShareCardView: View {
             .background(cream.opacity(0.08), in: .rect(cornerRadius: 12))
     }
 }
+
+/// Wrapped-style shareable card summarising the lifetime cinema statistics
+/// ("Le mie statistiche"). Fixed size for deterministic on-device rendering.
+struct StatsShareCardView: View {
+    let films: Int
+    let hoursText: String
+    let genreText: String?
+    let moodText: String?
+    let decadeText: String?
+    let favoriteText: String?
+
+    private let cardBackground = LinearGradient(
+        colors: [
+            Color(red: 0.075, green: 0.086, blue: 0.157),
+            Color(red: 0.098, green: 0.180, blue: 0.278)
+        ],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+    private let cream = Color(red: 0.949, green: 0.918, blue: 0.890)
+    private let gold = Color(red: 0.980, green: 0.749, blue: 0.439)
+
+    var body: some View {
+        VStack(spacing: 16) {
+            Text("\u{1F3AC} Mood-E")
+                .font(.system(size: 15, weight: .heavy, design: .rounded))
+                .foregroundStyle(cream.opacity(0.85))
+                .kerning(1.5)
+
+            Text(L("stats.share.cardTitle"))
+                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .foregroundStyle(cream)
+                .multilineTextAlignment(.center)
+
+            Text("\(films)")
+                .font(.system(size: 84, weight: .black, design: .rounded))
+                .foregroundStyle(gold)
+
+            Text(L("stats.card.films"))
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(cream)
+                .padding(.top, -14)
+
+            VStack(spacing: 10) {
+                if hoursText != "\u{2014}" {
+                    statRow("\u{23F1}\u{FE0F} \(L("stats.card.hours")): \(hoursText)")
+                }
+                if let genreText {
+                    statRow("\u{1F3AD} \(L("stats.card.topGenre")): \(genreText)")
+                }
+                if let moodText {
+                    statRow("\u{1F4AB} \(L("stats.card.topMood")): \(moodText)")
+                }
+                if let decadeText {
+                    statRow("\u{1F570}\u{FE0F} \(L("stats.card.decade")): \(decadeText)")
+                }
+                if let favoriteText {
+                    statRow("\u{1F3C6} \(L("stats.card.best")): \(favoriteText)")
+                }
+            }
+            .padding(.top, 2)
+
+            Spacer(minLength: 0)
+        }
+        .padding(26)
+        .frame(width: 350, height: 600)
+        .background(cardBackground)
+    }
+
+    private func statRow(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: 13.5, weight: .medium, design: .rounded))
+            .foregroundStyle(cream.opacity(0.92))
+            .multilineTextAlignment(.center)
+            .lineLimit(2)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 9)
+            .padding(.horizontal, 12)
+            .background(cream.opacity(0.08), in: .rect(cornerRadius: 12))
+    }
+}

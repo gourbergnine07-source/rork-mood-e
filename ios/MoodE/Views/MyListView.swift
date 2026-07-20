@@ -19,6 +19,13 @@ struct MyListView: View {
                 Theme.background.ignoresSafeArea()
 
                 VStack(spacing: 16) {
+                    NavigationLink(value: DiaryRoute.stats) {
+                        statsBanner
+                    }
+                    .buttonStyle(PressableCardStyle())
+                    .padding(.horizontal, 24)
+                    .padding(.top, 8)
+
                     Picker(L("list.section"), selection: $selectedSection) {
                         ForEach(ListSection.allCases) { section in
                             Text(sectionLabel(section)).tag(section)
@@ -26,7 +33,6 @@ struct MyListView: View {
                     }
                     .pickerStyle(.segmented)
                     .padding(.horizontal, 24)
-                    .padding(.top, 8)
 
                     if entries.isEmpty {
                         Spacer()
@@ -42,11 +48,47 @@ struct MyListView: View {
             .navigationDestination(for: TMDBMovie.self) { movie in
                 MovieDetailView(movie: movie)
             }
+            .navigationDestination(for: DiaryRoute.self) { route in
+                switch route {
+                case .badges: BadgesView()
+                case .memories: MemoriesView()
+                case .stats: MyStatsView()
+                }
+            }
             .trailerPlayer(trailerPlayback)
         }
         .tint(Theme.tabList)
         .sensoryFeedback(.selection, trigger: selectedSection)
         .onAppear { library.pruneExpiredWatched() }
+    }
+
+    /// Compact entry point to the aggregate statistics dashboard.
+    private var statsBanner: some View {
+        HStack(spacing: 10) {
+            Text("\u{1F4CA}")
+                .font(.system(size: 22))
+            VStack(alignment: .leading, spacing: 1) {
+                Text(L("stats.title"))
+                    .font(.footnote.weight(.bold))
+                    .foregroundStyle(Theme.ink)
+                Text(L("stats.row.subtitle"))
+                    .font(.caption2)
+                    .foregroundStyle(Theme.inkSoft)
+                    .lineLimit(1)
+            }
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(Theme.tabList)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(Theme.card, in: .rect(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Theme.tabList.opacity(0.25), lineWidth: 1)
+        )
+        .contentShape(.rect)
     }
 
     private var entries: [LibraryEntry] {

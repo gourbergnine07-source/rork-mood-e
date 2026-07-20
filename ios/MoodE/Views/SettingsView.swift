@@ -82,6 +82,7 @@ struct SettingsView: View {
                 switch route {
                 case .badges: BadgesView()
                 case .memories: MemoriesView()
+                case .stats: MyStatsView()
                 }
             }
             .sheet(isPresented: $showAccountSheet) {

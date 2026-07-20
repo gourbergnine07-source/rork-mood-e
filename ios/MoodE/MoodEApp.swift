@@ -15,6 +15,7 @@ struct MoodEApp: App {
     @State private var diary = MoodDiary()
     @State private var planner = MoviePlanner()
     @State private var auth = AuthManager()
+    @State private var statsStore = MovieStatsStore()
     @State private var theme = ThemeManager.shared
     @Environment(\.scenePhase) private var scenePhase
 
@@ -30,6 +31,7 @@ struct MoodEApp: App {
                 .environment(diary)
                 .environment(planner)
                 .environment(auth)
+                .environment(statsStore)
                 .preferredColorScheme(theme.appearance.colorScheme)
                 .task {
                     CloudSyncService.shared.configure(

@@ -12,8 +12,22 @@ enum Badge: String, CaseIterable, Identifiable {
     case primoPasso, primaSettimana, esploratore, cinefilo
     case nottambulo, mattiniero, fiammaViva, collezionista
     case buonConsigliere, parteDellaCommunity
+    case esploratoreHorror, amanteDelDramma, reDellaCommedia
+    case animatore, documentarista
 
     var id: String { rawValue }
+
+    /// Genre-based milestone (TMDB genre id + watched target), when applicable.
+    var genreGoal: (genreId: Int, target: Int)? {
+        switch self {
+        case .esploratoreHorror: return (27, 5)
+        case .amanteDelDramma: return (18, 10)
+        case .reDellaCommedia: return (35, 10)
+        case .animatore: return (16, 5)
+        case .documentarista: return (99, 3)
+        default: return nil
+        }
+    }
 
     var title: String { L("badge.\(rawValue).title") }
     var detail: String { L("badge.\(rawValue).desc") }
@@ -30,6 +44,11 @@ enum Badge: String, CaseIterable, Identifiable {
         case .collezionista: return "🏆"
         case .buonConsigliere: return "🤝"
         case .parteDellaCommunity: return "💬"
+        case .esploratoreHorror: return "👻"
+        case .amanteDelDramma: return "🎭"
+        case .reDellaCommedia: return "😂"
+        case .animatore: return "🎨"
+        case .documentarista: return "🎥"
         }
     }
 
@@ -46,6 +65,9 @@ enum Badge: String, CaseIterable, Identifiable {
         case .collezionista: return stats.checkInCount >= 30
         case .buonConsigliere: return stats.helpfulGiven >= 5
         case .parteDellaCommunity: return stats.requestsPublished >= 1
+        case .esploratoreHorror, .amanteDelDramma, .reDellaCommedia, .animatore, .documentarista:
+            guard let goal = genreGoal else { return false }
+            return stats.genreWatched[goal.genreId, default: 0] >= goal.target
         }
     }
 
@@ -63,6 +85,9 @@ enum Badge: String, CaseIterable, Identifiable {
         case .collezionista: ratio = Double(stats.checkInCount) / 30
         case .buonConsigliere: ratio = Double(stats.helpfulGiven) / 5
         case .parteDellaCommunity: ratio = Double(stats.requestsPublished) / 1
+        case .esploratoreHorror, .amanteDelDramma, .reDellaCommedia, .animatore, .documentarista:
+            guard let goal = genreGoal else { return 0 }
+            ratio = Double(stats.genreWatched[goal.genreId, default: 0]) / Double(goal.target)
         }
         return min(ratio, 1)
     }
@@ -80,6 +105,8 @@ struct DiaryStats {
     let helpfulGiven: Int
     /// Advice requests published on the community board.
     let requestsPublished: Int
+    /// Watched movies per TMDB genre id, for the genre milestones.
+    let genreWatched: [Int: Int]
 }
 
 /// Summary of the previous week, shown once at the start of a new week.
@@ -278,7 +305,7 @@ final class MoodDiary {
 
     // MARK: - Stats & badges
 
-    func stats(watchedTotal: Int) -> DiaryStats {
+    func stats(watchedTotal: Int, genreWatched: [Int: Int] = [:]) -> DiaryStats {
         let calendar = Calendar.current
         let hours = checkIns.map { calendar.component(.hour, from: $0.date) }
         return DiaryStats(
@@ -289,7 +316,8 @@ final class MoodDiary {
             morningCheckIns: hours.filter { $0 >= 5 && $0 < 9 }.count,
             bestStreak: bestStreak,
             helpfulGiven: defaults.integer(forKey: CommunityService.helpfulReceivedKey),
-            requestsPublished: defaults.integer(forKey: CommunityService.requestsPublishedKey)
+            requestsPublished: defaults.integer(forKey: CommunityService.requestsPublishedKey),
+            genreWatched: genreWatched
         )
     }
 

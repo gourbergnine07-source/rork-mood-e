@@ -70,6 +70,7 @@ struct HomeView: View {
                 switch route {
                 case .badges: BadgesView()
                 case .memories: MemoriesView()
+                case .stats: MyStatsView()
                 }
             }
         }

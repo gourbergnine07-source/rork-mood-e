@@ -11,6 +11,7 @@ struct DiaryView: View {
     @Environment(MovieLibrary.self) private var library
     @Environment(MoviePlanner.self) private var planner
     @Environment(NotificationService.self) private var notifications
+    @Environment(MovieStatsStore.self) private var statsStore
 
     @State private var displayedMonth: Date = Calendar.current.startOfMonth(for: Date())
     @State private var selectedDay: Date = Calendar.current.startOfDay(for: Date())
@@ -51,6 +52,11 @@ struct DiaryView: View {
 
                     NavigationLink(value: DiaryRoute.memories) {
                         memoriesRow
+                    }
+                    .buttonStyle(PressableCardStyle())
+
+                    NavigationLink(value: DiaryRoute.stats) {
+                        statsRow
                     }
                     .buttonStyle(PressableCardStyle())
 
@@ -329,6 +335,33 @@ struct DiaryView: View {
         )
     }
 
+    // MARK: - Stats row
+
+    private var statsRow: some View {
+        HStack(spacing: 12) {
+            Text("\u{1F4CA}")
+                .font(.system(size: 26))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(L("stats.title"))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.ink)
+                Text(L("stats.row.subtitle"))
+                    .font(.caption)
+                    .foregroundStyle(Theme.inkSoft)
+            }
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Theme.inkSoft)
+        }
+        .padding(16)
+        .background(Theme.card, in: .rect(cornerRadius: 20))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(Theme.primary.opacity(0.20), lineWidth: 1)
+        )
+    }
+
     // MARK: - Badges row
 
     private var badgesRow: some View {
@@ -357,7 +390,10 @@ struct DiaryView: View {
     }
 
     private var badgesSubtitle: String {
-        let stats = diary.stats(watchedTotal: library.lifetimeWatchedCount)
+        let stats = diary.stats(
+            watchedTotal: library.lifetimeWatchedCount,
+            genreWatched: statsStore.genreCounts(watched: library.watched, memories: planner.memories)
+        )
         let unlocked = Badge.allCases.filter { $0.isUnlocked(stats) }.count
         return LF("diary.badges.count", unlocked, Badge.allCases.count)
     }
@@ -428,6 +464,7 @@ struct DiaryView: View {
 enum DiaryRoute: Hashable {
     case badges
     case memories
+    case stats
 }
 
 /// Single day cell: number, mood emoji marker for check-ins, and a small
@@ -894,4 +931,5 @@ extension Calendar {
     .environment(MovieLibrary())
     .environment(MoviePlanner())
     .environment(NotificationService())
+    .environment(MovieStatsStore())
 }
