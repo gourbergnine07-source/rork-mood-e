@@ -694,6 +694,7 @@ final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
         let extras = userInfo as? [String: Any]
         await MainActor.run {
             NotificationHistory.shared.add(record)
+            AnalyticsService.shared.log("notification_opened", meta: ["route": route ?? "none"])
             if let route {
                 NotificationCenter.default.post(
                     name: NotificationRoute.notificationName,

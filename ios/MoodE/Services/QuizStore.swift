@@ -41,6 +41,7 @@ final class QuizStore {
         completedDate = Date()
         defaults.set(winner.rawValue, forKey: Self.profileKey)
         defaults.set(completedDate, forKey: Self.dateKey)
+        AnalyticsService.shared.log("quiz_completed", meta: ["profile": winner.rawValue])
         return winner
     }
 

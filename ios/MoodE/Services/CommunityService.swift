@@ -130,6 +130,8 @@ final class CommunityService {
             "mood": mood.rawValue,
             "text": text
         ])
+        // Counts the action only: the text never enters the analytics pipeline.
+        AnalyticsService.shared.log("advice_posted")
         await refreshProfile()
         return payload.request
     }
@@ -156,6 +158,8 @@ final class CommunityService {
         ]
         if let poster = movie.posterPath { body["posterPath"] = poster }
         let payload: ReplyPayload = try await post("/advice/replies", body: body)
+        // Counts the action only: comment text and movie stay out of analytics.
+        AnalyticsService.shared.log("advice_given")
         await refreshProfile()
         return payload.reply
     }

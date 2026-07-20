@@ -113,7 +113,12 @@ final class LocalizationManager {
     static let shared = LocalizationManager()
 
     var language: AppLanguage {
-        didSet { UserDefaults.standard.set(language.rawValue, forKey: L10nStore.storageKey) }
+        didSet {
+            UserDefaults.standard.set(language.rawValue, forKey: L10nStore.storageKey)
+            if oldValue != language {
+                AnalyticsService.shared.log("language_selected", meta: ["lang": language.rawValue])
+            }
+        }
     }
 
     /// True once the user confirmed a language in the first-launch screen.

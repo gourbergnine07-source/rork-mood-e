@@ -63,6 +63,7 @@ struct MoodEApp: App {
                             topMood: diary.topMood
                         )
                         await CloudSyncService.shared.syncIfSignedIn()
+                        await AnalyticsService.shared.flush()
                     }
                 }
         }

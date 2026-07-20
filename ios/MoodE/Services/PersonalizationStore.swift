@@ -114,23 +114,25 @@ final class PersonalizationStore {
         var newRewards: [UnlockedReward] = []
 
         let iconConditions: [(AppIconOption, Bool)] = [
-            (.gold, max(context.streak, context.bestStreak) >= 30),
+            (.gold, max(context.streak, context.bestStreak) >= 21),
             (.halloween, Self.isHalloweenPeriod(context.date)),
-            (.cinefilo, context.lifetimeWatched >= 50)
+            (.cinefilo, context.lifetimeWatched >= 40)
         ]
         for (icon, condition) in iconConditions where condition && !unlockedIcons.contains(icon.rawValue) {
             unlockedIcons.insert(icon.rawValue)
             newRewards.append(UnlockedReward(emoji: icon.emoji, title: icon.title))
+            AnalyticsService.shared.log("reward_unlocked", meta: ["reward": "icon_\(icon.rawValue)"])
         }
 
         let paletteConditions: [(AccentPalette, Bool)] = [
             (.oro, context.bestStreak >= 7),
-            (.aurora, context.lifetimeWatched >= 25),
+            (.aurora, context.lifetimeWatched >= 20),
             (.velluto, context.quizCompleted)
         ]
         for (palette, condition) in paletteConditions where condition && !unlockedPalettes.contains(palette.rawValue) {
             unlockedPalettes.insert(palette.rawValue)
             newRewards.append(UnlockedReward(emoji: "🎨", title: palette.displayName))
+            AnalyticsService.shared.log("reward_unlocked", meta: ["reward": "palette_\(palette.rawValue)"])
         }
 
         guard !newRewards.isEmpty else { return }

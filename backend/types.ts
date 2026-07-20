@@ -18,6 +18,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_events: {
+        Row: {
+          anon_id: string
+          created_at: string
+          event: string
+          id: string
+          meta: Json
+        }
+        Insert: {
+          anon_id: string
+          created_at?: string
+          event: string
+          id?: string
+          meta?: Json
+        }
+        Update: {
+          anon_id?: string
+          created_at?: string
+          event?: string
+          id?: string
+          meta?: Json
+        }
+        Relationships: []
+      }
       diary_check_ins: {
         Row: {
           date: string
@@ -223,7 +247,14 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      app_events_daily: {
+        Row: {
+          day: string | null
+          event: string | null
+          total: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       user_id: { Args: never; Returns: string }

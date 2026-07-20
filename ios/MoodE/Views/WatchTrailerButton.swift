@@ -23,6 +23,7 @@ final class TrailerPlayback {
                 let videos = try await TMDBService.movieVideos(id: movie.id)
                 if let trailer = videos.bestTrailer {
                     selection = TrailerSelection(movieTitle: movie.title, trailer: trailer)
+                    AnalyticsService.shared.log("trailer_played")
                 } else {
                     showsUnavailable = true
                 }

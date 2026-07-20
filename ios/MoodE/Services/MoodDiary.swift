@@ -191,6 +191,7 @@ final class MoodDiary {
             )
             checkIns.insert(checkIn, at: 0)
             bumpGenreAffinity(for: Array(proposed))
+            AnalyticsService.shared.log("diary_check_in")
         }
 
         persist()

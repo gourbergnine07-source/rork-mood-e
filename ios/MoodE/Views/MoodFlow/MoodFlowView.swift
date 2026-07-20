@@ -379,6 +379,7 @@ struct MoodFlowView: View {
             withAnimation { step += 1 }
         } else if let mood = selectedMood, let goal = selectedGoal, let era = selectedEra {
             let selection = MoodSelection(mood: mood, goal: goal, era: era)
+            AnalyticsService.shared.log("flow_completed")
             // Interstitial al massimo 1 ogni 3 ricerche, poi si aprono i risultati.
             AdsManager.shared.showSearchInterstitialIfDue {
                 resultSelection = selection
@@ -400,6 +401,7 @@ struct MoodFlowView: View {
             era: .noPreference,
             isQuickPick: true
         )
+        AnalyticsService.shared.log("quick_pick_used")
         AdsManager.shared.showSearchInterstitialIfDue {
             resultSelection = selection
         }

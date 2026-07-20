@@ -141,9 +141,11 @@ final class MovieLibrary {
                 entries[index].status = .toWatch
                 entries[index].addedDate = Date()
                 entries[index].watchedDate = nil
+                AnalyticsService.shared.log("watchlist_added")
             }
         } else {
             entries.insert(makeEntry(from: movie, status: .toWatch), at: 0)
+            AnalyticsService.shared.log("watchlist_added")
         }
         persist()
     }
@@ -158,12 +160,14 @@ final class MovieLibrary {
                 entries[index].status = .watched
                 entries[index].watchedDate = Date()
                 bumpLifetimeWatched()
+                AnalyticsService.shared.log("movie_watched")
             }
         } else {
             var entry = makeEntry(from: movie, status: .watched)
             entry.watchedDate = Date()
             entries.insert(entry, at: 0)
             bumpLifetimeWatched()
+            AnalyticsService.shared.log("movie_watched")
         }
         persist()
     }
@@ -174,6 +178,7 @@ final class MovieLibrary {
         entries[index].status = .watched
         entries[index].watchedDate = Date()
         bumpLifetimeWatched()
+        AnalyticsService.shared.log("movie_watched")
         persist()
     }
 
