@@ -53,6 +53,7 @@ struct MyListView: View {
                 case .badges: BadgesView()
                 case .memories: MemoriesView()
                 case .stats: MyStatsView()
+                case .friends: FriendsView()
                 }
             }
             .trailerPlayer(trailerPlayback)

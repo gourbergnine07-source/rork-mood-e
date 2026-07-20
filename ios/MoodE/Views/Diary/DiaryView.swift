@@ -469,6 +469,7 @@ enum DiaryRoute: Hashable {
     case badges
     case memories
     case stats
+    case friends
 }
 
 /// Single day cell: number, mood emoji marker for check-ins, and a small

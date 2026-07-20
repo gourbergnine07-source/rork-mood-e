@@ -89,6 +89,63 @@ export type Database = {
           },
         ]
       }
+      friend_stats: {
+        Row: {
+          best_streak: number
+          display_name: string
+          friend_code: string
+          streak: number
+          top_decade: number | null
+          top_genre_id: number | null
+          total_minutes: number
+          updated_at: string
+          user_id: string
+          watched_count: number
+        }
+        Insert: {
+          best_streak?: number
+          display_name?: string
+          friend_code?: string
+          streak?: number
+          top_decade?: number | null
+          top_genre_id?: number | null
+          total_minutes?: number
+          updated_at?: string
+          user_id: string
+          watched_count?: number
+        }
+        Update: {
+          best_streak?: number
+          display_name?: string
+          friend_code?: string
+          streak?: number
+          top_decade?: number | null
+          top_genre_id?: number | null
+          total_minutes?: number
+          updated_at?: string
+          user_id?: string
+          watched_count?: number
+        }
+        Relationships: []
+      }
+      friends: {
+        Row: {
+          created_at: string
+          friend_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          friend_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          friend_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       library_entries: {
         Row: {
           added_date: string
@@ -257,6 +314,13 @@ export type Database = {
       }
     }
     Functions: {
+      add_friend_by_code: {
+        Args: { code: string }
+        Returns: {
+          friend_name: string
+          friend_user_id: string
+        }[]
+      }
       user_id: { Args: never; Returns: string }
     }
     Enums: {

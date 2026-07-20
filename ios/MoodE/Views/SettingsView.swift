@@ -85,6 +85,7 @@ struct SettingsView: View {
                 case .badges: BadgesView()
                 case .memories: MemoriesView()
                 case .stats: MyStatsView()
+                case .friends: FriendsView()
                 }
             }
             .sheet(isPresented: $showAccountSheet) {

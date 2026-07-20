@@ -56,6 +56,8 @@ struct MyStatsView: View {
                         shareButton(stats)
                     }
 
+                    friendsLink
+
                     memoriesLink
                 }
                 .padding(.horizontal, 20)
@@ -247,6 +249,38 @@ struct MyStatsView: View {
         guard let image = ShareCardRenderer.render(card) else { return }
         didShare.toggle()
         sharePayload = ShareCardPayload(image: image, title: L("stats.share.cardTitle"))
+    }
+
+    // MARK: - Friends quick link
+
+    /// Entry point to the friends comparison: exchange friend codes and
+    /// see who is ahead, metric by metric.
+    private var friendsLink: some View {
+        NavigationLink(value: DiaryRoute.friends) {
+            HStack(spacing: 12) {
+                Text("\u{1F3C6}")
+                    .font(.system(size: 26))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(L("friends.row.title"))
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Theme.ink)
+                    Text(L("friends.row.subtitle"))
+                        .font(.caption)
+                        .foregroundStyle(Theme.inkSoft)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Theme.inkSoft)
+            }
+            .padding(16)
+            .background(Theme.card, in: .rect(cornerRadius: 20))
+            .overlay(
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(Theme.amber.opacity(0.30), lineWidth: 1)
+            )
+        }
+        .buttonStyle(PressableCardStyle())
     }
 
     // MARK: - Memories quick link
