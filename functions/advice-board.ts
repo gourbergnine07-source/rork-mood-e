@@ -19,6 +19,19 @@ const REPORT_HIDE_THRESHOLD = 3;
 const MAX_REQUESTS_PER_DAY = 10;
 const MAX_REPLIES_PER_DAY = 40;
 
+/** Hidden (reported) content is retained this long before being purged for good. */
+const HIDDEN_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+/** Hour of day (UTC) at which the nightly maintenance alarm fires. */
+const MAINTENANCE_HOUR_UTC = 4;
+
+type Env = {
+  DO: Fetcher & {
+    setAlarm(className: string, id: string, scheduledTime: number | Date): Promise<void>;
+    getAlarm(className: string, id: string): Promise<number | null>;
+    deleteAlarm(className: string, id: string): Promise<void>;
+  };
+};
+
 type RequestRow = {
   id: string;
   device_id: string;
@@ -46,8 +59,18 @@ function bad(message: string, code = "invalid", status = 400): Response {
   return Response.json({ error: message, code }, { status });
 }
 
-export class AdviceBoard extends DurableObject {
-  constructor(ctx: DurableObjectState, env: unknown) {
+/** Next occurrence of the nightly maintenance hour (UTC). */
+function nextMaintenanceTime(): number {
+  const next = new Date();
+  next.setUTCHours(MAINTENANCE_HOUR_UTC, 0, 0, 0);
+  if (next.getTime() <= Date.now()) {
+    next.setUTCDate(next.getUTCDate() + 1);
+  }
+  return next.getTime();
+}
+
+export class AdviceBoard extends DurableObject<Env> {
+  constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
     this.ctx.storage.sql.exec(`
       CREATE TABLE IF NOT EXISTS requests (
@@ -125,6 +148,66 @@ export class AdviceBoard extends DurableObject {
     } catch (error) {
       console.error("AdviceBoard error", path, error);
       return bad("internal error", "internal", 500);
+    } finally {
+      // Make sure the nightly maintenance alarm is always armed,
+      // without blocking the response.
+      this.ctx.waitUntil(this.ensureMaintenanceAlarm());
+    }
+  }
+
+  // MARK: Scheduled maintenance
+
+  /** Arms the nightly maintenance alarm if none is pending. */
+  private async ensureMaintenanceAlarm(): Promise<void> {
+    try {
+      const pending = await this.env.DO.getAlarm("AdviceBoard", this.ctx.id.name ?? "global");
+      if (pending === null) {
+        const when = nextMaintenanceTime();
+        await this.env.DO.setAlarm("AdviceBoard", this.ctx.id.name ?? "global", when);
+        console.log("AdviceBoard maintenance alarm armed for", new Date(when).toISOString());
+      }
+    } catch (error) {
+      console.warn("ensureMaintenanceAlarm failed", error);
+    }
+  }
+
+  /**
+   * Nightly background task (fires even with zero traffic, survives redeploys).
+   * Idempotent: alarms are delivered at-least-once.
+   * - Permanently purges reported/hidden content after 30 days.
+   * - Removes orphaned helpful marks and reports.
+   * Re-arms itself for the next night.
+   */
+  async onAlarm(info: { scheduledTime: number; retryCount: number; isRetry: boolean }): Promise<void> {
+    if (info.isRetry) console.warn(`AdviceBoard maintenance retry #${info.retryCount}`);
+
+    try {
+      const cutoff = Date.now() - HIDDEN_RETENTION_MS;
+      const sql = this.ctx.storage.sql;
+
+      // Purge replies attached to old hidden requests, then the requests themselves.
+      sql.exec(
+        `DELETE FROM replies WHERE request_id IN
+         (SELECT id FROM requests WHERE hidden = 1 AND created_at < ?)`,
+        cutoff,
+      );
+      sql.exec("DELETE FROM requests WHERE hidden = 1 AND created_at < ?", cutoff);
+      sql.exec("DELETE FROM replies WHERE hidden = 1 AND created_at < ?", cutoff);
+
+      // Drop helpful marks and reports whose target no longer exists.
+      sql.exec("DELETE FROM helpful WHERE reply_id NOT IN (SELECT id FROM replies)");
+      sql.exec(
+        `DELETE FROM reports WHERE
+         (target_type = 'request' AND target_id NOT IN (SELECT id FROM requests)) OR
+         (target_type = 'reply' AND target_id NOT IN (SELECT id FROM replies))`,
+      );
+
+      const requests = sql.exec<{ n: number }>("SELECT COUNT(*) AS n FROM requests").one().n;
+      const replies = sql.exec<{ n: number }>("SELECT COUNT(*) AS n FROM replies").one().n;
+      console.log(`AdviceBoard maintenance done: ${requests} requests, ${replies} replies remaining`);
+    } finally {
+      // Always re-arm for the next night, even if cleanup threw (retries aside).
+      await this.env.DO.setAlarm("AdviceBoard", this.ctx.id.name ?? "global", nextMaintenanceTime());
     }
   }
 
