@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import Network
 
 /// One queued usage event, persisted locally until it reaches the server.
 nonisolated private struct PendingAnalyticsEvent: Codable {
@@ -37,8 +38,9 @@ nonisolated private struct AnalyticsEventRow: Encodable {
 /// - requests are sent with the public anonymous key only (never the user's
 ///   session token), so events can't be joined with any account data.
 ///
-/// Events queue locally (UserDefaults) and are flushed in batches, so
-/// offline usage is counted once connectivity returns. Failures are silent:
+/// Events queue locally (UserDefaults) and are flushed in batches only when
+/// the connection is good (reachable and not in Low Data Mode), so offline
+/// usage is counted once connectivity returns. Failures are silent:
 /// analytics must never affect the user experience.
 final class AnalyticsService {
     static let shared = AnalyticsService()
@@ -52,6 +54,11 @@ final class AnalyticsService {
     private let anonId: String
     private var queue: [PendingAnalyticsEvent]
     private var isFlushing = false
+
+    /// True when the network path is satisfied and not constrained
+    /// (Low Data Mode): the only state in which batches are sent.
+    private var hasGoodConnection = false
+    private let pathMonitor = NWPathMonitor()
 
     private let defaults = UserDefaults.standard
 
@@ -70,6 +77,24 @@ final class AnalyticsService {
         } else {
             queue = []
         }
+        startNetworkMonitor()
+    }
+
+    /// Watches connectivity; when a good connection appears, the queued
+    /// events are flushed automatically.
+    private func startNetworkMonitor() {
+        pathMonitor.pathUpdateHandler = { [weak self] path in
+            let good = path.status == .satisfied && !path.isConstrained
+            Task { @MainActor in
+                guard let self else { return }
+                let becameGood = good && !self.hasGoodConnection
+                self.hasGoodConnection = good
+                if becameGood {
+                    await self.flush()
+                }
+            }
+        }
+        pathMonitor.start(queue: DispatchQueue(label: "analytics.network.monitor"))
     }
 
     // MARK: - Public API
@@ -82,11 +107,16 @@ final class AnalyticsService {
             queue.removeFirst(queue.count - Self.maxQueue)
         }
         persistQueue()
-        Task { await flush() }
+        if hasGoodConnection {
+            Task { await flush() }
+        }
     }
 
-    /// Sends every queued event in one batch insert. Safe to call anytime.
+    /// Sends every queued event in one batch insert, but only over a good
+    /// connection. Safe to call anytime: with no network the events simply
+    /// stay in the persisted queue.
     func flush() async {
+        guard hasGoodConnection else { return }
         guard !isFlushing, !queue.isEmpty else { return }
         guard let url = URL(string: Config.EXPO_PUBLIC_SUPABASE_URL + "/rest/v1/app_events"),
               url.host?.contains("supabase") == true else { return }
@@ -108,6 +138,7 @@ final class AnalyticsService {
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
+        request.timeoutInterval = 15
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         // Anonymous key only: analytics requests never carry the user session.
         request.setValue(Config.EXPO_PUBLIC_SUPABASE_ANON_KEY, forHTTPHeaderField: "apikey")

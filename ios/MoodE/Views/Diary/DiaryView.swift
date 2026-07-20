@@ -12,6 +12,7 @@ struct DiaryView: View {
     @Environment(MoviePlanner.self) private var planner
     @Environment(NotificationService.self) private var notifications
     @Environment(MovieStatsStore.self) private var statsStore
+    @Environment(\.dismiss) private var dismiss
 
     @State private var displayedMonth: Date = Calendar.current.startOfMonth(for: Date())
     @State private var selectedDay: Date = Calendar.current.startOfDay(for: Date())
@@ -40,7 +41,10 @@ struct DiaryView: View {
                         MonthlyRecapCard(recap: monthly, monthTitle: currentMonthTitle)
                     }
 
-                    StreakCard(streak: diary.streak, wasInterrupted: diary.streakWasInterrupted)
+                    StreakCard(streak: diary.streak, wasInterrupted: diary.streakWasInterrupted) {
+                        // Pops back to Home, where a new check-in restarts the streak.
+                        dismiss()
+                    }
 
                     if !planner.pendingPastScheduled.isEmpty {
                         pendingBanner
@@ -731,11 +735,27 @@ private struct DiaryCheckInRow: View {
 }
 
 /// Streak flame card with the gentle no-guilt message when interrupted.
+/// When the streak is at zero it becomes tappable and jumps back to Home
+/// so a fresh check-in can restart it right away.
 struct StreakCard: View {
     let streak: Int
     let wasInterrupted: Bool
+    var onRestart: (() -> Void)? = nil
 
     var body: some View {
+        if streak == 0, let onRestart {
+            Button(action: onRestart) {
+                cardContent
+                    .contentShape(.rect)
+            }
+            .buttonStyle(PressableCardStyle())
+            .accessibilityHint(L("diary.streak.restart"))
+        } else {
+            cardContent
+        }
+    }
+
+    private var cardContent: some View {
         HStack(spacing: 12) {
             Text("🔥")
                 .font(.system(size: 30))
@@ -767,6 +787,19 @@ struct StreakCard: View {
                 }
             }
             Spacer()
+
+            if streak == 0, onRestart != nil {
+                HStack(spacing: 4) {
+                    Text(L("diary.streak.restart"))
+                        .font(.caption.weight(.semibold))
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .bold))
+                }
+                .foregroundStyle(Theme.primary)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(Theme.primary.opacity(0.12), in: .capsule)
+            }
         }
         .padding(16)
         .background(Theme.card, in: .rect(cornerRadius: 20))
