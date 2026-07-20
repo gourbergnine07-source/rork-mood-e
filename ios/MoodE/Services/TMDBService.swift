@@ -53,6 +53,8 @@ enum TMDBKeyword {
     static let biography = 5565
     static let sport = 6075
     static let timeTravel = 4379
+    static let christmas = 207317
+    static let lgbt = 158718
 }
 
 /// Genres and keywords derived from the mood × goal mapping table.
@@ -125,6 +127,57 @@ enum TMDBService {
 
         let response: TMDBMovieListResponse = try await request(path: "/discover/movie", queryItems: queryItems)
         return await fillingMissingOverviews(response, path: "/discover/movie", queryItems: queryItems)
+    }
+
+    /// Movies for an editorial collection of the "In evidenza" strip.
+    /// Trending-backed collections reuse the weekly trending endpoint;
+    /// discover-backed ones translate the collection's query into filters.
+    static func featuredMovies(source: FeaturedSource, page: Int = 1) async throws -> [TMDBMovie] {
+        switch source {
+        case .trendingWeek:
+            return try await trendingMovies(window: .week)
+
+        case .discover(let query):
+            var queryItems: [URLQueryItem] = [
+                URLQueryItem(name: "sort_by", value: query.sortBy),
+                URLQueryItem(name: "vote_count.gte", value: String(query.voteCountGte)),
+                URLQueryItem(name: "include_adult", value: "false"),
+                URLQueryItem(name: "page", value: String(page))
+            ]
+            if !query.genres.isEmpty {
+                queryItems.append(URLQueryItem(
+                    name: "with_genres",
+                    value: query.genres.map(String.init).joined(separator: "|")
+                ))
+            }
+            if !query.keywords.isEmpty {
+                queryItems.append(URLQueryItem(
+                    name: "with_keywords",
+                    value: query.keywords.map(String.init).joined(separator: "|")
+                ))
+            }
+            if let voteAverageGte = query.voteAverageGte {
+                queryItems.append(URLQueryItem(name: "vote_average.gte", value: String(voteAverageGte)))
+            }
+            if !query.includeHorror {
+                queryItems.append(URLQueryItem(name: "without_genres", value: String(TMDBGenre.horror)))
+            }
+            if let months = query.releasedWithinMonths {
+                let calendar = Calendar.current
+                if let from = calendar.date(byAdding: .month, value: -months, to: Date()) {
+                    let formatter = DateFormatter()
+                    formatter.dateFormat = "yyyy-MM-dd"
+                    formatter.locale = Locale(identifier: "en_US_POSIX")
+                    queryItems.append(URLQueryItem(
+                        name: "primary_release_date.gte",
+                        value: formatter.string(from: from)
+                    ))
+                }
+            }
+
+            let response: TMDBMovieListResponse = try await request(path: "/discover/movie", queryItems: queryItems)
+            return await fillingMissingOverviews(response, path: "/discover/movie", queryItems: queryItems).results
+        }
     }
 
     /// Trending movies for the requested time window (week or day).

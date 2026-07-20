@@ -48,6 +48,7 @@ final class NotificationService {
     private static let communityEnabledKey = "notifications.community.enabled"
     private static let communityDigestDayKey = "notifications.community.lastDigestDay"
     private static let watchlistNotifiedKey = "notifications.watchlist.notifiedIds"
+    private static let featuredScheduledKey = "notifications.featured.scheduledIds"
     private static let knownIdsKey = "notifications.knownMovieIds"
     private static let lastSyncKey = "notifications.lastSyncDate"
     /// Minimum time between two TMDB checks (6 hours, like the data cache).
@@ -87,6 +88,8 @@ final class NotificationService {
             isEnabled = false
             defaults.set(false, forKey: Self.enabledKey)
             UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+            // Allow future seasonal-theme reminders to be re-armed on re-enable.
+            defaults.removeObject(forKey: Self.featuredScheduledKey)
             return true
         }
 
@@ -164,7 +167,46 @@ final class NotificationService {
         scheduleEveningReminder()
         scheduleWatchlistReminder(toWatch: toWatch)
         syncMovieNightReminders(scheduled)
+        await syncFeaturedThemeReminders()
         await sync(topGenres: topGenres)
+    }
+
+    // MARK: - Seasonal collection reminders
+
+    /// One-shot local notification on the first day of each seasonal
+    /// collection ("\u{1F383} È iniziato ottobre…"). At most one per theme per
+    /// year: fired ids are remembered so the same season never repeats.
+    private func syncFeaturedThemeReminders() async {
+        guard isEnabled else { return }
+
+        let center = UNUserNotificationCenter.current()
+        var scheduledIds = Set(defaults.array(forKey: Self.featuredScheduledKey) as? [String] ?? [])
+        let calendar = Calendar.current
+
+        for collection in FeaturedCalendar.seasonal {
+            guard let start = collection.period?.nextStart(after: Date()) else { continue }
+            let year = calendar.component(.year, from: start)
+            let identifier = "featured-\(collection.id)-\(year)"
+            guard !scheduledIds.contains(identifier) else { continue }
+
+            let content = UNMutableNotificationContent()
+            content.title = L("notif.featured.title")
+            content.body = L("notif.featured.\(collection.id)")
+            content.sound = .default
+            content.userInfo = ["route": NotificationRoute.moodFlow]
+
+            var components = calendar.dateComponents([.year, .month, .day], from: start)
+            components.hour = 10
+
+            try? await center.add(UNNotificationRequest(
+                identifier: identifier,
+                content: content,
+                trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+            ))
+            scheduledIds.insert(identifier)
+        }
+
+        defaults.set(Array(scheduledIds), forKey: Self.featuredScheduledKey)
     }
 
     // MARK: - Community (Consigli) notifications

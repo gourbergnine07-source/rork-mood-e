@@ -52,6 +52,9 @@ struct MoodFlowView: View {
         .navigationDestination(item: $resultSelection) { selection in
             MovieResultsView(selection: selection)
         }
+        .navigationDestination(for: FeaturedCollection.self) { collection in
+            FeaturedCollectionView(collection: collection)
+        }
         .sheet(isPresented: $showSurprise) {
             SurpriseView()
         }
@@ -67,7 +70,8 @@ struct MoodFlowView: View {
     private var moodStep: some View {
         stepScreen(
             title: L("flow.s1.title"),
-            subtitle: L("flow.s1.sub")
+            subtitle: L("flow.s1.sub"),
+            header: { FeaturedStripView() }
         ) {
             LazyVGrid(columns: gridColumns, spacing: 12) {
                 ForEach(Array(Mood.allCases.enumerated()), id: \.element) { index, mood in
@@ -137,21 +141,36 @@ struct MoodFlowView: View {
         subtitle: String,
         @ViewBuilder content: () -> Content
     ) -> some View {
+        stepScreen(title: title, subtitle: subtitle, header: { EmptyView() }, content: content)
+    }
+
+    /// Step layout with an optional full-bleed header above the title
+    /// (used on step 1 for the "In evidenza" editorial strip).
+    private func stepScreen<Header: View, Content: View>(
+        title: String,
+        subtitle: String,
+        @ViewBuilder header: () -> Header,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(title)
-                        .font(.title2.weight(.bold))
-                        .foregroundStyle(Theme.ink)
-                    Text(subtitle)
-                        .font(.subheadline)
-                        .foregroundStyle(Theme.inkSoft)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                header()
 
-                content()
+                VStack(alignment: .leading, spacing: 20) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(title)
+                            .font(.title2.weight(.bold))
+                            .foregroundStyle(Theme.ink)
+                        Text(subtitle)
+                            .font(.subheadline)
+                            .foregroundStyle(Theme.inkSoft)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                    content()
+                }
+                .padding(.horizontal, 24)
             }
-            .padding(.horizontal, 24)
             .padding(.top, 14)
             .padding(.bottom, 16)
         }
