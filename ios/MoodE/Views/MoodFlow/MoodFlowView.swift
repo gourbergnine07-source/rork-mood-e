@@ -259,8 +259,29 @@ struct MoodFlowView: View {
         }
     }
 
+    /// Compact pill used for the three step-1 shortcuts (quick / surprise / duo),
+    /// kept on a single row so the bottom bar covers as little of the grid as possible.
+    private func shortcutLabel(icon: String, title: String, tint: Color) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: icon)
+                .font(.system(size: 11, weight: .semibold))
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.65)
+        }
+        .foregroundStyle(tint)
+        .frame(maxWidth: .infinity)
+        .frame(height: 32)
+        .background(tint.opacity(0.12), in: .rect(cornerRadius: 11))
+        .overlay(
+            RoundedRectangle(cornerRadius: 11)
+                .stroke(tint.opacity(0.35), lineWidth: 1)
+        )
+    }
+
     private var bottomBar: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 6) {
             Button {
                 advance()
             } label: {
@@ -277,7 +298,7 @@ struct MoodFlowView: View {
                 }
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
-                .frame(height: 42)
+                .frame(height: 40)
                 .background(
                     canAdvance ? Theme.primary : Theme.primary.opacity(0.35),
                     in: .rect(cornerRadius: 14)
@@ -292,69 +313,24 @@ struct MoodFlowView: View {
                     Button {
                         startQuickPick()
                     } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "bolt.fill")
-                                .font(.system(size: 12, weight: .semibold))
-                            Text(L("flow.quick"))
-                                .font(.footnote.weight(.semibold))
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.8)
-                        }
-                        .foregroundStyle(Theme.amber)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 36)
-                        .background(Theme.amber.opacity(0.12), in: .rect(cornerRadius: 12))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Theme.amber.opacity(0.35), lineWidth: 1)
-                        )
+                        shortcutLabel(icon: "bolt.fill", title: L("flow.quick"), tint: Theme.amber)
                     }
                     .accessibilityHint(L("flow.quick.hint"))
 
                     Button {
                         showSurprise = true
                     } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "dice.fill")
-                                .font(.system(size: 12, weight: .semibold))
-                            Text(L("flow.surprise"))
-                                .font(.footnote.weight(.semibold))
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.8)
-                        }
-                        .foregroundStyle(Theme.rose)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 36)
-                        .background(Theme.rose.opacity(0.12), in: .rect(cornerRadius: 12))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Theme.rose.opacity(0.35), lineWidth: 1)
-                        )
+                        shortcutLabel(icon: "dice.fill", title: L("flow.surprise"), tint: Theme.rose)
                     }
                     .sensoryFeedback(.impact(weight: .light), trigger: showSurprise)
-                }
 
-                Button {
-                    showDuo = true
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "person.2.fill")
-                            .font(.system(size: 12, weight: .semibold))
-                        Text(L("flow.duo"))
-                            .font(.footnote.weight(.semibold))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
+                    Button {
+                        showDuo = true
+                    } label: {
+                        shortcutLabel(icon: "person.2.fill", title: L("flow.duo"), tint: Theme.tabList)
                     }
-                    .foregroundStyle(Theme.tabList)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 36)
-                    .background(Theme.tabList.opacity(0.12), in: .rect(cornerRadius: 12))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Theme.tabList.opacity(0.35), lineWidth: 1)
-                    )
+                    .sensoryFeedback(.impact(weight: .light), trigger: showDuo)
                 }
-                .sensoryFeedback(.impact(weight: .light), trigger: showDuo)
             }
         }
     }
