@@ -5,9 +5,9 @@
 
 import SwiftUI
 
-/// "In evidenza" strip at the top of Home: horizontally scrollable
-/// editorial collections driven by the seasonal theme calendar.
-/// Tapping a card pushes the collection's movie list.
+/// "In evidenza" strip at the top of Home: slim full-width rows for every
+/// active editorial collection, so nothing hides behind horizontal scroll.
+/// Tapping a row pushes the collection's movie list.
 struct FeaturedStripView: View {
     private let collections: [FeaturedCollection] = FeaturedCalendar.activeCollections()
 
@@ -23,23 +23,20 @@ struct FeaturedStripView: View {
             }
             .padding(.horizontal, 24)
 
-            ScrollView(.horizontal) {
-                HStack(spacing: 10) {
-                    ForEach(collections) { collection in
-                        NavigationLink(value: collection) {
-                            FeaturedCardView(collection: collection)
-                        }
-                        .buttonStyle(PressableCardStyle())
+            VStack(spacing: 8) {
+                ForEach(collections) { collection in
+                    NavigationLink(value: collection) {
+                        FeaturedCardView(collection: collection)
                     }
+                    .buttonStyle(PressableCardStyle())
                 }
             }
-            .scrollIndicators(.hidden)
-            .contentMargins(.horizontal, 24)
+            .padding(.horizontal, 24)
         }
     }
 }
 
-/// Compact gradient chip of the featured strip.
+/// Slim full-width gradient row of the featured strip.
 struct FeaturedCardView: View {
     let collection: FeaturedCollection
 
@@ -48,26 +45,28 @@ struct FeaturedCardView: View {
             Group {
                 if EmojiSupport.isAvailable {
                     Text(collection.emoji)
-                        .font(.system(size: 18))
+                        .font(.system(size: 16))
                 } else {
                     Image(systemName: collection.icon)
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(.white)
                 }
             }
-            .frame(width: 32, height: 32)
+            .frame(width: 28, height: 28)
             .background(.white.opacity(0.22), in: .circle)
 
-            VStack(alignment: .leading, spacing: 1) {
-                Text(collection.title)
-                    .font(.footnote.weight(.bold))
-                    .foregroundStyle(.white)
-                    .lineLimit(1)
-                Text(collection.subtitle)
-                    .font(.caption2)
-                    .foregroundStyle(.white.opacity(0.85))
-                    .lineLimit(1)
-            }
+            Text(collection.title)
+                .font(.footnote.weight(.bold))
+                .foregroundStyle(.white)
+                .lineLimit(1)
+
+            Text(collection.subtitle)
+                .font(.caption2)
+                .foregroundStyle(.white.opacity(0.85))
+                .lineLimit(1)
+                .layoutPriority(-1)
+
+            Spacer(minLength: 4)
 
             Image(systemName: "chevron.right")
                 .font(.system(size: 11, weight: .bold))
@@ -75,7 +74,8 @@ struct FeaturedCardView: View {
         }
         .padding(.leading, 8)
         .padding(.trailing, 12)
-        .padding(.vertical, 8)
+        .padding(.vertical, 7)
+        .frame(maxWidth: .infinity)
         .background(
             LinearGradient(
                 colors: collection.gradient,
@@ -88,7 +88,7 @@ struct FeaturedCardView: View {
             Capsule()
                 .stroke(.white.opacity(0.18), lineWidth: 1)
         )
-        .shadow(color: (collection.gradient.first ?? .black).opacity(0.2), radius: 6, y: 3)
+        .shadow(color: (collection.gradient.first ?? .black).opacity(0.18), radius: 5, y: 2)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(collection.title). \(collection.subtitle)")
     }
