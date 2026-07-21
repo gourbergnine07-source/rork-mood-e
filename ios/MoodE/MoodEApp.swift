@@ -7,6 +7,7 @@
 
 import SwiftUI
 import UserNotifications
+import AppIntents
 
 @main
 struct MoodEApp: App {
@@ -23,6 +24,8 @@ struct MoodEApp: App {
 
     init() {
         UNUserNotificationCenter.current().delegate = NotificationDelegate.shared
+        // Make the "what to watch" command discoverable by Siri right away.
+        MoodEShortcuts.updateAppShortcutParameters()
     }
 
     var body: some Scene {
@@ -38,6 +41,9 @@ struct MoodEApp: App {
                 .environment(quiz)
                 .preferredColorScheme(theme.appearance.colorScheme)
                 .task {
+                    // Keep the interactive widget's mood list fresh even
+                    // before the first check-in of the day.
+                    diary.publishWidgetSnapshot()
                     CloudSyncService.shared.configure(
                         auth: auth,
                         diary: diary,

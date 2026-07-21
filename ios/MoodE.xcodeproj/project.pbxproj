@@ -508,6 +508,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "MoodE-Info.plist";
+				APP_SHORTCUTS_ENABLE_FLEXIBLE_MATCHING = NO;
 				INFOPLIST_KEY_CFBundleDisplayName = "Mood-E";
 				INFOPLIST_KEY_CFBundleName = "Mood-E";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
@@ -547,6 +548,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "MoodE-Info.plist";
+				APP_SHORTCUTS_ENABLE_FLEXIBLE_MATCHING = NO;
 				INFOPLIST_KEY_CFBundleDisplayName = "Mood-E";
 				INFOPLIST_KEY_CFBundleName = "Mood-E";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;

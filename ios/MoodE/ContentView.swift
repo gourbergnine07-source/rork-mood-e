@@ -76,7 +76,13 @@ struct ContentView: View {
             .spring(response: 0.45, dampingFraction: 0.8),
             value: personalization.pendingRewards
         )
-        .task { evaluateUnlocks() }
+        .task {
+            evaluateUnlocks()
+            // Siri intent fired on a cold start: launch the ready proposal.
+            if let mood = IntentRelay.consumePendingMood() {
+                launchQuickPick(mood: mood)
+            }
+        }
         .onChange(of: diary.checkIns.count) { _, _ in evaluateUnlocks() }
         .onChange(of: library.lifetimeWatchedCount) { _, _ in evaluateUnlocks() }
         .onReceive(NotificationCenter.default.publisher(for: NotificationRoute.notificationName)) { note in
@@ -122,14 +128,30 @@ struct ContentView: View {
         )
     }
 
-    /// Forecast notification tap: jump to Home and open the results screen
-    /// with the pre-computed mood + goal for that weekday pattern.
+    /// Forecast notification tap (also reused by the Siri intent): jump to
+    /// Home and open the results screen with the pre-computed mood + goal.
     private func handleForecastTap(_ userInfo: [AnyHashable: Any]?) {
-        selectedTab = 0
+        // Clear any Siri pending mood so it doesn't re-fire at next launch.
+        _ = IntentRelay.consumePendingMood()
         guard let moodRaw = userInfo?["mood"] as? String,
-              let mood = Mood(rawValue: moodRaw) else { return }
-        let goal = (userInfo?["goal"] as? String).flatMap(ViewingGoal.init) ?? mood.quickPickGoal
-        let selection = MoodSelection(mood: mood, goal: goal, era: .noPreference, isQuickPick: true)
+              let mood = Mood(rawValue: moodRaw) else {
+            selectedTab = 0
+            return
+        }
+        let goal = (userInfo?["goal"] as? String).flatMap(ViewingGoal.init)
+        launchQuickPick(mood: mood, goal: goal)
+    }
+
+    /// Jumps to Home and opens the results screen for a quick-pick selection
+    /// (used by forecast notifications, the Siri intent and the widget).
+    private func launchQuickPick(mood: Mood, goal: ViewingGoal? = nil) {
+        selectedTab = 0
+        let selection = MoodSelection(
+            mood: mood,
+            goal: goal ?? mood.quickPickGoal,
+            era: .noPreference,
+            isQuickPick: true
+        )
         // Small delay so the tab switch settles before pushing the results.
         Task {
             try? await Task.sleep(for: .milliseconds(400))
@@ -137,11 +159,26 @@ struct ContentView: View {
         }
     }
 
-    /// Widget deep link: moode://movie/<id> opens the movie detail page.
+    /// Widget deep links:
+    /// - moode://movie/<id> opens the movie detail page
+    /// - moode://flow/<mood> opens the results screen for that emotion
     private func handleDeepLink(_ url: URL) {
-        guard url.scheme == "moode", url.host == "movie",
-              let id = Int(url.lastPathComponent) else { return }
+        guard url.scheme == "moode" else { return }
 
+        switch url.host {
+        case "movie":
+            guard let id = Int(url.lastPathComponent) else { return }
+            openMovieDeepLink(id: id)
+        case "flow":
+            guard let mood = Mood(rawValue: url.lastPathComponent) else { return }
+            AnalyticsService.shared.log("widget_mood_tap", meta: ["mood": mood.rawValue])
+            launchQuickPick(mood: mood)
+        default:
+            break
+        }
+    }
+
+    private func openMovieDeepLink(id: Int) {
         var title = ""
         var posterPath: String?
         if let shared = UserDefaults(suiteName: MoodDiary.appGroupID),

@@ -20,6 +20,12 @@ struct MoodFlowView: View {
     @State private var resultSelection: MoodSelection?
     @State private var showSurprise: Bool = false
     @State private var showQuiz: Bool = false
+
+    // Free-form mood input (STEP 1 alternative), analyzed by AI.
+    @State private var freeText: String = ""
+    @State private var isAnalyzing: Bool = false
+    @State private var interpretation: MoodInterpretation?
+    @State private var analysisFailed: Bool = false
     /// Session-only dismissal: the quiz banner returns at every app launch.
     @State private var quizBannerHidden: Bool = false
 
@@ -77,6 +83,18 @@ struct MoodFlowView: View {
         } message: {
             Text(L("flow.quick.alert.msg"))
         }
+        .alert(L("common.oops"), isPresented: $analysisFailed) {
+            Button(L("common.ok"), role: .cancel) {}
+        } message: {
+            Text(L("flow.freetext.error"))
+        }
+        .sheet(item: $interpretation) { interp in
+            MoodInterpretationSheet(interpretation: interp) { mood, goal in
+                applyInterpretation(mood: mood, goal: goal)
+            }
+            .presentationDetents([.height(420)])
+            .presentationDragIndicator(.visible)
+        }
     }
 
     // MARK: - Steps
@@ -85,21 +103,35 @@ struct MoodFlowView: View {
         stepScreen(
             title: L("flow.s1.title"),
             subtitle: L("flow.s1.sub"),
-            header: { homeHeader }
+            header: {
+                MoodFlowHeader(showQuiz: $showQuiz, quizBannerHidden: $quizBannerHidden)
+            }
         ) {
-            LazyVGrid(columns: gridColumns, spacing: 12) {
-                ForEach(Array(Mood.allCases.enumerated()), id: \.element) { index, mood in
-                    SelectableCard(
-                        emoji: mood.emoji,
-                        icon: mood.icon,
-                        title: mood.title,
-                        isSelected: selectedMood == mood,
-                        tint: mood.tint,
-                        animatesEmoji: true,
-                        animationIndex: index
-                    ) {
-                        selectedMood = mood
-                    }
+            VStack(spacing: 14) {
+                moodGrid
+                MoodFreeTextCard(
+                    text: $freeText,
+                    isAnalyzing: isAnalyzing
+                ) {
+                    analyzeFreeText()
+                }
+            }
+        }
+    }
+
+    private var moodGrid: some View {
+        LazyVGrid(columns: gridColumns, spacing: 12) {
+            ForEach(Array(Mood.allCases.enumerated()), id: \.element) { index, mood in
+                SelectableCard(
+                    emoji: mood.emoji,
+                    icon: mood.icon,
+                    title: mood.title,
+                    isSelected: selectedMood == mood,
+                    tint: mood.tint,
+                    animatesEmoji: true,
+                    animationIndex: index
+                ) {
+                    selectedMood = mood
                 }
             }
         }
@@ -148,81 +180,6 @@ struct MoodFlowView: View {
                 }
             }
         }
-    }
-
-    /// Step-1 header: featured strip + live-event countdown + quiz banner.
-    private var homeHeader: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            FeaturedStripView()
-
-            if let upcoming = LiveEventCalendar.upcoming().first {
-                LiveEventCard(event: upcoming.event, days: upcoming.days)
-                    .padding(.horizontal, 24)
-            }
-
-            if !quizBannerHidden {
-                quizBanner
-                    .padding(.horizontal, 24)
-                    .transition(.opacity.combined(with: .move(edge: .top)))
-            }
-        }
-    }
-
-    /// Slim, dismissible invitation to the spectator quiz.
-    /// Returns at every app launch; once completed it becomes a retake pill.
-    private var quizBanner: some View {
-        HStack(spacing: 8) {
-            Button {
-                showQuiz = true
-            } label: {
-                HStack(spacing: 8) {
-                    Text("\u{1F3AD}")
-                        .font(.system(size: 15))
-
-                    Text(L("quiz.banner.title"))
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(Theme.ink)
-                        .lineLimit(1)
-
-                    Text(quiz.profile == nil ? L("quiz.banner.sub") : L("quiz.banner.retake"))
-                        .font(.caption2)
-                        .foregroundStyle(Theme.inkSoft)
-                        .lineLimit(1)
-
-                    Spacer(minLength: 0)
-
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(Theme.primary)
-                }
-                .contentShape(.rect)
-            }
-            .buttonStyle(.plain)
-
-            Button {
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                    quizBannerHidden = true
-                }
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(Theme.inkSoft)
-                    .frame(width: 22, height: 22)
-                    .background(Theme.surface.opacity(0.7), in: .circle)
-                    .contentShape(.circle)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(L("common.close"))
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 7)
-        .background(Theme.card, in: .capsule)
-        .overlay(
-            Capsule()
-                .stroke(Theme.primary.opacity(0.18), lineWidth: 1)
-        )
-        .sensoryFeedback(.impact(weight: .light), trigger: showQuiz)
-        .accessibilityLabel("\(L("quiz.banner.title")). \(quiz.profile == nil ? L("quiz.banner.sub") : L("quiz.banner.retake"))")
     }
 
     private func stepScreen<Content: View>(
@@ -444,6 +401,41 @@ struct MoodFlowView: View {
         guard step > 0 else { return }
         isMovingForward = false
         withAnimation { step -= 1 }
+    }
+
+    // MARK: - Free-text mood analysis
+
+    /// Sends the free-form text to the AI classifier, then shows the
+    /// confirmation sheet so the user can correct the interpretation.
+    private func analyzeFreeText() {
+        let text = freeText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard text.count >= 3, !isAnalyzing else { return }
+        isAnalyzing = true
+        Task {
+            do {
+                let result = try await MoodTextAnalyzer.shared.analyze(text)
+                AnalyticsService.shared.log("mood_text_analyzed")
+                interpretation = MoodInterpretation(mood: result.mood, goal: result.goal)
+            } catch {
+                print("MoodFlow: free-text analysis failed: \(error.localizedDescription)")
+                analysisFailed = true
+            }
+            isAnalyzing = false
+        }
+    }
+
+    /// Applies the confirmed interpretation: jumps straight to the era step
+    /// when a goal was deduced, or to the goal step otherwise.
+    private func applyInterpretation(mood: Mood, goal: ViewingGoal?) {
+        selectedMood = mood
+        freeText = ""
+        isMovingForward = true
+        if let goal {
+            selectedGoal = goal
+            withAnimation { step = 2 }
+        } else {
+            withAnimation { step = 1 }
+        }
     }
 }
 

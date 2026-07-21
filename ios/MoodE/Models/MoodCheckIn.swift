@@ -50,4 +50,16 @@ nonisolated struct DiaryWidgetSnapshot: Codable {
     let movieTitle: String?
     let posterPath: String?
     let updatedAt: Date
+    /// Localized "How do you feel?" header for the interactive widget.
+    /// Optional so snapshots written by older app versions keep decoding.
+    var quickTitle: String?
+    /// The user's most-used moods, tappable directly from the widget.
+    var quickMoods: [WidgetQuickMood]?
+}
+
+/// Compact mood option for the interactive widget (title pre-localized).
+nonisolated struct WidgetQuickMood: Codable {
+    let raw: String
+    let emoji: String
+    let title: String
 }

@@ -67,6 +67,7 @@ struct SettingsView: View {
                 languageSection
                 notificationsSection
                 librarySection
+                siriSection
                 onboardingSection
                 adsSection
                 privacySection
@@ -756,6 +757,29 @@ struct SettingsView: View {
             Text(L("settings.list.header"))
         } footer: {
             Text(L("settings.list.footer"))
+                .font(.footnote)
+                .foregroundStyle(Theme.inkSoft)
+        }
+        .listRowBackground(Theme.card)
+    }
+
+    // MARK: - Siri
+
+    private var siriSection: some View {
+        Section {
+            NavigationLink {
+                SiriCommandsView()
+            } label: {
+                SettingsRow(
+                    icon: "waveform",
+                    iconColor: Color(red: 0.57, green: 0.42, blue: 0.83),
+                    title: L("settings.siri.row")
+                )
+            }
+        } header: {
+            Text(L("settings.siri.header"))
+        } footer: {
+            Text(L("settings.siri.footer"))
                 .font(.footnote)
                 .foregroundStyle(Theme.inkSoft)
         }

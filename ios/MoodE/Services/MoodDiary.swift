@@ -402,25 +402,48 @@ final class MoodDiary {
 
     // MARK: - Widget
 
-    /// Writes the latest mood + a matching movie into the shared container
-    /// and asks WidgetKit to refresh the home-screen widget.
+    /// Writes the latest mood + a matching movie + the user's most-used
+    /// moods (for the interactive widget) into the shared container and
+    /// asks WidgetKit to refresh the home-screen widget.
     func publishWidgetSnapshot() {
-        guard let latest = checkIns.first, let mood = latest.mood else { return }
-        let movie = latest.proposed.first
+        let latest = checkIns.first
+        let mood = latest?.mood
+        let movie = latest?.proposed.first
 
         let snapshot = DiaryWidgetSnapshot(
-            moodEmoji: mood.emoji,
-            moodTitle: mood.title,
+            moodEmoji: mood?.emoji ?? "\u{1F3AC}",
+            moodTitle: mood?.title ?? "Mood-E",
             headline: L("widget.forYou"),
             movieId: movie?.id,
             movieTitle: movie?.title,
             posterPath: movie?.posterPath,
-            updatedAt: Date()
+            updatedAt: Date(),
+            quickTitle: L("widget.quick.title"),
+            quickMoods: quickMoodRanking.map {
+                WidgetQuickMood(raw: $0.rawValue, emoji: $0.emoji, title: $0.title)
+            }
         )
 
         guard let shared = UserDefaults(suiteName: Self.appGroupID),
               let data = try? JSONEncoder().encode(snapshot) else { return }
         shared.set(data, forKey: Self.widgetSnapshotKey)
         WidgetCenter.shared.reloadAllTimelines()
+    }
+
+    /// The 6 moods the user picks most often (last 120 check-ins),
+    /// padded with a friendly default set for new users.
+    var quickMoodRanking: [Mood] {
+        var counts: [String: Int] = [:]
+        for checkIn in checkIns.prefix(120) {
+            counts[checkIn.moodRaw, default: 0] += 1
+        }
+        var result = counts
+            .sorted { $0.value > $1.value }
+            .compactMap { Mood(rawValue: $0.key) }
+        let defaults: [Mood] = [.felice, .triste, .stressato, .annoiato, .curioso, .innamorato]
+        for mood in defaults where !result.contains(mood) {
+            result.append(mood)
+        }
+        return Array(result.prefix(6))
     }
 }
