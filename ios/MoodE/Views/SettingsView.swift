@@ -232,6 +232,16 @@ struct SettingsView: View {
                     showsExternalBadge: true
                 )
             }
+
+            NavigationLink {
+                MonetizationInfoView()
+            } label: {
+                SettingsRow(
+                    icon: "eurosign.circle.fill",
+                    iconColor: Theme.seenGreen,
+                    title: L("settings.monetization.row")
+                )
+            }
         } header: {
             Text(L("settings.ads.header"))
         } footer: {

@@ -14,6 +14,7 @@ struct MovieDetailView: View {
     @State private var trailerToPlay: TMDBVideo?
     @Environment(MovieLibrary.self) private var library
     @Environment(\.requestReview) private var requestReview
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
         ZStack {
@@ -101,6 +102,8 @@ struct MovieDetailView: View {
                     }
 
                     actionButtons
+
+                    rentOrBuySection(detail)
 
                     if !detail.genres.isEmpty {
                         genreChips(detail.genres)
@@ -299,6 +302,52 @@ struct MovieDetailView: View {
         }
     }
 
+    // MARK: - Rent or buy (affiliate)
+
+    /// "Noleggia o acquista": affiliate links towards Apple TV/iTunes and
+    /// Amazon (Prime Video rent/buy). Always shown for now; will become
+    /// availability-driven once wired to a per-title lookup service.
+    private func rentOrBuySection(_ detail: TMDBMovieDetail) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionTitle(L("detail.rent.title"))
+
+            AffiliateStoreButton(
+                title: L("detail.rent.apple"),
+                icon: "appletv.fill",
+                tint: Theme.ink
+            ) {
+                openAffiliate(
+                    AffiliateLinks.appleTVURL(title: detail.title, year: detail.releaseYear),
+                    store: "apple_tv"
+                )
+            }
+
+            AffiliateStoreButton(
+                title: L("detail.rent.amazon"),
+                icon: "play.rectangle.fill",
+                tint: Color(red: 0.0, green: 0.47, blue: 0.75)
+            ) {
+                openAffiliate(
+                    AffiliateLinks.amazonURL(title: detail.title, year: detail.releaseYear),
+                    store: "amazon"
+                )
+            }
+
+            Text(L("detail.rent.disclosure"))
+                .font(.caption2)
+                .italic()
+                .foregroundStyle(Theme.inkSoft.opacity(0.8))
+                .padding(.top, 2)
+        }
+    }
+
+    /// Opens an affiliate link and logs an anonymous counter event.
+    private func openAffiliate(_ url: URL?, store: String) {
+        guard let url else { return }
+        AnalyticsService.shared.log("affiliate_tap", meta: ["store": store])
+        openURL(url)
+    }
+
     private func metaBadge(icon: String, text: String) -> some View {
         HStack(spacing: 4) {
             Image(systemName: icon)
@@ -455,6 +504,48 @@ struct LibraryActionButton: View {
             )
         }
         .buttonStyle(PressableCardStyle())
+    }
+}
+
+/// Full-width store row for the rent/buy affiliate section:
+/// tinted icon tile, store name and an external-link arrow.
+struct AffiliateStoreButton: View {
+    let title: String
+    let icon: String
+    let tint: Color
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 34, height: 34)
+                    .background(tint, in: .rect(cornerRadius: 9))
+
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.ink)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+
+                Spacer(minLength: 8)
+
+                Image(systemName: "arrow.up.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Theme.inkSoft)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 11)
+            .background(Theme.card, in: .rect(cornerRadius: 16))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(tint.opacity(0.18), lineWidth: 1)
+            )
+        }
+        .buttonStyle(PressableCardStyle())
+        .accessibilityLabel(title)
     }
 }
 
