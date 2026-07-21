@@ -8,13 +8,15 @@ import Foundation
 /// Central place for affiliate/monetization links (rent & buy),
 /// separate from and complementary to AdMob advertising.
 ///
-/// IMPORTANT — placeholders to replace once the programs are approved:
-/// - `appleAffiliateID`: token from Apple Services Performance Partners
-///   (https://performance-partners.apple.com). Final per-title URL format:
-///   https://tv.apple.com/movie/[movie-id]?at=[AFFILIATE_ID]
-/// - `amazonAssociateTag`: tag from Amazon Associates (per marketplace).
+/// IMPORTANT — affiliate IDs status:
+/// - `appleAffiliateID`: PLACEHOLDER — replace with the token from Apple
+///   Services Performance Partners (https://performance-partners.apple.com).
 ///   Final per-title URL format:
-///   https://www.amazon.it/dp/[asin]?tag=[AMAZON_ASSOCIATE_TAG]
+///   https://tv.apple.com/movie/[movie-id]?at=[AFFILIATE_ID]
+/// - `amazonAssociateTag`: REAL tag `moode26-21` (Amazon Associates,
+///   registered on amazon.it — commissions track on the .it marketplace).
+///   Final per-title URL format:
+///   https://www.amazon.it/dp/[asin]?tag=moode26-21
 ///
 /// Until we resolve real per-title IDs (e.g. via a JustWatch-like service),
 /// links point to the store SEARCH page for the movie title + year, keeping
@@ -22,8 +24,9 @@ import Foundation
 enum AffiliateLinks {
     /// Apple Services Performance Partners token (placeholder).
     static let appleAffiliateID = "AFFILIATE_ID"
-    /// Amazon Associates tag (placeholder).
-    static let amazonAssociateTag = "AMAZON_ASSOCIATE_TAG"
+    /// Amazon Associates tag (amazon.it). If you later register other
+    /// marketplaces (es/fr/com), map one tag per host in `amazonTag(for:)`.
+    static let amazonAssociateTag = "moode26-21"
 
     /// Apple TV / iTunes affiliate link for a movie.
     /// Search-based fallback until real per-title Apple IDs are wired in.
@@ -49,9 +52,20 @@ enum AffiliateLinks {
         components.queryItems = [
             URLQueryItem(name: "k", value: searchTerm(title: title, year: year)),
             URLQueryItem(name: "i", value: "instant-video"),
-            URLQueryItem(name: "tag", value: amazonAssociateTag)
+            URLQueryItem(name: "tag", value: amazonTag(for: amazonHost))
         ]
         return components.url
+    }
+
+    /// Associates tag per marketplace. The `moode26-21` tag is registered
+    /// on amazon.it; add entries here once other marketplaces are approved
+    /// so every locale earns commissions.
+    private static let amazonTagsByHost: [String: String] = [
+        "www.amazon.it": amazonAssociateTag
+    ]
+
+    private static func amazonTag(for host: String) -> String {
+        amazonTagsByHost[host] ?? amazonAssociateTag
     }
 
     // MARK: - Region handling
