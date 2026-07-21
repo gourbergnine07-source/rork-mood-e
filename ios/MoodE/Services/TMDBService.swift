@@ -129,6 +129,37 @@ enum TMDBService {
         return await fillingMissingOverviews(response, path: "/discover/movie", queryItems: queryItems)
     }
 
+    /// "Serata in Duo": movies crossing two mood × goal combinations.
+    /// Shared genres are preferred; when the two profiles have nothing in
+    /// common the union is used so the list is never empty.
+    static func duoDiscover(
+        hostMood: Mood, hostGoal: ViewingGoal,
+        guestMood: Mood, guestGoal: ViewingGoal
+    ) async throws -> [TMDBMovie] {
+        let hostQuery = recommendationQuery(mood: hostMood, goal: hostGoal)
+        let guestQuery = recommendationQuery(mood: guestMood, goal: guestGoal)
+
+        let shared = Set(hostQuery.genres).intersection(guestQuery.genres)
+        let genres = shared.isEmpty
+            ? Array(Set(hostQuery.genres).union(guestQuery.genres))
+            : Array(shared)
+
+        var queryItems: [URLQueryItem] = [
+            URLQueryItem(name: "sort_by", value: "vote_average.desc"),
+            URLQueryItem(name: "vote_count.gte", value: "300"),
+            URLQueryItem(name: "include_adult", value: "false"),
+            URLQueryItem(name: "with_genres", value: genres.map(String.init).joined(separator: "|")),
+            URLQueryItem(name: "page", value: "1")
+        ]
+        if !hostQuery.allowsHorror && !guestQuery.allowsHorror {
+            queryItems.append(URLQueryItem(name: "without_genres", value: String(TMDBGenre.horror)))
+        }
+
+        let response: TMDBMovieListResponse = try await request(path: "/discover/movie", queryItems: queryItems)
+        let filled = await fillingMissingOverviews(response, path: "/discover/movie", queryItems: queryItems)
+        return Array(filled.results.prefix(12))
+    }
+
     /// Movies for an editorial collection of the "In evidenza" strip.
     /// Trending-backed collections reuse the weekly trending endpoint;
     /// discover-backed ones translate the collection's query into filters.

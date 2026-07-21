@@ -20,6 +20,7 @@ struct MoodFlowView: View {
     @State private var resultSelection: MoodSelection?
     @State private var showSurprise: Bool = false
     @State private var showQuiz: Bool = false
+    @State private var showDuo: Bool = false
 
     // Free-form mood input (STEP 1 alternative), analyzed by AI.
     @State private var freeText: String = ""
@@ -67,6 +68,9 @@ struct MoodFlowView: View {
         }
         .sheet(isPresented: $showSurprise) {
             SurpriseView()
+        }
+        .sheet(isPresented: $showDuo) {
+            DuoNightView()
         }
         .sheet(isPresented: $showQuiz) {
             NavigationStack {
@@ -328,6 +332,28 @@ struct MoodFlowView: View {
                     }
                     .sensoryFeedback(.impact(weight: .light), trigger: showSurprise)
                 }
+
+                Button {
+                    showDuo = true
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "person.2.fill")
+                            .font(.system(size: 12, weight: .semibold))
+                        Text(L("flow.duo"))
+                            .font(.footnote.weight(.semibold))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                    }
+                    .foregroundStyle(Theme.tabList)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 36)
+                    .background(Theme.tabList.opacity(0.12), in: .rect(cornerRadius: 12))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Theme.tabList.opacity(0.35), lineWidth: 1)
+                    )
+                }
+                .sensoryFeedback(.impact(weight: .light), trigger: showDuo)
             }
         }
     }

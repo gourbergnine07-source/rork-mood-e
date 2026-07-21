@@ -69,6 +69,7 @@ struct HomeView: View {
             .navigationDestination(for: HomeRoute.self) { route in
                 switch route {
                 case .diary: DiaryView()
+                case .diaryDay(let day): DiaryView(initialDay: day)
                 case .notifications: NotificationInboxView()
                 }
             }
@@ -88,6 +89,8 @@ struct HomeView: View {
 /// Navigation destinations reachable from the Home tab root.
 enum HomeRoute: Hashable {
     case diary
+    /// Diary opened straight on a specific day ("Un anno fa oggi").
+    case diaryDay(Date)
     case notifications
 }
 

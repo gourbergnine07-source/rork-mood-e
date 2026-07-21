@@ -17,6 +17,9 @@ struct MoodFlowHeader: View {
         VStack(alignment: .leading, spacing: 14) {
             FeaturedStripView()
 
+            AnniversaryCard()
+                .padding(.horizontal, 24)
+
             if let upcoming = LiveEventCalendar.upcoming().first {
                 LiveEventCard(event: upcoming.event, days: upcoming.days)
                     .padding(.horizontal, 24)

@@ -14,13 +14,20 @@ struct DiaryView: View {
     @Environment(MovieStatsStore.self) private var statsStore
     @Environment(\.dismiss) private var dismiss
 
-    @State private var displayedMonth: Date = Calendar.current.startOfMonth(for: Date())
-    @State private var selectedDay: Date = Calendar.current.startOfDay(for: Date())
+    @State private var displayedMonth: Date
+    @State private var selectedDay: Date
     @State private var recap: WeeklyRecap?
     @State private var noteTarget: MoodCheckIn?
     @State private var showScheduleSheet: Bool = false
     @State private var watchedTarget: ScheduledMovie?
     @State private var moveTarget: ScheduledMovie?
+
+    /// Opens the diary on a specific day (defaults to today) — used by the
+    /// "Un anno fa oggi" card to jump straight to that memory.
+    init(initialDay: Date = Date()) {
+        _displayedMonth = State(initialValue: Calendar.current.startOfMonth(for: initialDay))
+        _selectedDay = State(initialValue: Calendar.current.startOfDay(for: initialDay))
+    }
 
     var body: some View {
         ZStack {
@@ -45,6 +52,8 @@ struct DiaryView: View {
                         // Pops back to Home, where a new check-in restarts the streak.
                         dismiss()
                     }
+
+                    ChallengeCard()
 
                     if !planner.pendingPastScheduled.isEmpty {
                         pendingBanner

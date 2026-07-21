@@ -14,6 +14,7 @@ enum Badge: String, CaseIterable, Identifiable {
     case buonConsigliere, parteDellaCommunity
     case esploratoreHorror, amanteDelDramma, reDellaCommedia
     case animatore, documentarista
+    case sfidante
 
     var id: String { rawValue }
 
@@ -49,6 +50,7 @@ enum Badge: String, CaseIterable, Identifiable {
         case .reDellaCommedia: return "😂"
         case .animatore: return "🎨"
         case .documentarista: return "🎥"
+        case .sfidante: return "🎯"
         }
     }
 
@@ -68,6 +70,7 @@ enum Badge: String, CaseIterable, Identifiable {
         case .esploratoreHorror, .amanteDelDramma, .reDellaCommedia, .animatore, .documentarista:
             guard let goal = genreGoal else { return false }
             return stats.genreWatched[goal.genreId, default: 0] >= goal.target
+        case .sfidante: return stats.challengesCompleted >= 1
         }
     }
 
@@ -88,6 +91,7 @@ enum Badge: String, CaseIterable, Identifiable {
         case .esploratoreHorror, .amanteDelDramma, .reDellaCommedia, .animatore, .documentarista:
             guard let goal = genreGoal else { return 0 }
             ratio = Double(stats.genreWatched[goal.genreId, default: 0]) / Double(goal.target)
+        case .sfidante: ratio = Double(stats.challengesCompleted) / 1
         }
         return min(ratio, 1)
     }
@@ -107,6 +111,8 @@ struct DiaryStats {
     let requestsPublished: Int
     /// Watched movies per TMDB genre id, for the genre milestones.
     let genreWatched: [Int: Int]
+    /// Monthly challenges completed (for the "Sfidante" badge).
+    let challengesCompleted: Int
 }
 
 /// Summary of the previous week, shown once at the start of a new week.
@@ -318,7 +324,8 @@ final class MoodDiary {
             bestStreak: bestStreak,
             helpfulGiven: defaults.integer(forKey: CommunityService.helpfulReceivedKey),
             requestsPublished: defaults.integer(forKey: CommunityService.requestsPublishedKey),
-            genreWatched: genreWatched
+            genreWatched: genreWatched,
+            challengesCompleted: ChallengeStore.completedCount
         )
     }
 
@@ -398,6 +405,22 @@ final class MoodDiary {
             }
         }
         return counts.sorted { $0.value > $1.value }.prefix(5).map(\.key)
+    }
+
+    // MARK: - Anniversary ("Un anno fa oggi")
+
+    /// Check-in recorded about one year before `date` (exact day first,
+    /// then up to ±3 days). Nil when the diary is younger than a year.
+    func anniversaryCheckIn(asOf date: Date = Date()) -> MoodCheckIn? {
+        let calendar = Calendar.current
+        guard let target = calendar.date(byAdding: .year, value: -1, to: date) else { return nil }
+        for offset in [0, -1, 1, -2, 2, -3, 3] {
+            guard let day = calendar.date(byAdding: .day, value: offset, to: target) else { continue }
+            if let hit = checkIns.first(where: { calendar.isDate($0.date, inSameDayAs: day) }) {
+                return hit
+            }
+        }
+        return nil
     }
 
     // MARK: - Widget

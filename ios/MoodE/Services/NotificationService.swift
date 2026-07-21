@@ -58,6 +58,7 @@ final class NotificationService {
     private static let featuredScheduledKey = "notifications.featured.scheduledIds"
     private static let knownIdsKey = "notifications.knownMovieIds"
     private static let lastSyncKey = "notifications.lastSyncDate"
+    private static let anniversaryMonthKey = "notifications.anniversary.lastMonth"
     /// Minimum time between two TMDB checks (6 hours, like the data cache).
     private static let syncInterval: TimeInterval = 6 * 60 * 60
     /// Days a watchlist movie sits unwatched before the reminder.
@@ -235,9 +236,53 @@ final class NotificationService {
         scheduleWatchlistReminder(toWatch: toWatch)
         syncMovieNightReminders(scheduled)
         await syncFeaturedThemeReminders()
+        await syncAnniversaryReminder(checkIns: checkIns)
         await syncMoodForecast(checkIns: checkIns)
         await syncLiveEventReminders()
         await sync(topGenres: topGenres)
+    }
+
+    // MARK: - "Un anno fa oggi" anniversary
+
+    /// Schedules at most ONE memory notification per calendar month:
+    /// the next day (within 4 weeks) that has a check-in exactly one year
+    /// earlier. Skipped entirely when no anniversary falls in the window.
+    func syncAnniversaryReminder(checkIns: [MoodCheckIn]) async {
+        guard isEnabled, !checkIns.isEmpty else { return }
+
+        let calendar = Calendar.current
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM"
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+
+        for offset in 0..<28 {
+            guard let candidate = calendar.date(byAdding: .day, value: offset, to: Date()),
+                  let yearAgo = calendar.date(byAdding: .year, value: -1, to: candidate),
+                  let fireDate = calendar.date(bySettingHour: 10, minute: 0, second: 0, of: candidate),
+                  fireDate > Date() else { continue }
+
+            guard let hit = checkIns.first(where: { calendar.isDate($0.date, inSameDayAs: yearAgo) }),
+                  let mood = hit.mood else { continue }
+
+            // Max one per month: remembered by the month of the fire date.
+            let monthKey = formatter.string(from: fireDate)
+            guard defaults.string(forKey: Self.anniversaryMonthKey) != monthKey else { return }
+
+            let content = UNMutableNotificationContent()
+            content.title = L("notif.anniversary.title")
+            content.body = LF("notif.anniversary.body", mood.title.lowercased())
+            content.sound = .default
+            content.userInfo = ["route": NotificationRoute.moodFlow]
+
+            let components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: fireDate)
+            try? await UNUserNotificationCenter.current().add(UNNotificationRequest(
+                identifier: "anniversary-\(monthKey)",
+                content: content,
+                trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+            ))
+            defaults.set(monthKey, forKey: Self.anniversaryMonthKey)
+            return
+        }
     }
 
     // MARK: - Mood forecast

@@ -89,6 +89,39 @@ export type Database = {
           },
         ]
       }
+      duo_sessions: {
+        Row: {
+          code: string
+          created_at: string
+          expires_at: string
+          guest_goal: string | null
+          guest_joined: boolean
+          guest_mood: string | null
+          host_goal: string | null
+          host_mood: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          expires_at?: string
+          guest_goal?: string | null
+          guest_joined?: boolean
+          guest_mood?: string | null
+          host_goal?: string | null
+          host_mood?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          expires_at?: string
+          guest_goal?: string | null
+          guest_joined?: boolean
+          guest_mood?: string | null
+          host_goal?: string | null
+          host_mood?: string | null
+        }
+        Relationships: []
+      }
       friend_stats: {
         Row: {
           best_streak: number
