@@ -77,6 +77,11 @@ struct DiaryView: View {
                         badgesRow
                     }
                     .buttonStyle(PressableCardStyle())
+
+                    NavigationLink(value: DiaryRoute.friends) {
+                        friendsRow
+                    }
+                    .buttonStyle(PressableCardStyle())
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 8)
@@ -399,6 +404,33 @@ struct DiaryView: View {
         .overlay(
             RoundedRectangle(cornerRadius: 20)
                 .stroke(Theme.amber.opacity(0.25), lineWidth: 1)
+        )
+    }
+
+    // MARK: - Friends row
+
+    private var friendsRow: some View {
+        HStack(spacing: 12) {
+            Text("\u{1F3C6}")
+                .font(.system(size: 26))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(L("friends.row.title"))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.ink)
+                Text(L("friends.row.subtitle"))
+                    .font(.caption)
+                    .foregroundStyle(Theme.inkSoft)
+            }
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Theme.inkSoft)
+        }
+        .padding(16)
+        .background(Theme.card, in: .rect(cornerRadius: 20))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(Theme.tabList.opacity(0.30), lineWidth: 1)
         )
     }
 
