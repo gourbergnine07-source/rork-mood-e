@@ -16,6 +16,8 @@ struct SelectableCard: View {
     var tint: Color = Theme.primary
     var animatesEmoji: Bool = false
     var animationIndex: Int = 0
+    /// Compact layout for the 12-mood Home grid, so every card fits on screen.
+    var isCompact: Bool = false
     let action: () -> Void
 
     @State private var hasAppeared: Bool = false
@@ -23,33 +25,33 @@ struct SelectableCard: View {
 
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 10) {
+            VStack(spacing: isCompact ? 5 : 10) {
                 ZStack(alignment: .topTrailing) {
                     glyph
                         .scaleEffect(isFloating ? 1.08 : 1.0)
                         .offset(y: isFloating ? -3 : 2)
                     if EmojiSupport.isAvailable {
                         Image(systemName: icon)
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(.system(size: isCompact ? 10 : 12, weight: .semibold))
                             .foregroundStyle(isSelected ? .white : tint)
-                            .padding(6)
+                            .padding(isCompact ? 5 : 6)
                             .background(
                                 isSelected ? tint : Theme.cardStrong,
                                 in: .circle
                             )
-                            .offset(x: 18, y: -6)
+                            .offset(x: isCompact ? 15 : 18, y: isCompact ? -5 : -6)
                     }
                 }
 
                 Text(title)
-                    .font(.subheadline.weight(.semibold))
+                    .font(isCompact ? .caption.weight(.semibold) : .subheadline.weight(.semibold))
                     .foregroundStyle(Theme.ink)
                     .multilineTextAlignment(.center)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.8)
+                    .lineLimit(isCompact ? 1 : 2)
+                    .minimumScaleFactor(0.7)
             }
             .frame(maxWidth: .infinity)
-            .frame(height: 116)
+            .frame(height: isCompact ? 84 : 116)
             .background(
                 LinearGradient(
                     colors: isSelected
@@ -90,12 +92,12 @@ struct SelectableCard: View {
     private var glyph: some View {
         if EmojiSupport.isAvailable {
             Text(emoji)
-                .font(.system(size: 38))
+                .font(.system(size: isCompact ? 28 : 38))
         } else {
             Image(systemName: icon)
-                .font(.system(size: 30, weight: .semibold))
+                .font(.system(size: isCompact ? 22 : 30, weight: .semibold))
                 .foregroundStyle(tint)
-                .frame(height: 44)
+                .frame(height: isCompact ? 32 : 44)
         }
     }
 

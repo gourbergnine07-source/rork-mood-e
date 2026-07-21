@@ -31,9 +31,9 @@ struct MoodFlowView: View {
     @State private var quizBannerHidden: Bool = false
 
     private let gridColumns: [GridItem] = [
-        GridItem(.flexible(), spacing: 12),
-        GridItem(.flexible(), spacing: 12),
-        GridItem(.flexible(), spacing: 12)
+        GridItem(.flexible(), spacing: 8),
+        GridItem(.flexible(), spacing: 8),
+        GridItem(.flexible(), spacing: 8)
     ]
 
     private let goalColumns: [GridItem] = [
@@ -124,7 +124,7 @@ struct MoodFlowView: View {
     }
 
     private var moodGrid: some View {
-        LazyVGrid(columns: gridColumns, spacing: 12) {
+        LazyVGrid(columns: gridColumns, spacing: 8) {
             ForEach(Array(Mood.allCases.enumerated()), id: \.element) { index, mood in
                 SelectableCard(
                     emoji: mood.emoji,
@@ -133,7 +133,8 @@ struct MoodFlowView: View {
                     isSelected: selectedMood == mood,
                     tint: mood.tint,
                     animatesEmoji: true,
-                    animationIndex: index
+                    animationIndex: index,
+                    isCompact: true
                 ) {
                     selectedMood = mood
                 }
