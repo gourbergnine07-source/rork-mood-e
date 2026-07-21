@@ -2,6 +2,8 @@
 //  AffiliateLinkService.swift
 //  MoodE
 //
+//  Affiliate links and provider tap routing.
+//
 
 import Foundation
 
@@ -95,5 +97,50 @@ enum AffiliateLinks {
     private static func searchTerm(title: String, year: String?) -> String {
         guard let year, !year.isEmpty else { return title }
         return "\(title) \(year)"
+    }
+
+    // MARK: - Provider routing (Netflix, Disney+, etc. via TMDB/JustWatch)
+
+    /// Where a tap on a watch-provider logo should lead.
+    struct ProviderDestination {
+        enum Kind {
+            /// One of our affiliate programs (earns a commission).
+            case affiliate
+            /// TMDB/JustWatch deep link for the title (no affiliate active).
+            case justWatch
+        }
+
+        let url: URL
+        let kind: Kind
+        /// Analytics label (e.g. "amazon", "apple_tv", "justwatch").
+        let store: String
+    }
+
+    /// Routes a provider tap: Amazon/Prime and Apple/iTunes go through our
+    /// affiliate links; every other platform (Netflix, Disney+, …) opens
+    /// the TMDB/JustWatch page for the title, which deep-links to each
+    /// service's own page for the movie.
+    static func providerDestination(
+        for provider: TMDBWatchProvider,
+        title: String,
+        year: String?,
+        justWatchLink: URL?
+    ) -> ProviderDestination? {
+        let name = provider.providerName.lowercased()
+
+        if name.contains("amazon") || name.contains("prime video") {
+            if let url = amazonURL(title: title, year: year) {
+                return ProviderDestination(url: url, kind: .affiliate, store: "amazon")
+            }
+        }
+
+        if name.contains("apple") || name.contains("itunes") {
+            if let url = appleTVURL(title: title, year: year) {
+                return ProviderDestination(url: url, kind: .affiliate, store: "apple_tv")
+            }
+        }
+
+        guard let justWatchLink else { return nil }
+        return ProviderDestination(url: justWatchLink, kind: .justWatch, store: "justwatch")
     }
 }

@@ -146,6 +146,7 @@
   "detail.watch.link": "Toutes les options sur TMDB",
   "detail.watch.rent": "Location",
   "detail.watch.stream": "Streaming",
+  "detail.watch.tap": "Touche un service pour ouvrir le film",
   "diary.badges": "Mes récompenses",
   "diary.badges.count": "%d sur %d débloquées",
   "diary.day.empty": "Aucun check-in ce jour-là. Ouvre l'accueil et dis-moi comment tu te sens 🎬",
