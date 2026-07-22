@@ -13,6 +13,7 @@ import Supabase
 nonisolated struct FriendStatsRow: Codable, Identifiable, Sendable, Equatable {
     let userId: String
     let displayName: String
+    let avatar: String?
     let friendCode: String?
     let watchedCount: Int
     let totalMinutes: Int
@@ -26,6 +27,7 @@ nonisolated struct FriendStatsRow: Codable, Identifiable, Sendable, Equatable {
     enum CodingKeys: String, CodingKey {
         case userId = "user_id"
         case displayName = "display_name"
+        case avatar
         case friendCode = "friend_code"
         case watchedCount = "watched_count"
         case totalMinutes = "total_minutes"
@@ -41,6 +43,7 @@ nonisolated struct FriendStatsRow: Codable, Identifiable, Sendable, Equatable {
 nonisolated private struct FriendStatsUpsert: Encodable, Sendable {
     let userId: String
     let displayName: String
+    let avatar: String?
     let watchedCount: Int
     let totalMinutes: Int
     let topGenreId: Int?
@@ -52,12 +55,29 @@ nonisolated private struct FriendStatsUpsert: Encodable, Sendable {
     enum CodingKeys: String, CodingKey {
         case userId = "user_id"
         case displayName = "display_name"
+        case avatar
         case watchedCount = "watched_count"
         case totalMinutes = "total_minutes"
         case topGenreId = "top_genre_id"
         case topDecade = "top_decade"
         case streak
         case bestStreak = "best_streak"
+        case updatedAt = "updated_at"
+    }
+}
+
+/// Lightweight upsert used by the real-time profile editor: touches only
+/// identity fields, never the stats counters.
+nonisolated private struct FriendProfileUpsert: Encodable, Sendable {
+    let userId: String
+    let displayName: String
+    let avatar: String
+    let updatedAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case userId = "user_id"
+        case displayName = "display_name"
+        case avatar
         case updatedAt = "updated_at"
     }
 }
@@ -124,6 +144,7 @@ final class FriendStatsService {
                 FriendStatsUpsert(
                     userId: user.id,
                     displayName: snapshot.displayName,
+                    avatar: snapshot.avatar,
                     watchedCount: snapshot.watchedCount,
                     totalMinutes: snapshot.totalMinutes,
                     topGenreId: snapshot.topGenreId,
@@ -175,6 +196,7 @@ final class FriendStatsService {
                 FriendStatsUpsert(
                     userId: user.id,
                     displayName: displayName,
+                    avatar: ProfileStore.shared.avatar,
                     watchedCount: 0,
                     totalMinutes: 0,
                     topGenreId: nil,
@@ -197,6 +219,29 @@ final class FriendStatsService {
         } catch {
             print("FriendStats: ensureCode failed: \(error.localizedDescription)")
             return nil
+        }
+    }
+
+    /// Real-time profile push from the editor: updates only display name
+    /// and avatar on my row (creating it when missing, stats default to
+    /// zero and get filled by the next snapshot refresh).
+    func pushProfile(auth: AuthManager, displayName: String, avatar: String) async -> Bool {
+        await auth.ensureValidToken()
+        guard let user = auth.user else { return false }
+        do {
+            try await SupabaseService.client.from("friend_stats").upsert(
+                FriendProfileUpsert(
+                    userId: user.id,
+                    displayName: displayName,
+                    avatar: avatar,
+                    updatedAt: Date()
+                ),
+                onConflict: "user_id"
+            ).execute()
+            return true
+        } catch {
+            print("FriendStats: profile push failed: \(error.localizedDescription)")
+            return false
         }
     }
 

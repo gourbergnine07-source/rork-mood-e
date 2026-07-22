@@ -308,6 +308,8 @@ struct TrendingCard: View {
                 }
             }
 
+            ProviderStripView(movieId: movie.id, tint: Theme.tabTrending)
+
             if let onPlayTrailer {
                 WatchTrailerButton(
                     tint: Theme.tabTrending,

@@ -182,6 +182,8 @@ struct LibraryEntryRow: View {
 
                         dateLabel
 
+                        ProviderStripView(movieId: entry.id, tint: Theme.tabList)
+
                         if let onPlayTrailer {
                             WatchTrailerButton(
                                 tint: Theme.tabList,

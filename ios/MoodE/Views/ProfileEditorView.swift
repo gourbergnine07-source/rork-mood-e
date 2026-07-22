@@ -14,6 +14,8 @@ struct ProfileEditorView: View {
     @State private var avatarHaptic = false
     @State private var showResetConfirm = false
     @State private var resetHaptic = false
+    @State private var syncState: ProfileSyncState = .idle
+    @State private var pushTask: Task<Void, Never>?
 
     private var profile: ProfileStore { .shared }
 
@@ -39,6 +41,7 @@ struct ProfileEditorView: View {
                     name = ""
                 }
                 resetHaptic.toggle()
+                scheduleBackendPush(immediate: true)
             }
             Button(L("common.cancel"), role: .cancel) {}
         } message: {
@@ -64,12 +67,63 @@ struct ProfileEditorView: View {
                     .font(.title3.weight(.bold))
                     .foregroundStyle(Theme.ink)
                     .contentTransition(.opacity)
+
+                syncIndicator
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 8)
         }
         .listRowBackground(Color.clear)
         .listRowSeparator(.hidden)
+    }
+
+    /// Discreet real-time save status: visible only for signed-in users,
+    /// whose profile is pushed to the backend as they edit.
+    @ViewBuilder
+    private var syncIndicator: some View {
+        if auth.user != nil {
+            HStack(spacing: 5) {
+                switch syncState {
+                case .idle:
+                    EmptyView()
+                case .saving:
+                    ProgressView()
+                        .controlSize(.mini)
+                    Text(L("profile.sync.saving"))
+                        .foregroundStyle(Theme.inkSoft)
+                case .saved:
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(Theme.seenGreen)
+                    Text(L("profile.sync.saved"))
+                        .foregroundStyle(Theme.seenGreen)
+                }
+            }
+            .font(.caption2.weight(.semibold))
+            .frame(height: 14)
+            .animation(.easeInOut(duration: 0.2), value: syncState)
+        }
+    }
+
+    /// Debounced push of name + avatar to the cloud so friends see the
+    /// update in real time. No-op when signed out (local-only profile).
+    private func scheduleBackendPush(immediate: Bool = false) {
+        guard auth.user != nil else { return }
+        pushTask?.cancel()
+        syncState = .saving
+        pushTask = Task {
+            if !immediate {
+                try? await Task.sleep(for: .seconds(1))
+            }
+            guard !Task.isCancelled else { return }
+            let ok = await FriendStatsService.shared.pushProfile(
+                auth: auth,
+                displayName: profile.resolvedName(auth: auth),
+                avatar: profile.avatar
+            )
+            guard !Task.isCancelled else { return }
+            syncState = ok ? .saved : .idle
+        }
     }
 
     // MARK: - Name
@@ -86,6 +140,7 @@ struct ProfileEditorView: View {
                         return
                     }
                     profile.setName(newValue)
+                    scheduleBackendPush()
                 }
         } header: {
             Text(L("profile.name.label"))
@@ -146,6 +201,7 @@ struct ProfileEditorView: View {
         return Button {
             profile.setAvatar(emoji)
             avatarHaptic.toggle()
+            scheduleBackendPush()
         } label: {
             Text(emoji)
                 .font(.system(size: 26))
@@ -168,6 +224,13 @@ struct ProfileEditorView: View {
         .accessibilityLabel(emoji)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
+}
+
+/// Save states of the real-time backend push.
+private enum ProfileSyncState {
+    case idle
+    case saving
+    case saved
 }
 
 #Preview {

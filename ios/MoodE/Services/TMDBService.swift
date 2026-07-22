@@ -283,6 +283,12 @@ enum TMDBService {
         return try await request(path: "/movie/\(id)/videos", queryItems: queryItems)
     }
 
+    /// Watch providers only — lightweight call used by the provider
+    /// strips under list cards (session-cached in WatchProviderCache).
+    static func movieWatchProviders(id: Int) async throws -> TMDBWatchProviderResults {
+        try await request(path: "/movie/\(id)/watch/providers", queryItems: [])
+    }
+
     /// Full movie detail with cast and videos in a single call.
     /// Falls back to the English overview when the localized one is missing.
     static func movieDetail(id: Int) async throws -> TMDBMovieDetail {

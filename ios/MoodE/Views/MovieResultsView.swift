@@ -335,6 +335,9 @@ struct MovieCard: View {
                         .lineSpacing(2)
                 }
 
+                ProviderStripView(movieId: movie.id)
+                    .padding(.top, 2)
+
                 quickActions
                     .padding(.top, 2)
 

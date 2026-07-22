@@ -154,6 +154,7 @@ export type Database = {
       }
       friend_stats: {
         Row: {
+          avatar: string | null
           best_streak: number
           display_name: string
           friend_code: string
@@ -166,6 +167,7 @@ export type Database = {
           watched_count: number
         }
         Insert: {
+          avatar?: string | null
           best_streak?: number
           display_name?: string
           friend_code?: string
@@ -178,6 +180,7 @@ export type Database = {
           watched_count?: number
         }
         Update: {
+          avatar?: string | null
           best_streak?: number
           display_name?: string
           friend_code?: string

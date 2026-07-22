@@ -44,6 +44,7 @@ struct FriendsView: View {
         return FriendStatsRow(
             userId: auth.user?.id ?? "",
             displayName: myDisplayName,
+            avatar: ProfileStore.shared.avatar,
             friendCode: service.myCode,
             watchedCount: stats.watchedCount,
             totalMinutes: stats.totalMinutes,
@@ -335,8 +336,8 @@ struct FriendsView: View {
             compareTarget = friend
         } label: {
             HStack(spacing: 12) {
-                Text(String(friend.displayName.prefix(1)).uppercased())
-                    .font(.headline.weight(.black))
+                Text(friend.avatar ?? String(friend.displayName.prefix(1)).uppercased())
+                    .font(friend.avatar != nil ? .title3 : .headline.weight(.black))
                     .foregroundStyle(Theme.primary)
                     .frame(width: 40, height: 40)
                     .background(Theme.primary.opacity(0.14), in: .circle)
@@ -479,7 +480,7 @@ private struct FriendCompareSheet: View {
                 Text(L("friends.compare.vs"))
                     .font(.title3.weight(.black))
                     .foregroundStyle(Theme.amber)
-                nameBubble(friend.displayName, tint: Theme.rose)
+                nameBubble(friend.displayName, tint: Theme.rose, avatar: friend.avatar)
             }
 
             Text(verdictText)
