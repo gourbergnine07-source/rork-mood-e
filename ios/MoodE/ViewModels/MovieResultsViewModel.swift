@@ -43,7 +43,7 @@ final class MovieResultsViewModel {
     private let maxPageFetches = 4
 
     private static func cacheKey(for selection: MoodSelection) -> String {
-        var key = "recommendations.\(String(describing: selection.mood)).\(String(describing: selection.goal)).\(String(describing: selection.era))"
+        var key = "recommendations.v2.\(String(describing: selection.mood)).\(String(describing: selection.goal)).\(String(describing: selection.era))"
         // Separate cache bucket per streaming-filter configuration, so
         // toggling the filter never serves a stale unfiltered batch.
         let store = StreamingServicesStore.shared
@@ -80,7 +80,8 @@ final class MovieResultsViewModel {
     func load(selection: MoodSelection, excluding excludedIds: Set<Int> = [], forceRefresh: Bool = false) async {
         if !forceRefresh,
            let disk = TMDBCache.load(RecommendationsSnapshot.self, forKey: Self.cacheKey(for: selection)) {
-            let movies = disk.value.movies.filter { !excludedIds.contains($0.id) }
+            let crossMood = RecommendationRegistry.shared.excludedIds(for: selection.mood)
+            let movies = disk.value.movies.filter { !excludedIds.contains($0.id) && !crossMood.contains($0.id) }
             if !movies.isEmpty {
                 currentPage = disk.value.page
                 totalPages = disk.value.totalPages
@@ -128,6 +129,8 @@ final class MovieResultsViewModel {
         isLoadingBonus = true
         defer { isLoadingBonus = false }
 
+        let excluded = excludedIds.union(RecommendationRegistry.shared.excludedIds(for: selection.mood))
+
         do {
             var bonus: [TMDBMovie] = []
             var page = currentPage
@@ -141,7 +144,7 @@ final class MovieResultsViewModel {
                 fetches += 1
 
                 let fresh = response.results.filter { movie in
-                    !excludedIds.contains(movie.id)
+                    !excluded.contains(movie.id)
                         && !current.contains(where: { $0.id == movie.id })
                         && !bonus.contains(where: { $0.id == movie.id })
                 }
@@ -151,7 +154,9 @@ final class MovieResultsViewModel {
             }
 
             guard !bonus.isEmpty else { return }
-            state = .loaded(current + Array(bonus.prefix(5)))
+            let bonusBatch = Array(bonus.prefix(5))
+            RecommendationRegistry.shared.register(bonusBatch, for: selection.mood)
+            state = .loaded(current + bonusBatch)
         } catch {
             print("MovieResultsViewModel: bonus non caricato: \(error.localizedDescription)")
         }
@@ -160,6 +165,9 @@ final class MovieResultsViewModel {
     /// Fetches pages starting at `startPage`, filtering out watched movies and
     /// pulling additional pages until the batch is full enough.
     private func fetch(selection: MoodSelection, startPage: Int, excluding excludedIds: Set<Int>) async {
+        // Movies recently proposed for a DIFFERENT emotion are excluded,
+        // so each emotion keeps its own distinct list.
+        let excluded = excludedIds.union(RecommendationRegistry.shared.excludedIds(for: selection.mood))
         do {
             var collected: [TMDBMovie] = []
             var page = startPage
@@ -172,7 +180,7 @@ final class MovieResultsViewModel {
                 fetches += 1
 
                 let fresh = response.results.filter { movie in
-                    !excludedIds.contains(movie.id)
+                    !excluded.contains(movie.id)
                         && !collected.contains(where: { $0.id == movie.id })
                 }
                 collected += await filterToSelectedServices(fresh)
@@ -186,8 +194,25 @@ final class MovieResultsViewModel {
                 page = currentPage + 1
             } while true
 
+            // Narrow mood × goal queries can run dry: top up with the
+            // broader (relaxed) query so the batch is never empty.
+            if collected.count < 5 {
+                var relaxedPage = 1
+                while collected.count < minBatchSize && relaxedPage <= 2 {
+                    let response = try await TMDBService.discoverMovies(for: selection, page: relaxedPage, relaxed: true)
+                    let fresh = response.results.filter { movie in
+                        !excluded.contains(movie.id)
+                            && !collected.contains(where: { $0.id == movie.id })
+                    }
+                    collected += await filterToSelectedServices(fresh)
+                    if response.page >= response.totalPages { break }
+                    relaxedPage += 1
+                }
+            }
+
             // Light spectator-profile boost: refines, never replaces, the flow.
             let batch = QuizStore.rerank(Array(collected.prefix(batchSize)))
+            RecommendationRegistry.shared.register(batch, for: selection.mood)
             state = .loaded(batch)
             batchId += 1
             TMDBCache.save(

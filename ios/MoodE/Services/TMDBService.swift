@@ -59,7 +59,11 @@ enum TMDBKeyword {
 
 /// Genres and keywords derived from the mood × goal mapping table.
 struct RecommendationQuery {
+    /// Goal-driven genres, matched as an OR group.
     var genres: [Int]
+    /// Mood-specific genres, REQUIRED (AND) in the query so every emotion
+    /// produces its own recognizable list instead of the same top titles.
+    var moodGenres: [Int] = []
     var keywords: [Int] = []
     var allowsHorror: Bool = false
 }
@@ -95,16 +99,32 @@ enum TMDBService {
 
     /// Discovers movies matching the user's mood, goal and era choices.
     /// Returns the full paginated response so callers can request fresh pages.
-    static func discoverMovies(for selection: MoodSelection, page: Int = 1) async throws -> TMDBMovieListResponse {
+    /// `relaxed` drops the mood-genre requirement (OR-only query), used as
+    /// a fallback when a narrow mood × goal combination runs dry.
+    static func discoverMovies(for selection: MoodSelection, page: Int = 1, relaxed: Bool = false) async throws -> TMDBMovieListResponse {
         let recommendation = recommendationQuery(mood: selection.mood, goal: selection.goal)
+
+        // Mood genre is required (comma = AND) while goal genres stay an
+        // OR group (pipe), so each emotion surfaces different real titles.
+        let goalGroup = recommendation.genres.map(String.init).joined(separator: "|")
+        let genresValue: String
+        if !relaxed, !recommendation.moodGenres.isEmpty {
+            let moodGroup = recommendation.moodGenres.map(String.init).joined(separator: "|")
+            genresValue = "\(moodGroup),\(goalGroup)"
+        } else {
+            let extras = recommendation.moodGenres.filter { !recommendation.genres.contains($0) }
+            genresValue = (recommendation.genres + extras).map(String.init).joined(separator: "|")
+        }
 
         var queryItems: [URLQueryItem] = [
             URLQueryItem(name: "sort_by", value: "vote_average.desc"),
             URLQueryItem(name: "vote_count.gte", value: "300"),
             URLQueryItem(name: "include_adult", value: "false"),
-            URLQueryItem(name: "with_genres", value: recommendation.genres.map(String.init).joined(separator: "|")),
+            URLQueryItem(name: "with_genres", value: genresValue),
             URLQueryItem(name: "page", value: String(page))
         ]
+
+        queryItems += streamingFilterItems()
 
         if !recommendation.keywords.isEmpty {
             queryItems.append(URLQueryItem(
@@ -139,9 +159,11 @@ enum TMDBService {
         let hostQuery = recommendationQuery(mood: hostMood, goal: hostGoal)
         let guestQuery = recommendationQuery(mood: guestMood, goal: guestGoal)
 
-        let shared = Set(hostQuery.genres).intersection(guestQuery.genres)
+        let hostGenres = Set(hostQuery.genres + hostQuery.moodGenres)
+        let guestGenres = Set(guestQuery.genres + guestQuery.moodGenres)
+        let shared = hostGenres.intersection(guestGenres)
         let genres = shared.isEmpty
-            ? Array(Set(hostQuery.genres).union(guestQuery.genres))
+            ? Array(hostGenres.union(guestGenres))
             : Array(shared)
 
         var queryItems: [URLQueryItem] = [
@@ -380,10 +402,44 @@ enum TMDBService {
         }
     }
 
+    /// Server-side narrowing to the user's subscription platforms when the
+    /// streaming filter is on: TMDB (JustWatch data) returns only movies
+    /// actually watchable in the user's region on those services. Applied
+    /// only when every selected service has known TMDB provider ids;
+    /// fragment-only services (e.g. RaiPlay) rely on the per-movie check.
+    private static func streamingFilterItems() -> [URLQueryItem] {
+        let store = StreamingServicesStore.shared
+        guard store.isFilterActive else { return [] }
+        let selected = StreamingServicesStore.allServices.filter { store.selectedIds.contains($0.id) }
+        guard !selected.isEmpty, selected.allSatisfy({ !$0.providerIds.isEmpty }) else { return [] }
+
+        let ids = Set(selected.flatMap { $0.providerIds }).sorted()
+        return [
+            URLQueryItem(name: "watch_region", value: watchRegion),
+            URLQueryItem(name: "with_watch_providers", value: ids.map(String.init).joined(separator: "|")),
+            URLQueryItem(name: "with_watch_monetization_types", value: "flatrate")
+        ]
+    }
+
+    /// Region for availability checks: device region first, app language
+    /// as fallback (mirrors TMDBWatchProviderResults.bestRegion).
+    private static var watchRegion: String {
+        if let device = Locale.current.region?.identifier {
+            return device
+        }
+        switch LocalizationManager.shared.language.rawValue {
+        case "it": return "IT"
+        case "es": return "ES"
+        case "fr": return "FR"
+        default: return "US"
+        }
+    }
+
     // MARK: - Selection → query mapping
 
     /// Full mapping table (12 moods × 10 goals): the goal drives the primary
-    /// genres, the mood refines the mix with extra genres or TMDB keywords.
+    /// genres (OR group), the mood adds a REQUIRED genre (AND) or keywords,
+    /// so every emotion yields a clearly different, well-themed list.
     private static func recommendationQuery(mood: Mood, goal: ViewingGoal) -> RecommendationQuery {
         var query: RecommendationQuery
 
@@ -391,69 +447,75 @@ enum TMDBService {
         case .ridere:
             query = RecommendationQuery(genres: [TMDBGenre.comedy])
             switch mood {
-            case .felice, .motivato: query.genres += [TMDBGenre.adventure]
-            case .triste, .malinconico: query.genres += [TMDBGenre.drama]
-            case .stressato, .nostalgico: query.genres += [TMDBGenre.family]
-            case .annoiato, .arrabbiato: query.genres += [TMDBGenre.action]
-            case .innamorato: query.genres += [TMDBGenre.romance]
-            case .spensierato: query.genres += [TMDBGenre.animation]
-            case .curioso: query.genres += [TMDBGenre.crime]
+            case .felice, .motivato: query.moodGenres = [TMDBGenre.adventure]
+            case .triste, .malinconico: query.moodGenres = [TMDBGenre.drama]
+            case .stressato, .nostalgico: query.moodGenres = [TMDBGenre.family]
+            case .annoiato, .arrabbiato: query.moodGenres = [TMDBGenre.action]
+            case .innamorato: query.moodGenres = [TMDBGenre.romance]
+            case .spensierato: query.moodGenres = [TMDBGenre.animation]
+            case .curioso: query.moodGenres = [TMDBGenre.crime]
             case .impaurito:
-                query.genres += [TMDBGenre.horror]
+                query.moodGenres = [TMDBGenre.horror]
                 query.allowsHorror = true
             }
 
         case .piangere:
             query = RecommendationQuery(genres: [TMDBGenre.drama])
             switch mood {
-            case .triste, .innamorato, .malinconico, .felice: query.genres += [TMDBGenre.romance]
-            case .stressato, .spensierato, .nostalgico: query.genres += [TMDBGenre.family]
-            case .annoiato, .arrabbiato: query.genres += [TMDBGenre.war]
+            case .triste, .innamorato, .malinconico, .felice: query.moodGenres = [TMDBGenre.romance]
+            case .stressato, .spensierato, .nostalgico: query.moodGenres = [TMDBGenre.family]
+            case .annoiato, .arrabbiato: query.moodGenres = [TMDBGenre.war]
             case .motivato:
-                query.genres += [TMDBGenre.history]
+                query.moodGenres = [TMDBGenre.history]
                 query.keywords = [TMDBKeyword.basedOnTrueStory]
-            case .curioso: query.genres += [TMDBGenre.mystery]
-            case .impaurito: query.genres += [TMDBGenre.thriller]
+            case .curioso: query.moodGenres = [TMDBGenre.mystery]
+            case .impaurito: query.moodGenres = [TMDBGenre.thriller]
             }
 
         case .rilassarmi:
             query = RecommendationQuery(genres: [TMDBGenre.animation, TMDBGenre.comedy, TMDBGenre.family])
             switch mood {
-            case .innamorato, .malinconico: query.genres += [TMDBGenre.romance]
-            case .curioso, .annoiato: query.genres += [TMDBGenre.adventure]
-            case .nostalgico: query.genres += [TMDBGenre.music]
+            case .innamorato, .malinconico: query.moodGenres = [TMDBGenre.romance]
+            case .curioso, .annoiato: query.moodGenres = [TMDBGenre.adventure]
+            case .nostalgico: query.moodGenres = [TMDBGenre.music]
+            case .felice, .spensierato: query.moodGenres = [TMDBGenre.comedy]
+            case .triste, .stressato: query.moodGenres = [TMDBGenre.family]
             default: break
             }
 
         case .riflettere:
             query = RecommendationQuery(genres: [TMDBGenre.drama, TMDBGenre.mystery, TMDBGenre.history])
             switch mood {
-            case .curioso, .annoiato: query.genres += [TMDBGenre.sciFi]
-            case .arrabbiato: query.genres += [TMDBGenre.crime]
+            case .curioso, .annoiato: query.moodGenres = [TMDBGenre.sciFi]
+            case .arrabbiato: query.moodGenres = [TMDBGenre.crime]
             case .motivato: query.keywords = [TMDBKeyword.basedOnTrueStory]
-            case .impaurito: query.genres += [TMDBGenre.thriller]
+            case .impaurito: query.moodGenres = [TMDBGenre.thriller]
+            case .triste, .malinconico: query.moodGenres = [TMDBGenre.drama]
+            case .nostalgico: query.moodGenres = [TMDBGenre.history]
             default: break
             }
 
         case .emozionarmi:
             query = RecommendationQuery(genres: [TMDBGenre.drama, TMDBGenre.adventure])
             switch mood {
-            case .innamorato, .malinconico, .triste, .nostalgico: query.genres += [TMDBGenre.romance]
-            case .annoiato, .arrabbiato: query.genres += [TMDBGenre.action]
-            case .curioso: query.genres += [TMDBGenre.mystery]
-            case .spensierato, .felice: query.genres += [TMDBGenre.music]
+            case .innamorato, .malinconico, .triste, .nostalgico: query.moodGenres = [TMDBGenre.romance]
+            case .annoiato, .arrabbiato: query.moodGenres = [TMDBGenre.action]
+            case .curioso: query.moodGenres = [TMDBGenre.mystery]
+            case .spensierato, .felice: query.moodGenres = [TMDBGenre.music]
             case .motivato: query.keywords = [TMDBKeyword.sport, TMDBKeyword.basedOnTrueStory]
-            case .stressato, .impaurito: query.genres += [TMDBGenre.thriller]
+            case .stressato, .impaurito: query.moodGenres = [TMDBGenre.thriller]
             }
 
         case .distrarmi:
             query = RecommendationQuery(genres: [TMDBGenre.action, TMDBGenre.adventure, TMDBGenre.comedy])
             switch mood {
-            case .curioso: query.genres += [TMDBGenre.sciFi]
-            case .impaurito: query.genres += [TMDBGenre.thriller]
-            case .spensierato, .stressato: query.genres += [TMDBGenre.animation]
-            case .nostalgico: query.genres += [TMDBGenre.family]
-            case .arrabbiato: query.genres += [TMDBGenre.crime]
+            case .curioso: query.moodGenres = [TMDBGenre.sciFi]
+            case .impaurito: query.moodGenres = [TMDBGenre.thriller]
+            case .spensierato, .stressato: query.moodGenres = [TMDBGenre.animation]
+            case .nostalgico: query.moodGenres = [TMDBGenre.family]
+            case .arrabbiato: query.moodGenres = [TMDBGenre.crime]
+            case .felice, .annoiato: query.moodGenres = [TMDBGenre.comedy]
+            case .motivato: query.moodGenres = [TMDBGenre.action]
             default: break
             }
 
@@ -463,36 +525,38 @@ enum TMDBService {
                 keywords: [TMDBKeyword.basedOnTrueStory, TMDBKeyword.biography, TMDBKeyword.sport]
             )
             switch mood {
-            case .innamorato, .malinconico: query.genres += [TMDBGenre.romance]
-            case .spensierato, .felice: query.genres += [TMDBGenre.music]
+            case .innamorato, .malinconico: query.moodGenres = [TMDBGenre.romance]
+            case .spensierato, .felice: query.moodGenres = [TMDBGenre.music]
             default: break
             }
 
         case .paura:
             query = RecommendationQuery(genres: [TMDBGenre.horror, TMDBGenre.thriller], allowsHorror: true)
             switch mood {
-            case .curioso, .triste, .malinconico: query.genres += [TMDBGenre.mystery]
-            case .arrabbiato: query.genres += [TMDBGenre.crime]
+            case .curioso, .triste, .malinconico: query.moodGenres = [TMDBGenre.mystery]
+            case .arrabbiato: query.moodGenres = [TMDBGenre.crime]
+            case .impaurito: query.moodGenres = [TMDBGenre.horror]
             default: break
             }
 
         case .sognare:
             query = RecommendationQuery(genres: [TMDBGenre.fantasy, TMDBGenre.sciFi, TMDBGenre.adventure])
             switch mood {
-            case .innamorato, .malinconico: query.genres += [TMDBGenre.romance]
+            case .innamorato, .malinconico: query.moodGenres = [TMDBGenre.romance]
             case .nostalgico: query.keywords = [TMDBKeyword.timeTravel]
-            case .spensierato, .felice, .stressato: query.genres += [TMDBGenre.animation]
+            case .spensierato, .felice, .stressato: query.moodGenres = [TMDBGenre.animation]
+            case .curioso: query.moodGenres = [TMDBGenre.sciFi]
             default: break
             }
 
         case .innamorarmi:
             query = RecommendationQuery(genres: [TMDBGenre.romance])
             switch mood {
-            case .felice, .spensierato, .annoiato: query.genres += [TMDBGenre.comedy]
-            case .curioso: query.genres += [TMDBGenre.fantasy]
-            case .nostalgico: query.genres += [TMDBGenre.music]
-            case .impaurito: query.genres += [TMDBGenre.thriller]
-            default: query.genres += [TMDBGenre.drama]
+            case .felice, .spensierato, .annoiato: query.moodGenres = [TMDBGenre.comedy]
+            case .curioso: query.moodGenres = [TMDBGenre.fantasy]
+            case .nostalgico: query.moodGenres = [TMDBGenre.music]
+            case .impaurito: query.moodGenres = [TMDBGenre.thriller]
+            default: query.moodGenres = [TMDBGenre.drama]
             }
         }
 
