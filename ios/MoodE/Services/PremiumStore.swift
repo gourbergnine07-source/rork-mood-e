@@ -35,13 +35,17 @@ final class PremiumStore {
         UserDefaults.standard.bool(forKey: cacheKey)
     }
 
+    /// RevenueCat public SDK keys — safe to embed in the client per RevenueCat docs.
+    private static let testStoreAPIKey = "test_xHUcAbpypOmJUQRftSASqkDasoy"
+    private static let appStoreAPIKey = "appl_fGUqgkWlxLExECTerLeAAmrjnzG"
+
     /// Must be called once from the App's `init()`, before any other use.
     static func configureSDK() {
         #if DEBUG
         Purchases.logLevel = .warn
-        Purchases.configure(withAPIKey: Config.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY)
+        Purchases.configure(withAPIKey: testStoreAPIKey)
         #else
-        Purchases.configure(withAPIKey: Config.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY)
+        Purchases.configure(withAPIKey: appStoreAPIKey)
         #endif
     }
 
