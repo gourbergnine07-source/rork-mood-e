@@ -6,8 +6,9 @@
 import SwiftUI
 
 /// "In evidenza" carousel at the top of Home: horizontally scrollable compact
-/// cards (~75% of screen width, so the next card peeks in) for every active
-/// editorial collection, plus the spectator-quiz invitation as the last card.
+/// cards with a fixed width (~78% of screen, so the next card peeks in as a
+/// scroll hint) and a fixed shared height for every active editorial
+/// collection, plus the spectator-quiz invitation as the last card.
 struct FeaturedStripView: View {
     @Environment(QuizStore.self) private var quiz
     @Binding var showQuiz: Bool
@@ -32,21 +33,21 @@ struct FeaturedStripView: View {
                 .padding(.horizontal, 24)
 
                 ScrollView(.horizontal) {
-                    HStack(spacing: 10) {
+                    HStack(spacing: FeaturedCardMetrics.gutter) {
                         ForEach(collections) { collection in
                             NavigationLink(value: collection) {
                                 FeaturedCardView(collection: collection)
                             }
                             .buttonStyle(PressableCardStyle())
                             .containerRelativeFrame(.horizontal) { length, _ in
-                                length * 0.75
+                                length * FeaturedCardMetrics.widthRatio
                             }
                         }
 
                         if !quizBannerHidden {
                             quizCard
                                 .containerRelativeFrame(.horizontal) { length, _ in
-                                    length * 0.75
+                                    length * FeaturedCardMetrics.widthRatio
                                 }
                                 .transition(.opacity)
                         }
@@ -90,12 +91,14 @@ struct FeaturedStripView: View {
                             .font(.footnote.weight(.bold))
                             .foregroundStyle(.white)
                             .lineLimit(1)
-                        Text(isPremium
-                            ? (quiz.profile == nil ? L("quiz.banner.sub") : L("quiz.banner.retake"))
-                            : L("premium.locked"))
-                            .font(.caption2)
-                            .foregroundStyle(.white.opacity(0.85))
-                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                        WordTailText(
+                            isPremium
+                                ? (quiz.profile == nil ? L("quiz.banner.sub") : L("quiz.banner.retake"))
+                                : L("premium.locked"),
+                            textStyle: .caption2
+                        )
+                        .foregroundStyle(.white.opacity(0.85))
                     }
 
                     Spacer(minLength: 4)
@@ -125,7 +128,7 @@ struct FeaturedStripView: View {
             .accessibilityLabel(L("common.close"))
         }
         .padding(.horizontal, 10)
-        .frame(height: 44)
+        .frame(height: FeaturedCardMetrics.height)
         .frame(maxWidth: .infinity)
         .background(
             LinearGradient(
@@ -142,6 +145,58 @@ struct FeaturedStripView: View {
         .shadow(color: Theme.primary.opacity(0.12), radius: 3, y: 1)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(L("quiz.banner.title")). \(isPremium ? (quiz.profile == nil ? L("quiz.banner.sub") : L("quiz.banner.retake")) : L("premium.locked"))")
+    }
+}
+
+/// Shared sizing for every carousel card so they are all pixel-identical:
+/// fixed width ratio (next card peeks in ~15%), fixed height, fixed gutter.
+enum FeaturedCardMetrics {
+    static let widthRatio: CGFloat = 0.78
+    static let height: CGFloat = 48
+    static let gutter: CGFloat = 12
+}
+
+/// Single-line text that truncates with an ellipsis ONLY at whole-word
+/// boundaries (never mid-word), based on the actual available width.
+struct WordTailText: View {
+    let text: String
+    let font: UIFont
+
+    @State private var availableWidth: CGFloat = 0
+
+    init(_ text: String, textStyle: UIFont.TextStyle) {
+        self.text = text
+        self.font = UIFont.preferredFont(forTextStyle: textStyle)
+    }
+
+    var body: some View {
+        Text(displayText)
+            .font(Font(font))
+            .lineLimit(1)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .onGeometryChange(for: CGFloat.self) { proxy in
+                proxy.size.width
+            } action: { newWidth in
+                availableWidth = newWidth
+            }
+    }
+
+    private var displayText: String {
+        guard availableWidth > 0 else { return text }
+        if width(of: text) <= availableWidth { return text }
+
+        let words = text.split(separator: " ")
+        var kept = words.count - 1
+        while kept > 0 {
+            let candidate = words[0..<kept].joined(separator: " ") + "\u{2026}"
+            if width(of: candidate) <= availableWidth { return candidate }
+            kept -= 1
+        }
+        return "\u{2026}"
+    }
+
+    private func width(of string: String) -> CGFloat {
+        (string as NSString).size(withAttributes: [.font: font]).width.rounded(.up)
     }
 }
 
@@ -169,10 +224,9 @@ struct FeaturedCardView: View {
                     .font(.footnote.weight(.bold))
                     .foregroundStyle(.white)
                     .lineLimit(1)
-                Text(collection.subtitle)
-                    .font(.caption2)
+                    .minimumScaleFactor(0.8)
+                WordTailText(collection.subtitle, textStyle: .caption2)
                     .foregroundStyle(.white.opacity(0.85))
-                    .lineLimit(1)
             }
 
             Spacer(minLength: 4)
@@ -182,7 +236,7 @@ struct FeaturedCardView: View {
                 .foregroundStyle(.white.opacity(0.7))
         }
         .padding(.horizontal, 10)
-        .frame(height: 44)
+        .frame(height: FeaturedCardMetrics.height)
         .frame(maxWidth: .infinity)
         .background(
             LinearGradient(
