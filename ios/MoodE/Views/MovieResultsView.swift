@@ -113,10 +113,28 @@ struct MovieResultsView: View {
             Text(L("results.empty.title"))
                 .font(.title3.weight(.semibold))
                 .foregroundStyle(Theme.ink)
-            Text(L("results.empty.msg"))
-                .font(.subheadline)
-                .foregroundStyle(Theme.inkSoft)
-                .multilineTextAlignment(.center)
+            Text(
+                StreamingServicesStore.shared.isFilterActive
+                    ? L("results.empty.filtered")
+                    : L("results.empty.msg")
+            )
+            .font(.subheadline)
+            .foregroundStyle(Theme.inkSoft)
+            .multilineTextAlignment(.center)
+
+            if StreamingServicesStore.shared.isFilterActive {
+                Button {
+                    StreamingServicesStore.shared.setFilterEnabled(false)
+                    Task { await viewModel.load(selection: selection, excluding: library.watchedIds) }
+                } label: {
+                    Label(L("filter.streaming.off"), systemImage: "line.3.horizontal.decrease.circle")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 11)
+                        .background(Theme.primary, in: .capsule)
+                }
+            }
         }
         .padding(.horizontal, 32)
     }
@@ -250,9 +268,32 @@ struct MovieResultsView: View {
                 recapChip(emoji: selection.mood.emoji, text: selection.mood.title)
                 recapChip(emoji: selection.goal.emoji, text: selection.goal.title)
                 recapChip(emoji: selection.era.emoji, text: selection.era.title)
+
+                if StreamingServicesStore.shared.isFilterActive {
+                    streamingFilterChip
+                }
             }
         }
         .contentMargins(.horizontal, 24)
+    }
+
+    /// Green chip signalling that results are limited to the user's
+    /// streaming services, so a short list never looks like a bug.
+    private var streamingFilterChip: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "play.tv.fill")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(Theme.seenGreen)
+            Text(L("filter.streaming.only"))
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Theme.ink)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Theme.seenGreen.opacity(0.12), in: .capsule)
+        .overlay(
+            Capsule().stroke(Theme.seenGreen.opacity(0.35), lineWidth: 1)
+        )
     }
 
     private func recapChip(emoji: String, text: String) -> some View {

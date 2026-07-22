@@ -43,7 +43,35 @@ final class MovieResultsViewModel {
     private let maxPageFetches = 4
 
     private static func cacheKey(for selection: MoodSelection) -> String {
-        "recommendations.\(String(describing: selection.mood)).\(String(describing: selection.goal)).\(String(describing: selection.era))"
+        var key = "recommendations.\(String(describing: selection.mood)).\(String(describing: selection.goal)).\(String(describing: selection.era))"
+        // Separate cache bucket per streaming-filter configuration, so
+        // toggling the filter never serves a stale unfiltered batch.
+        let store = StreamingServicesStore.shared
+        if store.isFilterActive {
+            key += ".only." + store.selectedIds.sorted().joined(separator: "-")
+        }
+        return key
+    }
+
+    /// When the streaming filter is on, keeps only movies available on one
+    /// of the user's selected subscription services (JustWatch flatrate
+    /// data, fetched concurrently and cached per movie).
+    private func filterToSelectedServices(_ movies: [TMDBMovie]) async -> [TMDBMovie] {
+        guard StreamingServicesStore.shared.isFilterActive, !movies.isEmpty else { return movies }
+        var matching: Set<Int> = []
+        await withTaskGroup(of: (Int, Bool).self) { group in
+            for movie in movies {
+                let movieId = movie.id
+                group.addTask { @MainActor in
+                    let flatrate = await WatchProviderCache.shared.flatrateProviders(for: movieId)
+                    return (movieId, StreamingServicesStore.shared.matchesAny(of: flatrate))
+                }
+            }
+            for await (id, matches) in group where matches {
+                matching.insert(id)
+            }
+        }
+        return movies.filter { matching.contains($0.id) }
     }
 
     /// Fetches the first batch of recommendations for the given flow selection.
@@ -117,7 +145,7 @@ final class MovieResultsViewModel {
                         && !current.contains(where: { $0.id == movie.id })
                         && !bonus.contains(where: { $0.id == movie.id })
                 }
-                bonus += fresh
+                bonus += await filterToSelectedServices(fresh)
 
                 if page == 1 { break }
             }
@@ -147,11 +175,14 @@ final class MovieResultsViewModel {
                     !excludedIds.contains(movie.id)
                         && !collected.contains(where: { $0.id == movie.id })
                 }
-                collected += fresh
+                collected += await filterToSelectedServices(fresh)
 
+                // The streaming filter discards many titles per page, so it
+                // gets a slightly higher page budget to fill the batch.
+                let pageCap = StreamingServicesStore.shared.isFilterActive ? 6 : maxPageFetches
                 guard collected.count < minBatchSize,
                       currentPage < totalPages,
-                      fetches < maxPageFetches else { break }
+                      fetches < pageCap else { break }
                 page = currentPage + 1
             } while true
 

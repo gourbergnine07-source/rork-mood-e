@@ -290,7 +290,53 @@ struct MoodFlowView: View {
                 .font(.footnote.weight(.semibold))
                 .foregroundStyle(Theme.inkSoft)
                 .monospacedDigit()
+
+            streamingFilterButton
         }
+    }
+
+    /// Streaming filter selector: a compact menu in the top bar (zero extra
+    /// vertical space). Lets the user toggle "my platforms only" and pick
+    /// the services they subscribe to; results then include only movies
+    /// available on those platforms.
+    private var streamingFilterButton: some View {
+        let store = StreamingServicesStore.shared
+        return Menu {
+            Toggle(isOn: Binding(
+                get: { store.filterEnabled },
+                set: { store.setFilterEnabled($0) }
+            )) {
+                Label(L("filter.streaming.only"), systemImage: "play.tv")
+            }
+
+            Section(L("services.title")) {
+                ForEach(StreamingServicesStore.allServices) { service in
+                    Toggle(isOn: Binding(
+                        get: { store.isSelected(service) },
+                        set: { _ in store.toggle(service) }
+                    )) {
+                        Text(service.name)
+                    }
+                }
+            }
+
+            if !store.hasSelection {
+                Section {
+                    Text(L("filter.streaming.hint"))
+                }
+            }
+        } label: {
+            Image(systemName: store.isFilterActive
+                ? "line.3.horizontal.decrease.circle.fill"
+                : "line.3.horizontal.decrease.circle")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(store.isFilterActive ? .white : Theme.primary)
+                .frame(width: 36, height: 36)
+                .background(store.isFilterActive ? Theme.primary : Theme.card, in: .circle)
+                .contentTransition(.symbolEffect(.replace))
+        }
+        .sensoryFeedback(.selection, trigger: store.filterEnabled)
+        .accessibilityLabel(L("filter.streaming.only"))
     }
 
     /// Icon-only shortcut with a tiny caption underneath, so the step-1

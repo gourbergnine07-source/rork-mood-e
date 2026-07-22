@@ -42,14 +42,29 @@ final class StreamingServicesStore {
 
     private(set) var selectedIds: Set<String>
 
+    /// When true, mood-flow results only include movies available on one
+    /// of the selected services. Persisted; ignored while no service is
+    /// selected (see `isFilterActive`).
+    private(set) var filterEnabled: Bool
+
     private static let storageKey = "streaming.services"
+    private static let filterKey = "streaming.filterEnabled"
 
     private init() {
         let stored = UserDefaults.standard.stringArray(forKey: Self.storageKey) ?? []
         selectedIds = Set(stored)
+        filterEnabled = UserDefaults.standard.bool(forKey: Self.filterKey)
     }
 
     var hasSelection: Bool { !selectedIds.isEmpty }
+
+    /// Filter is effective only with both the toggle on and ≥1 service.
+    var isFilterActive: Bool { filterEnabled && hasSelection }
+
+    func setFilterEnabled(_ enabled: Bool) {
+        filterEnabled = enabled
+        UserDefaults.standard.set(enabled, forKey: Self.filterKey)
+    }
 
     func isSelected(_ service: Service) -> Bool {
         selectedIds.contains(service.id)
