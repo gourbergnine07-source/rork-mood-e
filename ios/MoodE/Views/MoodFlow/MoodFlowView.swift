@@ -24,7 +24,9 @@ struct MoodFlowView: View {
     @State private var showPaywall: Bool = false
 
     // Free-form mood input (STEP 1 alternative), analyzed by AI.
+    // Collapsed behind a discreet text link so the grid stays prominent.
     @State private var freeText: String = ""
+    @State private var showFreeText: Bool = false
     @State private var isAnalyzing: Bool = false
     @State private var interpretation: MoodInterpretation?
     @State private var analysisFailed: Bool = false
@@ -117,13 +119,41 @@ struct MoodFlowView: View {
         ) {
             VStack(spacing: 14) {
                 moodGrid
-                MoodFreeTextCard(
-                    text: $freeText,
-                    isAnalyzing: isAnalyzing
-                ) {
-                    analyzeFreeText()
-                }
+                freeTextSection
             }
+        }
+    }
+
+    /// Free-form input hidden behind a text link; expands only on demand.
+    @ViewBuilder
+    private var freeTextSection: some View {
+        if showFreeText {
+            MoodFreeTextCard(
+                text: $freeText,
+                isAnalyzing: isAnalyzing
+            ) {
+                analyzeFreeText()
+            }
+            .transition(.opacity.combined(with: .move(edge: .top)))
+        } else {
+            Button {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                    showFreeText = true
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "square.and.pencil")
+                        .font(.system(size: 12, weight: .semibold))
+                    Text(L("flow.freetext.toggle"))
+                        .font(.footnote.weight(.medium))
+                        .underline()
+                }
+                .foregroundStyle(Theme.primary)
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint(L("flow.freetext.title"))
         }
     }
 
@@ -208,10 +238,10 @@ struct MoodFlowView: View {
         @ViewBuilder content: () -> Content
     ) -> some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: 16) {
                 header()
 
-                VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 16) {
                     VStack(alignment: .leading, spacing: 6) {
                         Text(title)
                             .font(.title2.weight(.bold))
@@ -226,7 +256,7 @@ struct MoodFlowView: View {
                 }
                 .padding(.horizontal, 24)
             }
-            .padding(.top, 14)
+            .padding(.top, 10)
             .padding(.bottom, 16)
         }
         .scrollIndicators(.hidden)
@@ -263,25 +293,21 @@ struct MoodFlowView: View {
         }
     }
 
-    /// Compact pill used for the three step-1 shortcuts (quick / surprise / duo),
-    /// kept on a single row so the bottom bar covers as little of the grid as possible.
-    private func shortcutLabel(icon: String, title: String, tint: Color) -> some View {
-        HStack(spacing: 5) {
+    /// Icon-only shortcut with a tiny caption underneath, so the step-1
+    /// shortcut row stays roughly as tall as a single line of text.
+    private func iconShortcut(icon: String, label: String, tint: Color) -> some View {
+        VStack(spacing: 1) {
             Image(systemName: icon)
-                .font(.system(size: 11, weight: .semibold))
-            Text(title)
-                .font(.caption.weight(.semibold))
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(tint)
+            Text(label)
+                .font(.system(size: 8, weight: .medium))
+                .foregroundStyle(Theme.inkSoft)
                 .lineLimit(1)
-                .minimumScaleFactor(0.65)
+                .minimumScaleFactor(0.7)
         }
-        .foregroundStyle(tint)
-        .frame(maxWidth: .infinity)
-        .frame(height: 32)
-        .background(tint.opacity(0.12), in: .rect(cornerRadius: 11))
-        .overlay(
-            RoundedRectangle(cornerRadius: 11)
-                .stroke(tint.opacity(0.35), lineWidth: 1)
-        )
+        .frame(minWidth: 44, minHeight: 36)
+        .contentShape(.rect)
     }
 
     private var bottomBar: some View {
@@ -313,20 +339,34 @@ struct MoodFlowView: View {
             .animation(.easeInOut(duration: 0.2), value: canAdvance)
 
             if step == 0 {
-                HStack(spacing: 8) {
+                HStack(spacing: 16) {
                     Button {
                         startQuickPick()
                     } label: {
-                        shortcutLabel(icon: "bolt.fill", title: L("flow.quick"), tint: Theme.amber)
+                        HStack(spacing: 5) {
+                            Image(systemName: "bolt.fill")
+                                .font(.system(size: 11, weight: .semibold))
+                            Text(L("flow.quick"))
+                                .font(.caption.weight(.semibold))
+                                .underline()
+                        }
+                        .foregroundStyle(Theme.amber)
+                        .frame(minHeight: 36)
+                        .contentShape(.rect)
                     }
+                    .buttonStyle(.plain)
                     .accessibilityHint(L("flow.quick.hint"))
+
+                    Spacer(minLength: 0)
 
                     Button {
                         showSurprise = true
                     } label: {
-                        shortcutLabel(icon: "dice.fill", title: L("flow.surprise"), tint: Theme.rose)
+                        iconShortcut(icon: "dice.fill", label: L("flow.surprise"), tint: Theme.rose)
                     }
+                    .buttonStyle(.plain)
                     .sensoryFeedback(.impact(weight: .light), trigger: showSurprise)
+                    .accessibilityLabel(L("flow.surprise"))
 
                     Button {
                         // Serata in Duo è una funzione Premium: il lucchetto
@@ -337,13 +377,15 @@ struct MoodFlowView: View {
                             showPaywall = true
                         }
                     } label: {
-                        shortcutLabel(
+                        iconShortcut(
                             icon: PremiumStore.shared.isPremium ? "person.2.fill" : "lock.fill",
-                            title: L("flow.duo"),
+                            label: L("flow.duo"),
                             tint: Theme.tabList
                         )
                     }
+                    .buttonStyle(.plain)
                     .sensoryFeedback(.impact(weight: .light), trigger: showDuo)
+                    .accessibilityLabel(L("flow.duo"))
                     .accessibilityHint(PremiumStore.shared.isPremium ? "" : L("premium.locked"))
                 }
             }

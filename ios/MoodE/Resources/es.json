@@ -292,6 +292,7 @@
   "flow.freetext.hint": "Toca el micrófono del teclado para dictar.",
   "flow.freetext.placeholder": "Ej. día duro, necesito reírme un poco…",
   "flow.freetext.title": "O cuéntalo con tus palabras",
+  "flow.freetext.toggle": "¿Prefieres contarlo con tus palabras?",
   "flow.quick": "Elección rápida",
   "flow.quick.alert.msg": "Toca primero la emoción que sientes: la elección rápida hará el resto.",
   "flow.quick.alert.title": "Elige una emoción",

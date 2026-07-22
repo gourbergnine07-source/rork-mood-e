@@ -292,6 +292,7 @@
   "flow.freetext.hint": "Tap the mic on the keyboard to dictate.",
   "flow.freetext.placeholder": "E.g. tough day, I need a good laugh…",
   "flow.freetext.title": "Or tell us in your own words",
+  "flow.freetext.toggle": "Prefer to say it in your own words?",
   "flow.quick": "Quick pick",
   "flow.quick.alert.msg": "Tap the emotion you feel first: quick pick will do the rest.",
   "flow.quick.alert.title": "Pick an emotion",
