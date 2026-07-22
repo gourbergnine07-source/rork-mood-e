@@ -31,6 +31,19 @@ struct MovieDetailView: View {
         }
         .navigationTitle(movie.title)
         .toolbarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                ShareLink(item: movie.shareMessage, subject: Text(movie.title)) {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Theme.primary)
+                }
+                .accessibilityLabel(LF("share.a11y", movie.title))
+                .simultaneousGesture(TapGesture().onEnded {
+                    AnalyticsService.shared.log("movie_shared", meta: ["source": "detail", "id": String(movie.id)])
+                })
+            }
+        }
         .tint(Theme.primary)
         .task {
             await viewModel.load(movieID: movie.id)
