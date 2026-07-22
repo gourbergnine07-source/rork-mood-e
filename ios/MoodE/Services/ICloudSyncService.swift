@@ -53,9 +53,21 @@ final class ICloudSyncService {
 
     // MARK: - Change hook (called from the services' persist paths)
 
+    /// True when the device is signed into iCloud. Checked BEFORE any
+    /// CloudKit call: touching CKContainer without an iCloud account (e.g.
+    /// in the cloud preview simulator) can raise an uncatchable exception
+    /// and terminate the app. This check is always safe to call.
+    nonisolated private static var hasICloudAccount: Bool {
+        FileManager.default.ubiquityIdentityToken != nil
+    }
+
     /// Schedules a debounced upload after any local mutation, Premium only.
     func noteLocalChange() {
         guard PremiumStore.isPremiumCached, !isApplyingRemote else { return }
+        guard Self.hasICloudAccount else {
+            status = .unavailable
+            return
+        }
         uploadTask?.cancel()
         uploadTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(5))
@@ -73,6 +85,10 @@ final class ICloudSyncService {
         guard PremiumStore.isPremiumCached else { return }
         guard status != .syncing else { return }
         guard let diary, let library, let planner else { return }
+        guard Self.hasICloudAccount else {
+            status = .unavailable
+            return
+        }
 
         status = .syncing
         do {
@@ -117,6 +133,10 @@ final class ICloudSyncService {
 
     private func push() async {
         guard PremiumStore.isPremiumCached, status != .syncing else { return }
+        guard Self.hasICloudAccount else {
+            status = .unavailable
+            return
+        }
         status = .syncing
         do {
             guard try await Self.accountAvailable() else {
