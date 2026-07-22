@@ -21,6 +21,7 @@ struct PaywallView: View {
 
     private let features: [Feature] = [
         Feature(id: "noads", icon: "rectangle.slash.fill", tint: Theme.rose),
+        Feature(id: "scan", icon: "camera.viewfinder", tint: Theme.seenGreen),
         Feature(id: "duo", icon: "person.2.fill", tint: Theme.tabList),
         Feature(id: "friend", icon: "trophy.fill", tint: Theme.amber),
         Feature(id: "icloud", icon: "icloud.fill", tint: Theme.tabSettings),

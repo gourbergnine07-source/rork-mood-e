@@ -10,6 +10,10 @@ import SwiftUI
 struct HomeView: View {
     @Environment(MoodDiary.self) private var diary
     private let history = NotificationHistory.shared
+    private var premium: PremiumStore { .shared }
+
+    @State private var showPosterScan: Bool = false
+    @State private var showScanPaywall: Bool = false
 
     var body: some View {
         NavigationStack {
@@ -54,6 +58,32 @@ struct HomeView: View {
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        if premium.isPremium {
+                            showPosterScan = true
+                        } else {
+                            showScanPaywall = true
+                        }
+                    } label: {
+                        ZStack(alignment: .bottomTrailing) {
+                            Image(systemName: "camera.viewfinder")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(Theme.primary)
+
+                            if !premium.isPremium {
+                                Image(systemName: "lock.fill")
+                                    .font(.system(size: 6, weight: .bold))
+                                    .foregroundStyle(.white)
+                                    .frame(width: 11, height: 11)
+                                    .background(Theme.ink.opacity(0.85), in: .circle)
+                                    .offset(x: 4, y: 4)
+                            }
+                        }
+                    }
+                    .accessibilityLabel(L("scan.title"))
+                }
+
+                ToolbarItem(placement: .topBarTrailing) {
                     NavigationLink(value: HomeRoute.notifications) {
                         Image(systemName: history.unreadCount > 0 ? "bell.badge" : "bell")
                             .font(.system(size: 15, weight: .semibold))
@@ -87,6 +117,12 @@ struct HomeView: View {
                 case .stats: MyStatsView()
                 case .friends: FriendsView()
                 }
+            }
+            .sheet(isPresented: $showPosterScan) {
+                PosterScanView()
+            }
+            .sheet(isPresented: $showScanPaywall) {
+                PaywallView()
             }
         }
         .tint(Theme.primary)
