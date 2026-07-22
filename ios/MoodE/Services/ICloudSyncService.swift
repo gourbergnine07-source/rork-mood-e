@@ -6,6 +6,7 @@
 import Foundation
 import Observation
 import CloudKit
+import CryptoKit
 
 /// Premium-only iCloud sync (CloudKit private database): the diary, the
 /// movie library, the planner and the completed challenges are stored as a
@@ -40,6 +41,12 @@ final class ICloudSyncService {
     private static let lastSyncKey = "icloud.lastSync"
     private static let recordType = "MoodEBackup"
     private static let recordName = "moode-premium-backup"
+    /// SHA256 fingerprints of the sections uploaded in the last successful
+    /// push, so subsequent backups only transfer what actually changed.
+    private static let pushedHashesKey = "icloud.pushedHashes"
+    /// `updatedAt` of the last cloud copy already merged on this device,
+    /// so unchanged backups are not re-downloaded on every manual sync.
+    private static let remoteUpdatedKey = "icloud.remoteUpdatedAt"
 
     private init() {
         let stored = UserDefaults.standard.double(forKey: Self.lastSyncKey)
@@ -99,7 +106,15 @@ final class ICloudSyncService {
                 return
             }
 
-            if let record = try await Self.fetchRecord() {
+            // Incremental pull: a cheap metadata-only fetch first; the full
+            // backup is downloaded only when the cloud copy is newer than
+            // the one already merged on this device.
+            let storedRemote = UserDefaults.standard.double(forKey: Self.remoteUpdatedKey)
+            let stub = try await Self.fetchRecordStub()
+            let remoteUpdated = (stub?["updatedAt"] as? Date)?.timeIntervalSince1970
+            let needsPull = stub != nil && (remoteUpdated == nil || remoteUpdated! > storedRemote)
+
+            if needsPull, let record = try await Self.fetchRecord() {
                 let decoder = JSONDecoder()
                 let remoteCheckIns: [MoodCheckIn] = Self.decode(record["checkIns"], decoder) ?? []
                 let remoteEntries: [LibraryEntry] = Self.decode(record["entries"], decoder) ?? []
@@ -120,6 +135,7 @@ final class ICloudSyncService {
                     ChallengeStore.shared.markCompleted(month)
                 }
                 isApplyingRemote = false
+                UserDefaults.standard.set(remoteUpdated ?? Date().timeIntervalSince1970, forKey: Self.remoteUpdatedKey)
             }
 
             try await pushRecord()
@@ -184,28 +200,81 @@ final class ICloudSyncService {
         return false
     }
 
-    /// Uploads the full local snapshot into the single backup record.
+    /// Incremental backup: encodes each section, compares it with the
+    /// fingerprint of the last successful upload and sends ONLY the fields
+    /// that changed. When nothing changed the network call is skipped
+    /// entirely, keeping manual syncs light on data.
     private func pushRecord() async throws {
         guard let diary, let library, let planner else { return }
         let database = CKContainer.default().privateCloudDatabase
-        let recordID = CKRecord.ID(recordName: Self.recordName)
-
-        let record: CKRecord
-        if let existing = try await Self.fetchRecord() {
-            record = existing
-        } else {
-            record = CKRecord(recordType: Self.recordType, recordID: recordID)
-        }
 
         let encoder = JSONEncoder()
-        record["checkIns"] = try encoder.encode(diary.checkIns) as NSData
-        record["entries"] = try encoder.encode(library.entries) as NSData
-        record["scheduled"] = try encoder.encode(planner.scheduled) as NSData
-        record["memories"] = try encoder.encode(planner.memories) as NSData
-        record["challenges"] = Array(ChallengeStore.shared.completedMonths) as NSArray
-        record["updatedAt"] = Date() as NSDate
+        let challenges = Array(ChallengeStore.shared.completedMonths).sorted()
+        let payloads: [String: Data] = [
+            "checkIns": try encoder.encode(diary.checkIns),
+            "entries": try encoder.encode(library.entries),
+            "scheduled": try encoder.encode(planner.scheduled),
+            "memories": try encoder.encode(planner.memories),
+            "challenges": try encoder.encode(challenges),
+        ]
+        let hashes = payloads.mapValues { Self.hash($0) }
+        let stored = (UserDefaults.standard.dictionary(forKey: Self.pushedHashesKey) as? [String: String]) ?? [:]
 
-        _ = try await database.save(record)
+        // Metadata-only fetch (no data payloads) to know whether the
+        // backup record exists and to carry its change tag for the save.
+        let existing = try await Self.fetchRecordStub()
+
+        let changedKeys: Set<String>
+        if existing == nil {
+            changedKeys = Set(payloads.keys) // first backup: upload everything
+        } else {
+            changedKeys = Set(hashes.filter { stored[$0.key] != $0.value }.map(\.key))
+        }
+
+        guard !changedKeys.isEmpty else {
+            print("ICloudSync: no local changes, upload skipped")
+            return
+        }
+        print("ICloudSync: incremental push of \(changedKeys.sorted().joined(separator: ", "))")
+
+        let record = existing ?? CKRecord(recordType: Self.recordType, recordID: CKRecord.ID(recordName: Self.recordName))
+        Self.apply(payloads: payloads, keys: changedKeys, challenges: challenges, to: record)
+
+        do {
+            let saved = try await database.save(record)
+            Self.storePushState(hashes: hashes, savedRecord: saved)
+        } catch let error as CKError where error.code == .serverRecordChanged {
+            // Another device updated the backup meanwhile: re-apply our
+            // changed sections on top of the fresh server copy, retry once.
+            guard let server = error.serverRecord else { throw error }
+            Self.apply(payloads: payloads, keys: changedKeys, challenges: challenges, to: server)
+            let saved = try await database.save(server)
+            Self.storePushState(hashes: hashes, savedRecord: saved)
+        }
+    }
+
+    /// Writes the given sections into the record. Challenges keep their
+    /// legacy `[String]` format; the encoded Data is only used for hashing.
+    nonisolated private static func apply(payloads: [String: Data], keys: Set<String>, challenges: [String], to record: CKRecord) {
+        for key in keys {
+            if key == "challenges" {
+                record["challenges"] = challenges as NSArray
+            } else if let data = payloads[key] {
+                record[key] = data as NSData
+            }
+        }
+        record["updatedAt"] = Date() as NSDate
+    }
+
+    /// Remembers what was uploaded so the next push can diff against it.
+    nonisolated private static func storePushState(hashes: [String: String], savedRecord: CKRecord) {
+        UserDefaults.standard.set(hashes, forKey: pushedHashesKey)
+        let updated = (savedRecord["updatedAt"] as? Date)?.timeIntervalSince1970 ?? Date().timeIntervalSince1970
+        UserDefaults.standard.set(updated, forKey: remoteUpdatedKey)
+    }
+
+    nonisolated private static func hash(_ data: Data) -> String {
+        SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }
 
     // MARK: - CloudKit helpers
@@ -219,6 +288,20 @@ final class ICloudSyncService {
         let database = CKContainer.default().privateCloudDatabase
         do {
             return try await database.record(for: CKRecord.ID(recordName: recordName))
+        } catch let error as CKError where error.code == .unknownItem {
+            return nil
+        }
+    }
+
+    /// Metadata-only fetch: retrieves just `updatedAt` (no data payloads),
+    /// so existence/staleness checks cost a few bytes instead of the full
+    /// backup download.
+    private static func fetchRecordStub() async throws -> CKRecord? {
+        let database = CKContainer.default().privateCloudDatabase
+        let id = CKRecord.ID(recordName: recordName)
+        do {
+            let results = try await database.records(for: [id], desiredKeys: ["updatedAt"])
+            return try results[id]?.get()
         } catch let error as CKError where error.code == .unknownItem {
             return nil
         }
