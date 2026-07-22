@@ -579,28 +579,65 @@ struct SettingsView: View {
 
     private var profileSection: some View {
         Section {
-            NavigationLink(value: ProfileRoute.editor) {
-                HStack(spacing: 12) {
-                    Text(ProfileStore.shared.avatar)
-                        .font(.system(size: 20))
-                        .frame(width: 36, height: 36)
-                        .background(Theme.primary.opacity(0.12), in: .circle)
-                        .accessibilityHidden(true)
-
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(ProfileStore.shared.resolvedName(auth: auth))
-                            .font(.body.weight(.semibold))
-                            .foregroundStyle(Theme.ink)
-                        Text(L("profile.row.title"))
-                            .font(.caption)
-                            .foregroundStyle(Theme.inkSoft)
-                    }
+            if premium.isPremium {
+                NavigationLink(value: ProfileRoute.editor) {
+                    profileRowLabel
                 }
+            } else {
+                Button {
+                    showPaywall = true
+                } label: {
+                    HStack(spacing: 12) {
+                        profileRowLabel
+                        Spacer()
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(Theme.amber)
+                    }
+                    .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
             }
         } header: {
             Text(L("profile.header"))
         }
         .listRowBackground(Theme.card)
+    }
+
+    private var profileRowLabel: some View {
+        HStack(spacing: 12) {
+            profileAvatarThumb
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(ProfileStore.shared.resolvedName(auth: auth))
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(Theme.ink)
+                Text(premium.isPremium ? L("profile.row.title") : L("premium.locked"))
+                    .font(.caption)
+                    .foregroundStyle(Theme.inkSoft)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var profileAvatarThumb: some View {
+        if let data = ProfileStore.shared.photoData, let image = UIImage(data: data) {
+            Color(Theme.surface)
+                .frame(width: 36, height: 36)
+                .overlay {
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .allowsHitTesting(false)
+                }
+                .clipShape(.circle)
+        } else {
+            Text(ProfileStore.shared.avatar)
+                .font(.system(size: 20))
+                .frame(width: 36, height: 36)
+                .background(Theme.primary.opacity(0.12), in: .circle)
+        }
     }
 
     // MARK: - Aspetto

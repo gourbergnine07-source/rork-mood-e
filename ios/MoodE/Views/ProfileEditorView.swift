@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import PhotosUI
 
 /// Profile editor: display name (shown to friends in challenges) and an
 /// avatar picked from the predefined set in `ProfileStore`.
@@ -16,6 +17,7 @@ struct ProfileEditorView: View {
     @State private var resetHaptic = false
     @State private var syncState: ProfileSyncState = .idle
     @State private var pushTask: Task<Void, Never>?
+    @State private var photoItem: PhotosPickerItem?
 
     private var profile: ProfileStore { .shared }
 
@@ -25,6 +27,7 @@ struct ProfileEditorView: View {
         List {
             previewSection
             nameSection
+            photoSection
             avatarSection
             resetSection
         }
@@ -47,6 +50,18 @@ struct ProfileEditorView: View {
         } message: {
             Text(L("profile.reset.msg"))
         }
+        .onChange(of: photoItem) { _, newItem in
+            guard let newItem else { return }
+            Task {
+                if let data = try? await newItem.loadTransferable(type: Data.self) {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                        profile.setPhoto(data)
+                    }
+                    avatarHaptic.toggle()
+                }
+                photoItem = nil
+            }
+        }
     }
 
     // MARK: - Live preview
@@ -54,14 +69,9 @@ struct ProfileEditorView: View {
     private var previewSection: some View {
         Section {
             VStack(spacing: 10) {
-                Text(profile.avatar)
-                    .font(.system(size: 52))
-                    .frame(width: 96, height: 96)
-                    .background(Theme.primary.opacity(0.12), in: .circle)
-                    .overlay(
-                        Circle().stroke(Theme.primary.opacity(0.35), lineWidth: 1.5)
-                    )
+                previewAvatar
                     .animation(.spring(response: 0.3, dampingFraction: 0.7), value: profile.avatar)
+                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: profile.photoData)
 
                 Text(profile.resolvedName(auth: auth))
                     .font(.title3.weight(.bold))
@@ -75,6 +85,34 @@ struct ProfileEditorView: View {
         }
         .listRowBackground(Color.clear)
         .listRowSeparator(.hidden)
+    }
+
+    /// Big round preview: the user's own photo when set, the emoji
+    /// avatar otherwise.
+    @ViewBuilder
+    private var previewAvatar: some View {
+        if let data = profile.photoData, let image = UIImage(data: data) {
+            Color(Theme.surface)
+                .frame(width: 96, height: 96)
+                .overlay {
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .allowsHitTesting(false)
+                }
+                .clipShape(.circle)
+                .overlay(
+                    Circle().stroke(Theme.primary.opacity(0.35), lineWidth: 1.5)
+                )
+        } else {
+            Text(profile.avatar)
+                .font(.system(size: 52))
+                .frame(width: 96, height: 96)
+                .background(Theme.primary.opacity(0.12), in: .circle)
+                .overlay(
+                    Circle().stroke(Theme.primary.opacity(0.35), lineWidth: 1.5)
+                )
+        }
     }
 
     /// Discreet real-time save status: visible only for signed-in users,
@@ -152,6 +190,52 @@ struct ProfileEditorView: View {
         .listRowBackground(Theme.card)
     }
 
+    // MARK: - Photo
+
+    private var photoSection: some View {
+        Section {
+            PhotosPicker(selection: $photoItem, matching: .images, photoLibrary: .shared()) {
+                HStack(spacing: 10) {
+                    Image(systemName: "photo.on.rectangle.angled")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Theme.primary)
+                        .frame(width: 24)
+                    Text(L("profile.photo.choose"))
+                        .font(.body)
+                        .foregroundStyle(Theme.ink)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Theme.inkSoft.opacity(0.6))
+                }
+                .contentShape(.rect)
+            }
+
+            if profile.photoData != nil {
+                Button(role: .destructive) {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                        profile.removePhoto()
+                    }
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "trash")
+                            .font(.system(size: 14, weight: .semibold))
+                            .frame(width: 24)
+                        Text(L("profile.photo.remove"))
+                            .font(.body)
+                    }
+                }
+            }
+        } header: {
+            Text(L("profile.photo.label"))
+        } footer: {
+            Text(L("profile.photo.footer"))
+                .font(.footnote)
+                .foregroundStyle(Theme.inkSoft)
+        }
+        .listRowBackground(Theme.card)
+    }
+
     // MARK: - Avatar
 
     private var avatarSection: some View {
@@ -197,7 +281,7 @@ struct ProfileEditorView: View {
     }
 
     private func avatarButton(_ emoji: String) -> some View {
-        let isSelected = profile.avatar == emoji
+        let isSelected = profile.avatar == emoji && profile.photoData == nil
         return Button {
             profile.setAvatar(emoji)
             avatarHaptic.toggle()
