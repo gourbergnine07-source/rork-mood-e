@@ -293,20 +293,39 @@ struct MoodFlowView: View {
         }
     }
 
-    /// Icon-only shortcut with a tiny caption underneath, so the step-1
-    /// shortcut row stays roughly as tall as a single line of text.
-    private func iconShortcut(icon: String, label: String, tint: Color) -> some View {
-        VStack(spacing: 1) {
+    /// Compact gradient shortcut card, visually consistent with the
+    /// "In evidenza" carousel cards: icon in a translucent circle + label
+    /// on a tinted gradient, all three sharing the same fixed height.
+    private func shortcutCard(icon: String, label: String, tint: Color) -> some View {
+        HStack(spacing: 6) {
             Image(systemName: icon)
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(tint)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 22, height: 22)
+                .background(.white.opacity(0.22), in: .circle)
+
             Text(label)
-                .font(.system(size: 8, weight: .medium))
-                .foregroundStyle(Theme.inkSoft)
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(.white)
                 .lineLimit(1)
-                .minimumScaleFactor(0.7)
+                .minimumScaleFactor(0.75)
         }
-        .frame(minWidth: 44, minHeight: 36)
+        .padding(.horizontal, 8)
+        .frame(maxWidth: .infinity)
+        .frame(height: 40)
+        .background(
+            LinearGradient(
+                colors: [tint, tint.opacity(0.72)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            ),
+            in: .rect(cornerRadius: 13)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 13)
+                .stroke(.white.opacity(0.18), lineWidth: 1)
+        )
+        .shadow(color: tint.opacity(0.15), radius: 3, y: 1)
         .contentShape(.rect)
     }
 
@@ -339,32 +358,21 @@ struct MoodFlowView: View {
             .animation(.easeInOut(duration: 0.2), value: canAdvance)
 
             if step == 0 {
-                HStack(spacing: 16) {
+                HStack(spacing: 8) {
                     Button {
                         startQuickPick()
                     } label: {
-                        HStack(spacing: 5) {
-                            Image(systemName: "bolt.fill")
-                                .font(.system(size: 11, weight: .semibold))
-                            Text(L("flow.quick"))
-                                .font(.caption.weight(.semibold))
-                                .underline()
-                        }
-                        .foregroundStyle(Theme.amber)
-                        .frame(minHeight: 36)
-                        .contentShape(.rect)
+                        shortcutCard(icon: "bolt.fill", label: L("flow.quick"), tint: Theme.amber)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressableCardStyle())
                     .accessibilityHint(L("flow.quick.hint"))
-
-                    Spacer(minLength: 0)
 
                     Button {
                         showSurprise = true
                     } label: {
-                        iconShortcut(icon: "dice.fill", label: L("flow.surprise"), tint: Theme.rose)
+                        shortcutCard(icon: "dice.fill", label: L("flow.surprise"), tint: Theme.rose)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressableCardStyle())
                     .sensoryFeedback(.impact(weight: .light), trigger: showSurprise)
                     .accessibilityLabel(L("flow.surprise"))
 
@@ -377,13 +385,13 @@ struct MoodFlowView: View {
                             showPaywall = true
                         }
                     } label: {
-                        iconShortcut(
+                        shortcutCard(
                             icon: PremiumStore.shared.isPremium ? "person.2.fill" : "lock.fill",
                             label: L("flow.duo"),
                             tint: Theme.tabList
                         )
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressableCardStyle())
                     .sensoryFeedback(.impact(weight: .light), trigger: showDuo)
                     .accessibilityLabel(L("flow.duo"))
                     .accessibilityHint(PremiumStore.shared.isPremium ? "" : L("premium.locked"))
