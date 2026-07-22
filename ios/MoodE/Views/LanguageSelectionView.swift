@@ -93,8 +93,16 @@ struct LanguageSelectionView: View {
             }
         } label: {
             HStack(spacing: 14) {
-                Text(language.flag)
-                    .font(.system(size: 30))
+                if EmojiSupport.isAvailable {
+                    Text(language.flag)
+                        .font(.system(size: 30))
+                } else {
+                    Text(language.rawValue.uppercased())
+                        .font(.system(size: 13, weight: .heavy, design: .rounded))
+                        .foregroundStyle(Theme.primary)
+                        .frame(width: 44, height: 30)
+                        .background(Theme.primary.opacity(0.12), in: .rect(cornerRadius: 8))
+                }
 
                 Text(language.nativeName)
                     .font(.headline)

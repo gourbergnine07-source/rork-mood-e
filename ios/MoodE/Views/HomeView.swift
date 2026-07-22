@@ -23,9 +23,16 @@ struct HomeView: View {
                 ToolbarItem(placement: .topBarLeading) {
                     NavigationLink(value: HomeRoute.diary) {
                         HStack(spacing: 4) {
-                            Text("🔥")
-                                .font(.system(size: 14))
-                                .opacity(diary.streak > 0 ? 1 : 0.4)
+                            if EmojiSupport.isAvailable {
+                                Text("🔥")
+                                    .font(.system(size: 14))
+                                    .opacity(diary.streak > 0 ? 1 : 0.4)
+                            } else {
+                                Image(systemName: "flame.fill")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(diary.streak > 0 ? Theme.primary : Theme.inkSoft)
+                                    .opacity(diary.streak > 0 ? 1 : 0.4)
+                            }
                             Text("\(diary.streak)")
                                 .font(.subheadline.weight(.bold))
                                 .foregroundStyle(diary.streak > 0 ? Theme.primary : Theme.inkSoft)

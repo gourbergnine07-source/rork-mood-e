@@ -797,7 +797,11 @@ struct SettingsView: View {
         Section {
             Picker(selection: languageBinding) {
                 ForEach(AppLanguage.allCases) { language in
-                    Text("\(language.flag)  \(language.nativeName)").tag(language)
+                    if EmojiSupport.isAvailable {
+                        Text("\(language.flag)  \(language.nativeName)").tag(language)
+                    } else {
+                        Text("\(language.rawValue.uppercased())  \(language.nativeName)").tag(language)
+                    }
                 }
             } label: {
                 SettingsRow(
