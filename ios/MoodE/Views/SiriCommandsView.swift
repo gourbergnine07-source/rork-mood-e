@@ -11,10 +11,15 @@ import AppIntents
 /// to the Shortcuts app for custom phrases.
 struct SiriCommandsView: View {
     @State private var siriTipVisible: Bool = true
+    @State private var showPaywall: Bool = false
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
+                if !PremiumStore.shared.isPremium {
+                    premiumLockCard
+                }
+
                 Text(L("siri.intro"))
                     .font(.subheadline)
                     .foregroundStyle(Theme.inkSoft)
@@ -26,15 +31,17 @@ struct SiriCommandsView: View {
                     stepCard(number: 3, text: L("siri.step3"))
                 }
 
-                VStack(alignment: .leading, spacing: 10) {
-                    Text(L("siri.tip"))
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(Theme.ink)
+                if PremiumStore.shared.isPremium {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(L("siri.tip"))
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(Theme.ink)
 
-                    SiriTipView(intent: WhatToWatchIntent(), isVisible: $siriTipVisible)
+                        SiriTipView(intent: WhatToWatchIntent(), isVisible: $siriTipVisible)
 
-                    ShortcutsLink()
-                        .shortcutsLinkStyle(.automaticOutline)
+                        ShortcutsLink()
+                            .shortcutsLinkStyle(.automaticOutline)
+                    }
                 }
 
                 Text(L("siri.note"))
@@ -51,6 +58,47 @@ struct SiriCommandsView: View {
         .background(Theme.background.ignoresSafeArea())
         .navigationTitle(L("siri.title"))
         .toolbarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showPaywall) {
+            PaywallView()
+        }
+    }
+
+    /// Free users: the guide stays readable, but activation needs Premium.
+    private var premiumLockCard: some View {
+        Button {
+            showPaywall = true
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 34, height: 34)
+                    .background(Theme.amber, in: .rect(cornerRadius: 10))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(L("premium.locked"))
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(Theme.ink)
+                    Text(L("premium.siri.locked"))
+                        .font(.caption)
+                        .foregroundStyle(Theme.inkSoft)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Theme.inkSoft)
+            }
+            .padding(14)
+            .background(Theme.amber.opacity(0.1), in: .rect(cornerRadius: 16))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Theme.amber.opacity(0.35), lineWidth: 1)
+            )
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
     }
 
     private func stepCard(number: Int, text: String) -> some View {

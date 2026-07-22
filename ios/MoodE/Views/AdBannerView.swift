@@ -15,7 +15,8 @@ struct AdBannerView: View {
     private var ads: AdsManager { AdsManager.shared }
 
     var body: some View {
-        if ads.isStarted {
+        // Premium: nessun banner in tutta l'app.
+        if ads.isStarted, !PremiumStore.shared.isPremium {
             let width = UIScreen.main.bounds.width
             let adSize = currentOrientationAnchoredAdaptiveBanner(width: width)
             BannerViewRepresentable(adSize: adSize)

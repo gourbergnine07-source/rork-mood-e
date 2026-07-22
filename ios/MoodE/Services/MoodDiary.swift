@@ -220,6 +220,7 @@ final class MoodDiary {
             print("MoodDiary: persist failed: \(error.localizedDescription)")
         }
         CloudSyncService.shared.noteLocalChange()
+        ICloudSyncService.shared.noteLocalChange()
     }
 
     /// Replaces the whole diary with the cloud-merged copy (sync only).

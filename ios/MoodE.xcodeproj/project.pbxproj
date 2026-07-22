@@ -10,6 +10,7 @@
 		XX31C08D89000476ACED2CXX /* MoodEWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = XX9BD89C46B35B92C99196XX /* MoodEWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		XX58A87C46960997EAFEF8XX /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = XX5EB48DBE87E012384FECXX /* GoogleMobileAds */; };
 		XXCB0C833A4E7DDE353CE0XX /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = XX17F496E7391AF4178246XX /* Supabase */; };
+		XXD63457E41125E77BACFDXX /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = XX8F6E1A701EA04CDCEA3DXX /* RevenueCat */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -100,6 +101,7 @@
 			files = (
 				XX58A87C46960997EAFEF8XX /* GoogleMobileAds in Frameworks */,
 				XXCB0C833A4E7DDE353CE0XX /* Supabase in Frameworks */,
+				XXD63457E41125E77BACFDXX /* RevenueCat in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -173,6 +175,7 @@
 			packageProductDependencies = (
 				XX5EB48DBE87E012384FECXX /* GoogleMobileAds */,
 				XX17F496E7391AF4178246XX /* Supabase */,
+				XX8F6E1A701EA04CDCEA3DXX /* RevenueCat */,
 			);
 			productName = MoodE;
 			productReference = 105FC57A2E9EAD3100EA8BCF /* MoodE.app */;
@@ -289,6 +292,7 @@
 			packageReferences = (
 				XX8F321EBFA973C6F11275XX /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */,
 				XXA26CCC1C14E04A80BED3XX /* XCRemoteSwiftPackageReference "supabase-swift" */,
+				XX56D7F10BAEE1D3529BF9XX /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
 			);
 		};
 /* End PBXProject section */
@@ -756,6 +760,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		XX56D7F10BAEE1D3529BF9XX /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios-spm.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.0.0;
+			};
+		};
 		XX8F321EBFA973C6F11275XX /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/googleads/swift-package-manager-google-mobile-ads.git";
@@ -784,6 +796,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = XX8F321EBFA973C6F11275XX /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */;
 			productName = GoogleMobileAds;
+		};
+		XX8F6E1A701EA04CDCEA3DXX /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = XX56D7F10BAEE1D3529BF9XX /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = RevenueCat;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

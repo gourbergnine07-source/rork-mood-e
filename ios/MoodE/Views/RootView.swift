@@ -54,8 +54,11 @@ struct RootView: View {
                 ContentView()
                     .transition(.opacity)
                     .task {
-                        // ATT prompt (solo al primo avvio, dopo l'onboarding),
-                        // poi avvio del SDK annunci: nessun annuncio prima del consenso.
+                        // Gli abbonati Premium non vedono pubblicità: verifica lo
+                        // stato prima di avviare l'SDK annunci. Per gli altri:
+                        // ATT prompt (solo al primo avvio), poi avvio del SDK.
+                        await PremiumStore.shared.refreshStatus()
+                        guard !PremiumStore.shared.isPremium else { return }
                         await AdsManager.shared.requestTrackingAndStart()
                     }
             }

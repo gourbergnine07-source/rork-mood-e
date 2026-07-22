@@ -11,7 +11,10 @@ import SwiftUI
 struct MoodFlowHeader: View {
     @Environment(QuizStore.self) private var quiz
     @Binding var showQuiz: Bool
+    @Binding var showPaywall: Bool
     @Binding var quizBannerHidden: Bool
+
+    private var isPremium: Bool { PremiumStore.shared.isPremium }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -38,7 +41,12 @@ struct MoodFlowHeader: View {
     private var quizBanner: some View {
         HStack(spacing: 8) {
             Button {
-                showQuiz = true
+                // Il quiz è una funzione Premium: il lucchetto porta al paywall.
+                if isPremium {
+                    showQuiz = true
+                } else {
+                    showPaywall = true
+                }
             } label: {
                 HStack(spacing: 8) {
                     Text("\u{1F3AD}")
@@ -49,16 +57,18 @@ struct MoodFlowHeader: View {
                         .foregroundStyle(Theme.ink)
                         .lineLimit(1)
 
-                    Text(quiz.profile == nil ? L("quiz.banner.sub") : L("quiz.banner.retake"))
+                    Text(isPremium
+                        ? (quiz.profile == nil ? L("quiz.banner.sub") : L("quiz.banner.retake"))
+                        : L("premium.locked"))
                         .font(.caption2)
                         .foregroundStyle(Theme.inkSoft)
                         .lineLimit(1)
 
                     Spacer(minLength: 0)
 
-                    Image(systemName: "chevron.right")
+                    Image(systemName: isPremium ? "chevron.right" : "lock.fill")
                         .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(Theme.primary)
+                        .foregroundStyle(isPremium ? Theme.primary : Theme.amber)
                 }
                 .contentShape(.rect)
             }

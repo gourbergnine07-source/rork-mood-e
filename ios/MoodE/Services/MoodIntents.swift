@@ -47,6 +47,10 @@ nonisolated struct WhatToWatchIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
+        // Siri commands are part of Mood-E Premium.
+        guard PremiumStore.isPremiumCached else {
+            return .result(dialog: "Siri commands are included in Mood-E Premium. Unlock them from the app settings ✨")
+        }
         IntentRelay.launch(moodRaw: mood.rawValue)
         return .result(dialog: "Here's a movie idea for you 🎬")
     }

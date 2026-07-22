@@ -150,7 +150,7 @@ struct MovieResultsView: View {
                     .sensoryFeedback(.impact(weight: .medium), trigger: trailerPlayback.loadingMovieId)
                     .padding(.horizontal, 24)
 
-                    if AdsManager.shared.isRewardedReady || viewModel.isLoadingBonus {
+                    if PremiumStore.shared.isPremium || AdsManager.shared.isRewardedReady || viewModel.isLoadingBonus {
                         rewardedButton
                     }
 
@@ -172,9 +172,16 @@ struct MovieResultsView: View {
     /// appended below the current batch.
     private var rewardedButton: some View {
         Button {
-            AdsManager.shared.showRewarded {
+            if PremiumStore.shared.isPremium {
+                // Premium: bonus immediato, senza video pubblicitario.
                 Task {
                     await viewModel.loadBonusMovies(selection: selection, excluding: library.watchedIds)
+                }
+            } else {
+                AdsManager.shared.showRewarded {
+                    Task {
+                        await viewModel.loadBonusMovies(selection: selection, excluding: library.watchedIds)
+                    }
                 }
             }
         } label: {
@@ -186,7 +193,7 @@ struct MovieResultsView: View {
                     Image(systemName: "gift.fill")
                         .font(.system(size: 15, weight: .semibold))
                 }
-                Text(L("results.rewarded"))
+                Text(L(PremiumStore.shared.isPremium ? "results.bonus.premium" : "results.rewarded"))
                     .font(.subheadline.weight(.semibold))
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)

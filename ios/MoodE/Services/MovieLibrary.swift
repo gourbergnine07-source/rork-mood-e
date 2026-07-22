@@ -221,6 +221,7 @@ final class MovieLibrary {
             print("MovieLibrary: failed to persist entries: \(error.localizedDescription)")
         }
         CloudSyncService.shared.noteLocalChange()
+        ICloudSyncService.shared.noteLocalChange()
     }
 
     /// Replaces the whole library with the cloud-merged copy (sync only).

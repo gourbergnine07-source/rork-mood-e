@@ -95,11 +95,14 @@ final class PersonalizationStore {
     // MARK: - Queries
 
     func isUnlocked(_ icon: AppIconOption) -> Bool {
-        icon == .classic || unlockedIcons.contains(icon.rawValue)
+        // Premium sblocca subito tutto; la via gratuita (streak/traguardi) resta.
+        icon == .classic || PremiumStore.shared.isPremium || unlockedIcons.contains(icon.rawValue)
     }
 
     func isUnlocked(_ palette: AccentPalette) -> Bool {
-        !Self.lockedPalettes.contains(palette) || unlockedPalettes.contains(palette.rawValue)
+        !Self.lockedPalettes.contains(palette)
+            || PremiumStore.shared.isPremium
+            || unlockedPalettes.contains(palette.rawValue)
     }
 
     /// Localized description of what unlocks a locked palette.

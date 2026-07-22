@@ -26,6 +26,9 @@ struct MoodEApp: App {
         UNUserNotificationCenter.current().delegate = NotificationDelegate.shared
         // Make the "what to watch" command discoverable by Siri right away.
         MoodEShortcuts.updateAppShortcutParameters()
+        // In-App Purchases (Premium): configure once, before any use.
+        PremiumStore.configureSDK()
+        PremiumStore.shared.start()
     }
 
     var body: some Scene {
@@ -50,8 +53,14 @@ struct MoodEApp: App {
                         library: library,
                         planner: planner
                     )
+                    ICloudSyncService.shared.configure(
+                        diary: diary,
+                        library: library,
+                        planner: planner
+                    )
                     await auth.checkAuth()
                     await CloudSyncService.shared.syncIfSignedIn()
+                    await ICloudSyncService.shared.syncIfPremium()
                 }
                 .onChange(of: scenePhase) { _, newPhase in
                     guard newPhase == .active else { return }
@@ -69,6 +78,7 @@ struct MoodEApp: App {
                             topMood: diary.topMood
                         )
                         await CloudSyncService.shared.syncIfSignedIn()
+                        await ICloudSyncService.shared.syncIfPremium()
                         await AnalyticsService.shared.flush()
                     }
                 }

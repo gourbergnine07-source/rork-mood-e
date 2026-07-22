@@ -21,6 +21,7 @@ struct MoodFlowView: View {
     @State private var showSurprise: Bool = false
     @State private var showQuiz: Bool = false
     @State private var showDuo: Bool = false
+    @State private var showPaywall: Bool = false
 
     // Free-form mood input (STEP 1 alternative), analyzed by AI.
     @State private var freeText: String = ""
@@ -72,6 +73,9 @@ struct MoodFlowView: View {
         .sheet(isPresented: $showDuo) {
             DuoNightView()
         }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView()
+        }
         .sheet(isPresented: $showQuiz) {
             NavigationStack {
                 SpectatorQuizView(isPresentedAsSheet: true)
@@ -108,7 +112,7 @@ struct MoodFlowView: View {
             title: L("flow.s1.title"),
             subtitle: L("flow.s1.sub"),
             header: {
-                MoodFlowHeader(showQuiz: $showQuiz, quizBannerHidden: $quizBannerHidden)
+                MoodFlowHeader(showQuiz: $showQuiz, showPaywall: $showPaywall, quizBannerHidden: $quizBannerHidden)
             }
         ) {
             VStack(spacing: 14) {
@@ -325,11 +329,22 @@ struct MoodFlowView: View {
                     .sensoryFeedback(.impact(weight: .light), trigger: showSurprise)
 
                     Button {
-                        showDuo = true
+                        // Serata in Duo è una funzione Premium: il lucchetto
+                        // porta al paywall, mai durante il flusso di ricerca.
+                        if PremiumStore.shared.isPremium {
+                            showDuo = true
+                        } else {
+                            showPaywall = true
+                        }
                     } label: {
-                        shortcutLabel(icon: "person.2.fill", title: L("flow.duo"), tint: Theme.tabList)
+                        shortcutLabel(
+                            icon: PremiumStore.shared.isPremium ? "person.2.fill" : "lock.fill",
+                            title: L("flow.duo"),
+                            tint: Theme.tabList
+                        )
                     }
                     .sensoryFeedback(.impact(weight: .light), trigger: showDuo)
+                    .accessibilityHint(PremiumStore.shared.isPremium ? "" : L("premium.locked"))
                 }
             }
         }

@@ -205,6 +205,7 @@ final class MoviePlanner {
             print("MoviePlanner: persist scheduled failed: \(error.localizedDescription)")
         }
         CloudSyncService.shared.noteLocalChange()
+        ICloudSyncService.shared.noteLocalChange()
     }
 
     private func persistMemories() {
@@ -215,6 +216,7 @@ final class MoviePlanner {
             print("MoviePlanner: persist memories failed: \(error.localizedDescription)")
         }
         CloudSyncService.shared.noteLocalChange()
+        ICloudSyncService.shared.noteLocalChange()
     }
 
     /// Replaces plans and memories with the cloud-merged copy (sync only).

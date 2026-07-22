@@ -9,10 +9,14 @@ import SwiftUI
 /// with unlock state and the milestone needed for the locked ones.
 struct PersonalizationView: View {
     @Environment(PersonalizationStore.self) private var personalization
+    @State private var showPaywall: Bool = false
     private var theme: ThemeManager { ThemeManager.shared }
 
     var body: some View {
         List {
+            if !PremiumStore.shared.isPremium {
+                premiumBanner
+            }
             iconsSection
             themesSection
         }
@@ -20,6 +24,45 @@ struct PersonalizationView: View {
         .background(Theme.background)
         .navigationTitle(L("perso.title"))
         .toolbarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showPaywall) {
+            PaywallView()
+        }
+    }
+
+    /// Free users: everything can still be earned via streaks/milestones,
+    /// but Premium unlocks it all instantly.
+    private var premiumBanner: some View {
+        Section {
+            Button {
+                showPaywall = true
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "crown.fill")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 29, height: 29)
+                        .background(Theme.amber, in: .rect(cornerRadius: 7))
+
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(L("perso.premium.title"))
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(Theme.ink)
+                        Text(L("perso.premium.sub"))
+                            .font(.caption)
+                            .foregroundStyle(Theme.inkSoft)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Theme.inkSoft)
+                }
+                .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+        }
+        .listRowBackground(Theme.card)
     }
 
     // MARK: - App icons

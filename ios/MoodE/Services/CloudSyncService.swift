@@ -238,9 +238,9 @@ final class CloudSyncService {
         status = .idle
     }
 
-    // MARK: - Merge helpers
+    // MARK: - Merge helpers (shared with ICloudSyncService)
 
-    private static func mergeCheckIns(local: [MoodCheckIn], remote: [MoodCheckIn]) -> [MoodCheckIn] {
+    static func mergeCheckIns(local: [MoodCheckIn], remote: [MoodCheckIn]) -> [MoodCheckIn] {
         var byId: [UUID: MoodCheckIn] = [:]
         for checkIn in remote { byId[checkIn.id] = checkIn }
         // Local wins on id conflicts (it may carry fresher notes).
@@ -248,7 +248,7 @@ final class CloudSyncService {
         return byId.values.sorted { $0.date > $1.date }
     }
 
-    private static func mergeLibrary(local: [LibraryEntry], remote: [LibraryEntry]) -> [LibraryEntry] {
+    static func mergeLibrary(local: [LibraryEntry], remote: [LibraryEntry]) -> [LibraryEntry] {
         func activity(_ entry: LibraryEntry) -> Date {
             max(entry.addedDate, entry.watchedDate ?? .distantPast)
         }
@@ -263,7 +263,7 @@ final class CloudSyncService {
         return byMovie.values.sorted { $0.addedDate > $1.addedDate }
     }
 
-    private static func mergeById<T: Identifiable>(local: [T], remote: [T]) -> [T] where T.ID: Hashable {
+    static func mergeById<T: Identifiable>(local: [T], remote: [T]) -> [T] where T.ID: Hashable {
         var byId: [T.ID: T] = [:]
         for item in remote { byId[item.id] = item }
         for item in local { byId[item.id] = item }

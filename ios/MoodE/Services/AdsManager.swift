@@ -57,6 +57,8 @@ final class AdsManager: NSObject, FullScreenContentDelegate {
     /// Shows the system ATT prompt (first time only), then starts the SDK
     /// and preloads full-screen ads. Called after onboarding, before any ad.
     func requestTrackingAndStart() async {
+        // Premium: nessuna pubblicità, l'SDK non viene nemmeno avviato.
+        guard !PremiumStore.shared.isPremium else { return }
         guard !isStarted else { return }
         _ = await ATTrackingManager.requestTrackingAuthorization()
         _ = await MobileAds.shared.start()
@@ -96,6 +98,10 @@ final class AdsManager: NSObject, FullScreenContentDelegate {
     /// once every `searchesPerInterstitial` searches, then runs `completion`
     /// (immediately when no ad is due) so the user's action is never lost.
     func showSearchInterstitialIfDue(then completion: @escaping () -> Void) {
+        guard !PremiumStore.shared.isPremium else {
+            completion()
+            return
+        }
         let count = defaults.integer(forKey: searchCountKey) + 1
         defaults.set(count, forKey: searchCountKey)
 
@@ -111,6 +117,7 @@ final class AdsManager: NSObject, FullScreenContentDelegate {
     /// Called when the user returns from a movie detail screen.
     /// Rate limited to 1 interstitial every 5 minutes of use.
     func maybeShowReturnInterstitial() {
+        guard !PremiumStore.shared.isPremium else { return }
         guard isStarted, interstitial != nil else { return }
         let last = defaults.double(forKey: lastInterstitialKey)
         guard Date().timeIntervalSince1970 - last >= interstitialCooldown else { return }

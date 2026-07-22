@@ -42,6 +42,36 @@ export type Database = {
         }
         Relationships: []
       }
+      challenge_duos: {
+        Row: {
+          code: string
+          created_at: string
+          expires_at: string
+          guest_joined: boolean
+          guest_progress: number
+          host_progress: number
+          month_key: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          expires_at?: string
+          guest_joined?: boolean
+          guest_progress?: number
+          host_progress?: number
+          month_key: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          expires_at?: string
+          guest_joined?: boolean
+          guest_progress?: number
+          host_progress?: number
+          month_key?: string
+        }
+        Relationships: []
+      }
       diary_check_ins: {
         Row: {
           date: string

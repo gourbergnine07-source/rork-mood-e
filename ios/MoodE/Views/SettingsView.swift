@@ -46,6 +46,7 @@ struct SettingsView: View {
     @State private var nicknameRefreshTrigger = false
     @State private var showAccountSheet = false
     @State private var showSignOutConfirm = false
+    @State private var showPaywall = false
     private var cloudSync: CloudSyncService { CloudSyncService.shared }
     @AppStorage("onboarding.completed") private var hasCompletedOnboarding: Bool = true
     private var theme: ThemeManager { ThemeManager.shared }
@@ -59,6 +60,7 @@ struct SettingsView: View {
         NavigationStack {
             List {
                 appInfoSection
+                premiumSection
                 accountSection
                 journeySection
                 communitySection
@@ -69,7 +71,9 @@ struct SettingsView: View {
                 librarySection
                 siriSection
                 onboardingSection
-                adsSection
+                if !premium.isPremium {
+                    adsSection
+                }
                 privacySection
                 supportSection
                 legalSection
@@ -91,6 +95,14 @@ struct SettingsView: View {
             }
             .sheet(isPresented: $showAccountSheet) {
                 AccountSheetView()
+            }
+            .sheet(isPresented: $showPaywall) {
+                PaywallView()
+            }
+            .alert(L("premium.restore"), isPresented: restoreAlertBinding) {
+                Button(L("common.ok"), role: .cancel) { premium.restoreMessage = nil }
+            } message: {
+                Text(premium.restoreMessage ?? "")
             }
             .confirmationDialog(L("account.signOut.confirm"), isPresented: $showSignOutConfirm, titleVisibility: .visible) {
                 Button(L("account.signOut"), role: .destructive) {
@@ -117,6 +129,160 @@ struct SettingsView: View {
             }
         }
         .tint(Theme.tabSettings)
+    }
+
+    // MARK: - Premium
+
+    private var premium: PremiumStore { .shared }
+    private var iCloudSync: ICloudSyncService { .shared }
+
+    private var restoreAlertBinding: Binding<Bool> {
+        Binding(
+            get: { premium.restoreMessage != nil },
+            set: { if !$0 { premium.restoreMessage = nil } }
+        )
+    }
+
+    private var premiumSection: some View {
+        Section {
+            if premium.isPremium {
+                HStack(spacing: 12) {
+                    Image(systemName: "crown.fill")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 29, height: 29)
+                        .background(Theme.amber, in: .rect(cornerRadius: 7))
+
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(L("premium.active"))
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(Theme.ink)
+                        Text(L("premium.active.sub"))
+                            .font(.caption)
+                            .foregroundStyle(Theme.inkSoft)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "checkmark.seal.fill")
+                        .font(.system(size: 18))
+                        .foregroundStyle(Theme.seenGreen)
+                }
+
+                iCloudSyncRow
+
+                Button {
+                    if let url = URL(string: "https://apps.apple.com/account/subscriptions") {
+                        openURL(url)
+                    }
+                } label: {
+                    SettingsRow(
+                        icon: "creditcard.fill",
+                        iconColor: Theme.tabSettings,
+                        title: L("premium.manage"),
+                        showsExternalBadge: true
+                    )
+                }
+            } else {
+                Button {
+                    showPaywall = true
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "crown.fill")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(width: 29, height: 29)
+                            .background(Theme.amber, in: .rect(cornerRadius: 7))
+
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(L("premium.row"))
+                                .font(.body.weight(.semibold))
+                                .foregroundStyle(Theme.ink)
+                            Text(L("premium.row.sub"))
+                                .font(.caption)
+                                .foregroundStyle(Theme.inkSoft)
+                        }
+
+                        Spacer()
+
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(Theme.inkSoft)
+                    }
+                    .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
+            }
+
+            Button {
+                Task { await premium.restore() }
+            } label: {
+                SettingsRow(
+                    icon: "arrow.clockwise.circle.fill",
+                    iconColor: Theme.tabHome,
+                    title: L("premium.restore")
+                )
+            }
+            .disabled(premium.isPurchasing)
+        } header: {
+            Text(L("premium.header"))
+        } footer: {
+            Text(L("premium.footer"))
+                .font(.footnote)
+                .foregroundStyle(Theme.inkSoft)
+        }
+        .listRowBackground(Theme.card)
+    }
+
+    /// Premium-only: iCloud (CloudKit) sync status with a manual refresh.
+    private var iCloudSyncRow: some View {
+        HStack(spacing: 12) {
+            Image(systemName: iCloudSync.status == .error ? "exclamationmark.icloud.fill" : "icloud.fill")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 29, height: 29)
+                .background(iCloudSync.status == .error ? Theme.rose : Theme.tabSettings, in: .rect(cornerRadius: 7))
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(L("premium.icloud.status"))
+                    .font(.body)
+                    .foregroundStyle(Theme.ink)
+                Text(iCloudSyncLabel)
+                    .font(.caption)
+                    .foregroundStyle(iCloudSync.status == .error ? Theme.rose : Theme.inkSoft)
+            }
+
+            Spacer()
+
+            if iCloudSync.status == .syncing {
+                ProgressView()
+            } else {
+                Button {
+                    Task { await ICloudSyncService.shared.syncIfPremium() }
+                } label: {
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Theme.tabSettings)
+                        .frame(width: 32, height: 32)
+                        .background(Theme.tabSettings.opacity(0.12), in: .circle)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(L("account.syncNow"))
+            }
+        }
+    }
+
+    private var iCloudSyncLabel: String {
+        switch iCloudSync.status {
+        case .unavailable: return L("premium.icloud.unavailable")
+        case .error: return L("account.error")
+        default: break
+        }
+        guard let lastSync = iCloudSync.lastSync else { return L("premium.icloud.never") }
+        let formatter = RelativeDateTimeFormatter()
+        formatter.locale = LocalizationManager.shared.locale
+        formatter.unitsStyle = .short
+        return formatter.localizedString(for: lastSync, relativeTo: Date())
     }
 
     // MARK: - Account e sincronizzazione
@@ -234,15 +400,6 @@ struct SettingsView: View {
                 )
             }
 
-            NavigationLink {
-                MonetizationInfoView()
-            } label: {
-                SettingsRow(
-                    icon: "eurosign.circle.fill",
-                    iconColor: Theme.seenGreen,
-                    title: L("settings.monetization.row")
-                )
-            }
         } header: {
             Text(L("settings.ads.header"))
         } footer: {
@@ -354,23 +511,26 @@ struct SettingsView: View {
                 )
             }
 
-            NavigationLink {
-                SpectatorQuizView()
-            } label: {
-                HStack(spacing: 12) {
-                    Text(quiz.profile?.emoji ?? "\u{1F3AD}")
-                        .font(.system(size: 20))
-                        .frame(width: 29, height: 29)
-
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(L("quiz.settings.row"))
-                            .font(.body)
-                            .foregroundStyle(Theme.ink)
-                        Text(quiz.profile?.title ?? L("quiz.settings.sub.none"))
-                            .font(.caption)
-                            .foregroundStyle(Theme.inkSoft)
-                    }
+            if premium.isPremium {
+                NavigationLink {
+                    SpectatorQuizView()
+                } label: {
+                    quizRowLabel
                 }
+            } else {
+                Button {
+                    showPaywall = true
+                } label: {
+                    HStack(spacing: 12) {
+                        quizRowLabel
+                        Spacer()
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(Theme.amber)
+                    }
+                    .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
             }
         } header: {
             Text(L("settings.perso.header"))
@@ -380,6 +540,25 @@ struct SettingsView: View {
                 .foregroundStyle(Theme.inkSoft)
         }
         .listRowBackground(Theme.card)
+    }
+
+    private var quizRowLabel: some View {
+        HStack(spacing: 12) {
+            Text(quiz.profile?.emoji ?? "\u{1F3AD}")
+                .font(.system(size: 20))
+                .frame(width: 29, height: 29)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(L("quiz.settings.row"))
+                    .font(.body)
+                    .foregroundStyle(Theme.ink)
+                Text(premium.isPremium
+                    ? (quiz.profile?.title ?? L("quiz.settings.sub.none"))
+                    : L("premium.locked"))
+                    .font(.caption)
+                    .foregroundStyle(Theme.inkSoft)
+            }
+        }
     }
 
     // MARK: - Lingua
@@ -770,11 +949,18 @@ struct SettingsView: View {
             NavigationLink {
                 SiriCommandsView()
             } label: {
-                SettingsRow(
-                    icon: "waveform",
-                    iconColor: Color(red: 0.57, green: 0.42, blue: 0.83),
-                    title: L("settings.siri.row")
-                )
+                HStack(spacing: 0) {
+                    SettingsRow(
+                        icon: "waveform",
+                        iconColor: Color(red: 0.57, green: 0.42, blue: 0.83),
+                        title: L("settings.siri.row")
+                    )
+                    if !premium.isPremium {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(Theme.amber)
+                    }
+                }
             }
         } header: {
             Text(L("settings.siri.header"))

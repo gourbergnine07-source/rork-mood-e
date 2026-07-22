@@ -16,6 +16,8 @@ struct ChallengeCard: View {
     @State private var store = ChallengeStore.shared
     @State private var celebrating: Bool = false
     @State private var animatedFraction: Double = 0
+    @State private var showDuoChallenge: Bool = false
+    @State private var showPaywall: Bool = false
 
     private var challenge: MonthlyChallenge { ChallengeCalendar.current() }
 
@@ -98,6 +100,8 @@ struct ChallengeCard: View {
                     }
                 }
             }
+
+            friendChallengeButton
         }
         .padding(16)
         .background(Theme.card, in: .rect(cornerRadius: 20))
@@ -114,6 +118,12 @@ struct ChallengeCard: View {
             }
         }
         .sensoryFeedback(.success, trigger: celebrating)
+        .sheet(isPresented: $showDuoChallenge) {
+            ChallengeDuoView()
+        }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView()
+        }
         .onAppear {
             withAnimation(.spring(response: 0.8, dampingFraction: 0.85).delay(0.15)) {
                 animatedFraction = isDone ? 1 : progress.fraction
@@ -126,6 +136,44 @@ struct ChallengeCard: View {
             }
             completeIfNeeded(progress)
         }
+    }
+
+    /// "Sfida un amico" (Premium): run this month's challenge together via
+    /// a shareable code, with side-by-side progress.
+    private var friendChallengeButton: some View {
+        let isPremium = PremiumStore.shared.isPremium
+        let isPaired = UserDefaults.standard.string(forKey: "chduo.month") == challenge.id
+            && !(UserDefaults.standard.string(forKey: "chduo.code") ?? "").isEmpty
+
+        return Button {
+            if isPremium {
+                showDuoChallenge = true
+            } else {
+                showPaywall = true
+            }
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: isPremium ? "person.2.fill" : "lock.fill")
+                    .font(.system(size: 11, weight: .semibold))
+                Text(L(isPaired ? "chduo.active" : "chduo.title"))
+                    .font(.caption.weight(.semibold))
+                    .lineLimit(1)
+                if !isPremium {
+                    Text(L("premium.locked"))
+                        .font(.caption2)
+                        .foregroundStyle(Theme.inkSoft)
+                }
+            }
+            .foregroundStyle(Theme.amber)
+            .frame(maxWidth: .infinity)
+            .frame(height: 32)
+            .background(Theme.amber.opacity(0.12), in: .rect(cornerRadius: 11))
+            .overlay(
+                RoundedRectangle(cornerRadius: 11)
+                    .stroke(Theme.amber.opacity(0.35), lineWidth: 1)
+            )
+        }
+        .sensoryFeedback(.impact(weight: .light), trigger: showDuoChallenge)
     }
 
     /// First time the target is reached: persist + celebrate.
