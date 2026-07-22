@@ -108,11 +108,13 @@ struct FeaturedStripView: View {
                 }
 
                 Text(L("quiz.banner.title"))
-                    .font(.system(size: FeaturedCardMetrics.captionSize, weight: .medium))
-                    .foregroundStyle(Theme.inkSoft)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
+                    .font(.system(size: FeaturedCardMetrics.captionSize, weight: .semibold))
+                    .foregroundStyle(Theme.ink)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+                    .minimumScaleFactor(0.85)
                     .frame(width: FeaturedCardMetrics.captionWidth)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .contentShape(.rect)
         }
@@ -139,11 +141,11 @@ struct FeaturedStripView: View {
 /// caption underneath, so the whole row stays about as tall as one line
 /// of text plus a micro-label.
 enum FeaturedCardMetrics {
-    static let iconSize: CGFloat = 34
-    static let captionSize: CGFloat = 8
-    static let captionSpacing: CGFloat = 2
-    static let captionWidth: CGFloat = 62
-    static let gutter: CGFloat = 10
+    static let iconSize: CGFloat = 36
+    static let captionSize: CGFloat = 11
+    static let captionSpacing: CGFloat = 3
+    static let captionWidth: CGFloat = 84
+    static let gutter: CGFloat = 12
 }
 
 /// Small gradient icon button of the featured strip: circle + micro-caption.
@@ -178,11 +180,13 @@ struct FeaturedCardView: View {
             .shadow(color: (collection.gradient.first ?? .black).opacity(0.18), radius: 2, y: 1)
 
             Text(collection.title)
-                .font(.system(size: FeaturedCardMetrics.captionSize, weight: .medium))
-                .foregroundStyle(Theme.inkSoft)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
+                .font(.system(size: FeaturedCardMetrics.captionSize, weight: .semibold))
+                .foregroundStyle(Theme.ink)
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
+                .minimumScaleFactor(0.85)
                 .frame(width: FeaturedCardMetrics.captionWidth)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .contentShape(.rect)
         .accessibilityElement(children: .combine)
