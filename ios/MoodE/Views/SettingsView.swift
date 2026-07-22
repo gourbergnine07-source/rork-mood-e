@@ -48,6 +48,7 @@ struct SettingsView: View {
     @State private var showInviteSheet = false
     @State private var showSignOutConfirm = false
     @State private var showDeleteAccountConfirm = false
+    @State private var showDeleteAccountFinalConfirm = false
     @State private var isDeletingAccount = false
     @State private var showDeleteAccountError = false
     @State private var showPaywall = false
@@ -124,11 +125,19 @@ struct SettingsView: View {
             }
             .confirmationDialog(L("account.delete.confirm"), isPresented: $showDeleteAccountConfirm, titleVisibility: .visible) {
                 Button(L("account.delete"), role: .destructive) {
-                    Task { await deleteAccount() }
+                    showDeleteAccountFinalConfirm = true
                 }
                 Button(L("common.cancel"), role: .cancel) {}
             } message: {
                 Text(L("account.delete.msg"))
+            }
+            .alert(L("account.delete.final.title"), isPresented: $showDeleteAccountFinalConfirm) {
+                Button(L("account.delete.final.confirm"), role: .destructive) {
+                    Task { await deleteAccount() }
+                }
+                Button(L("common.cancel"), role: .cancel) {}
+            } message: {
+                Text(L("account.delete.final.msg"))
             }
             .alert(L("account.error.title"), isPresented: $showDeleteAccountError) {
                 Button(L("common.ok"), role: .cancel) {}
