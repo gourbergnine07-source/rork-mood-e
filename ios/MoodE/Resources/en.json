@@ -1,4 +1,8 @@
 {
+  "account.delete": "Delete account and cloud data",
+  "account.delete.confirm": "Delete your account?",
+  "account.delete.error": "We couldn't delete your account. Check your connection and try again.",
+  "account.delete.msg": "All data saved in the cloud (diary, list, planner and profile) will be permanently deleted and your access removed. Data on this device stays. This action cannot be undone.",
   "account.error": "Sync failed. Please try again.",
   "account.error.title": "Sign-in error",
   "account.footer": "Optional: sign in to back up your diary, list and planner to the cloud and get them back on a new iPhone. Without signing in everything stays on this device only.",

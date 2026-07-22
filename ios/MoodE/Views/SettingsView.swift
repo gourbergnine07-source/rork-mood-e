@@ -46,6 +46,9 @@ struct SettingsView: View {
     @State private var nicknameRefreshTrigger = false
     @State private var showAccountSheet = false
     @State private var showSignOutConfirm = false
+    @State private var showDeleteAccountConfirm = false
+    @State private var isDeletingAccount = false
+    @State private var showDeleteAccountError = false
     @State private var showPaywall = false
     private var cloudSync: CloudSyncService { CloudSyncService.shared }
     @AppStorage("onboarding.completed") private var hasCompletedOnboarding: Bool = true
@@ -114,6 +117,19 @@ struct SettingsView: View {
                 Button(L("common.cancel"), role: .cancel) {}
             } message: {
                 Text(L("account.signOut.msg"))
+            }
+            .confirmationDialog(L("account.delete.confirm"), isPresented: $showDeleteAccountConfirm, titleVisibility: .visible) {
+                Button(L("account.delete"), role: .destructive) {
+                    Task { await deleteAccount() }
+                }
+                Button(L("common.cancel"), role: .cancel) {}
+            } message: {
+                Text(L("account.delete.msg"))
+            }
+            .alert(L("account.error.title"), isPresented: $showDeleteAccountError) {
+                Button(L("common.ok"), role: .cancel) {}
+            } message: {
+                Text(L("account.delete.error"))
             }
             .fullScreenCover(isPresented: $showOnboarding) {
                 OnboardingView {
@@ -355,6 +371,23 @@ struct SettingsView: View {
                         title: L("account.signOut")
                     )
                 }
+
+                Button(role: .destructive) {
+                    showDeleteAccountConfirm = true
+                } label: {
+                    HStack {
+                        SettingsRow(
+                            icon: "trash.fill",
+                            iconColor: Theme.rose,
+                            title: L("account.delete")
+                        )
+                        if isDeletingAccount {
+                            Spacer()
+                            ProgressView()
+                        }
+                    }
+                }
+                .disabled(isDeletingAccount)
             } else {
                 Button {
                     showAccountSheet = true
@@ -374,6 +407,20 @@ struct SettingsView: View {
                 .foregroundStyle(Theme.inkSoft)
         }
         .listRowBackground(Theme.card)
+    }
+
+    /// Deletes all cloud data for the account, then signs the user out.
+    /// Required by App Store guideline 5.1.1(v).
+    private func deleteAccount() async {
+        isDeletingAccount = true
+        defer { isDeletingAccount = false }
+        do {
+            try await CloudSyncService.shared.deleteAccountData()
+            await auth.signOut()
+        } catch {
+            print("Settings: account deletion failed: \(error.localizedDescription)")
+            showDeleteAccountError = true
+        }
     }
 
     private var lastSyncLabel: String {

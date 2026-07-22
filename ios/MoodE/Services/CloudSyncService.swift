@@ -232,6 +232,39 @@ final class CloudSyncService {
             .execute()
     }
 
+    // MARK: - Account deletion (App Store guideline 5.1.1(v))
+
+    /// Permanently deletes every cloud row belonging to the signed-in user
+    /// (diary, library, planner and profile). Local data is untouched.
+    /// The caller signs the user out afterwards.
+    func deleteAccountData() async throws {
+        guard let auth, let user = auth.user else { return }
+        cancelPendingUpload()
+
+        await auth.ensureValidToken()
+        guard auth.user != nil else {
+            throw URLError(.userAuthenticationRequired)
+        }
+
+        let supabase = SupabaseService.client
+        let userId = user.id
+
+        for table in ["diary_check_ins", "library_entries", "planner_scheduled", "planner_memories"] {
+            try await supabase.from(table)
+                .delete()
+                .eq("user_id", value: userId)
+                .execute()
+        }
+        try await supabase.from("profiles")
+            .delete()
+            .eq("id", value: userId)
+            .execute()
+
+        lastSync = nil
+        UserDefaults.standard.removeObject(forKey: Self.lastSyncKey)
+        status = .idle
+    }
+
     private func markSynced() {
         lastSync = Date()
         UserDefaults.standard.set(lastSync?.timeIntervalSince1970 ?? 0, forKey: Self.lastSyncKey)

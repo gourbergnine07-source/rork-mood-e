@@ -1,4 +1,8 @@
 {
+  "account.delete": "Eliminar cuenta y datos en la nube",
+  "account.delete.confirm": "¿Eliminar la cuenta?",
+  "account.delete.error": "No se pudo eliminar la cuenta. Comprueba la conexión e inténtalo de nuevo.",
+  "account.delete.msg": "Todos los datos guardados en la nube (diario, lista, planner y perfil) se eliminarán definitivamente y se cerrará el acceso. Los datos del dispositivo se conservan. Esta acción no se puede deshacer.",
   "account.error": "La sincronización falló. Inténtalo de nuevo.",
   "account.error.title": "Error de acceso",
   "account.footer": "Opcional: inicia sesión para guardar tu diario, lista y planificador en la nube y recuperarlos en un iPhone nuevo. Sin sesión, todo se queda solo en este dispositivo.",

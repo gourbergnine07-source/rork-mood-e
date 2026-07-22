@@ -1,4 +1,8 @@
 {
+  "account.delete": "Elimina account e dati cloud",
+  "account.delete.confirm": "Eliminare l'account?",
+  "account.delete.error": "Non è stato possibile eliminare l'account. Controlla la connessione e riprova.",
+  "account.delete.msg": "Tutti i dati salvati nel cloud (diario, lista, planner e profilo) verranno eliminati definitivamente e l'accesso sarà rimosso. I dati sul dispositivo restano. Questa azione non è reversibile.",
   "account.error": "Sincronizzazione non riuscita. Riprova.",
   "account.error.title": "Errore di accesso",
   "account.footer": "Facoltativo: accedi per salvare diario, lista e planner nel cloud e ritrovarli su un nuovo iPhone. Senza accesso tutto resta solo sul dispositivo.",

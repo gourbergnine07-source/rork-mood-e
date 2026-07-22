@@ -1,4 +1,8 @@
 {
+  "account.delete": "Supprimer le compte et les données cloud",
+  "account.delete.confirm": "Supprimer le compte ?",
+  "account.delete.error": "Impossible de supprimer le compte. Vérifie ta connexion et réessaie.",
+  "account.delete.msg": "Toutes les données enregistrées dans le cloud (journal, liste, planning et profil) seront définitivement supprimées et votre accès retiré. Les données de l'appareil sont conservées. Cette action est irréversible.",
   "account.error": "Échec de la synchronisation. Réessaie.",
   "account.error.title": "Erreur de connexion",
   "account.footer": "Facultatif : connecte-toi pour sauvegarder ton journal, ta liste et ton planning dans le cloud et les retrouver sur un nouvel iPhone. Sans connexion, tout reste uniquement sur cet appareil.",
