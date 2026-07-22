@@ -20,6 +20,8 @@ final class ICloudSyncService {
         case idle
         case syncing
         case error
+        /// No internet connection: sync will retry automatically later.
+        case offline
         case unavailable
     }
 
@@ -125,7 +127,7 @@ final class ICloudSyncService {
         } catch {
             isApplyingRemote = false
             print("ICloudSync: sync failed: \(error.localizedDescription)")
-            status = .error
+            status = Self.isNetworkError(error) ? .offline : .error
         }
     }
 
@@ -147,8 +149,39 @@ final class ICloudSyncService {
             markSynced()
         } catch {
             print("ICloudSync: push failed: \(error.localizedDescription)")
-            status = .error
+            status = Self.isNetworkError(error) ? .offline : .error
         }
+    }
+
+    /// True when the failure comes from a missing or broken internet
+    /// connection, so the UI can show a dedicated "offline" message
+    /// instead of a generic error.
+    nonisolated private static func isNetworkError(_ error: Error) -> Bool {
+        if let ckError = error as? CKError {
+            switch ckError.code {
+            case .networkUnavailable, .networkFailure:
+                return true
+            default:
+                // Batch operations wrap per-item failures.
+                if let partial = ckError.partialErrorsByItemID?.values
+                    .compactMap({ $0 as? CKError })
+                    .first(where: { $0.code == .networkUnavailable || $0.code == .networkFailure }) {
+                    _ = partial
+                    return true
+                }
+                return false
+            }
+        }
+        if let urlError = error as? URLError {
+            switch urlError.code {
+            case .notConnectedToInternet, .networkConnectionLost, .timedOut,
+                 .cannotFindHost, .cannotConnectToHost, .dataNotAllowed:
+                return true
+            default:
+                return false
+            }
+        }
+        return false
     }
 
     /// Uploads the full local snapshot into the single backup record.

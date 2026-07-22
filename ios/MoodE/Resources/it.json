@@ -548,6 +548,7 @@
   "premium.header": "Mood-E Premium",
   "premium.hero": "Sblocca tutto Mood-E",
   "premium.icloud.never": "Non ancora sincronizzato",
+  "premium.icloud.offline": "Nessuna connessione: la sincronizzazione riprenderà appena torni online",
   "premium.icloud.status": "Sincronizzazione iCloud",
   "premium.icloud.unavailable": "iCloud non disponibile su questo dispositivo",
   "premium.locked": "Funzione Premium",

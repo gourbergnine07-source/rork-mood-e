@@ -255,13 +255,30 @@ struct SettingsView: View {
     }
 
     /// Premium-only: iCloud (CloudKit) sync status with a manual refresh.
+    private var iCloudSyncIcon: String {
+        switch iCloudSync.status {
+        case .error: return "exclamationmark.icloud.fill"
+        case .offline: return "wifi.slash"
+        case .unavailable: return "icloud.slash.fill"
+        default: return "icloud.fill"
+        }
+    }
+
+    private var iCloudSyncIconColor: Color {
+        switch iCloudSync.status {
+        case .error: return Theme.rose
+        case .offline, .unavailable: return Theme.amber
+        default: return Theme.tabSettings
+        }
+    }
+
     private var iCloudSyncRow: some View {
         HStack(spacing: 12) {
-            Image(systemName: iCloudSync.status == .error ? "exclamationmark.icloud.fill" : "icloud.fill")
+            Image(systemName: iCloudSyncIcon)
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(.white)
                 .frame(width: 29, height: 29)
-                .background(iCloudSync.status == .error ? Theme.rose : Theme.tabSettings, in: .rect(cornerRadius: 7))
+                .background(iCloudSyncIconColor, in: .rect(cornerRadius: 7))
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(L("premium.icloud.status"))
@@ -269,7 +286,7 @@ struct SettingsView: View {
                     .foregroundStyle(Theme.ink)
                 Text(iCloudSyncLabel)
                     .font(.caption)
-                    .foregroundStyle(iCloudSync.status == .error ? Theme.rose : Theme.inkSoft)
+                    .foregroundStyle(iCloudSyncLabelColor)
             }
 
             Spacer()
@@ -292,9 +309,18 @@ struct SettingsView: View {
         }
     }
 
+    private var iCloudSyncLabelColor: Color {
+        switch iCloudSync.status {
+        case .error: return Theme.rose
+        case .offline: return Theme.amber
+        default: return Theme.inkSoft
+        }
+    }
+
     private var iCloudSyncLabel: String {
         switch iCloudSync.status {
         case .unavailable: return L("premium.icloud.unavailable")
+        case .offline: return L("premium.icloud.offline")
         case .error: return L("account.error")
         default: break
         }
