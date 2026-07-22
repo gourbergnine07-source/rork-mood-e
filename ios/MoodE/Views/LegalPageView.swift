@@ -50,14 +50,21 @@ struct LegalPageView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var loadState: WebPageLoadState = .loading
     @State private var reloadToken: Int = 0
+    /// True after the remote page failed (network error or HTTP 4xx/5xx):
+    /// the bundled copy is shown instead, so the user always sees the text.
+    @State private var useBundled = false
+
+    private var currentURL: URL? {
+        useBundled ? page.bundledURL : page.resolvedURL
+    }
 
     var body: some View {
         ZStack {
             Theme.background.ignoresSafeArea()
 
-            if let url = page.resolvedURL {
+            if let url = currentURL {
                 WebPageView(url: url, loadState: $loadState)
-                    .id(reloadToken)
+                    .id("\(useBundled)-\(reloadToken)")
                     .opacity(loadState == .loaded ? 1 : 0)
             }
 
@@ -75,6 +82,14 @@ struct LegalPageView: View {
                 failedView
             case .loaded:
                 EmptyView()
+            }
+        }
+        .onChange(of: loadState) { _, newValue in
+            // Remote page unreachable or missing: fall back to the copy
+            // bundled with the app instead of showing an error page.
+            if newValue == .failed, !useBundled, page.bundledURL != nil {
+                useBundled = true
+                loadState = .loading
             }
         }
         .navigationTitle(page.title)
@@ -109,6 +124,7 @@ struct LegalPageView: View {
                 .foregroundStyle(Theme.inkSoft)
                 .multilineTextAlignment(.center)
             Button {
+                useBundled = false
                 loadState = .loading
                 reloadToken += 1
             } label: {
@@ -167,6 +183,21 @@ struct WebPageView: UIViewRepresentable {
             Task { @MainActor in
                 loadState.wrappedValue = .loaded
             }
+        }
+
+        /// Treats HTTP error responses (404, 500, ...) as failures: without
+        /// this check a "page not found" page would render as a success.
+        nonisolated func webView(
+            _ webView: WKWebView,
+            decidePolicyFor navigationResponse: WKNavigationResponse
+        ) async -> WKNavigationResponsePolicy {
+            if let http = navigationResponse.response as? HTTPURLResponse, http.statusCode >= 400 {
+                Task { @MainActor in
+                    loadState.wrappedValue = .failed
+                }
+                return .cancel
+            }
+            return .allow
         }
 
         nonisolated func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {

@@ -60,7 +60,7 @@
 <body>
   <main>
     <h1>Informativa sulla Privacy</h1>
-    <p class="updated">Ultimo aggiornamento: 19 luglio 2026</p>
+    <p class="updated">Ultimo aggiornamento: 22 luglio 2026</p>
 
     <p>Mood-E ("l'app") è un'app per iOS che consiglia film in base al tuo stato d'animo. La tua privacy è importante per noi: questa pagina spiega in modo semplice quali dati vengono trattati dall'app e come.</p>
 
@@ -105,10 +105,37 @@
     </ul>
     <p>Evita di inserire dati personali (tuoi o di altri) nel testo delle richieste o dei commenti.</p>
 
-    <h2>7. Nessun'altra condivisione con terze parti</h2>
-    <p>Al di fuori dei servizi sopra descritti (TMDB per i dati sui film, Google AdMob per la pubblicità e il server della community per la sezione «Consigli»), non raccogliamo, vendiamo né condividiamo i tuoi dati con terze parti a fini pubblicitari o di profilazione.</p>
+    <h2>7. Statistiche d'uso anonime e aggregate</h2>
+    <p>Per capire quali funzionalità dell'app vengono usate di più e migliorare Mood-E, l'app registra alcuni <strong>eventi d'uso in forma anonima e aggregata</strong> (ad esempio: "è stato completato un percorso emozione→obiettivo→epoca", "è stato riprodotto un trailer", "è stato aggiunto un film alla watchlist").</p>
+    <ul>
+      <li>ogni evento contiene solo il <strong>nome dell'evento e la data/ora</strong>, insieme a un <strong>identificatore casuale generato localmente</strong> al primo avvio, diverso per ogni installazione e <strong>non collegabile in alcun modo alla tua identità</strong>;</li>
+      <li><strong>non vengono mai registrati</strong>: nome, email, indirizzo IP, nickname, contenuto di commenti o messaggi, posizione, né l'identificatore pubblicitario del dispositivo (IDFA);</li>
+      <li>questi dati servono <strong>esclusivamente a contare quante volte le funzionalità vengono usate</strong> nel loro complesso (totali giornalieri e settimanali) e <strong>non vengono usati per pubblicità, profilazione o tracciamento</strong> tra app o siti di terze parti;</li>
+      <li>i conteggi sono conservati su un server sicuro e non vengono condivisi con terze parti.</li>
+    </ul>
+    <p>Questo sistema è separato e indipendente dalla pubblicità di Google AdMob descritta al punto 5: non utilizza l'IDFA e non richiede il consenso al tracciamento.</p>
 
-    <h2>8. Contatti</h2>
+    <h2>8. Abbonamento Mood-E Premium (acquisti in-app)</h2>
+    <p>Mood-E offre un abbonamento mensile facoltativo («Mood-E Premium») che rimuove la pubblicità e sblocca alcune funzionalità aggiuntive. L'acquisto avviene tramite gli <strong>acquisti in-app di Apple (App Store)</strong> ed è gestito con l'aiuto di <strong>RevenueCat</strong>, un servizio che si appoggia ad Apple per la convalida delle ricevute e la gestione dei piani:</p>
+    <ul>
+      <li><strong>Mood-E non gestisce né salva alcun dato di pagamento</strong> (carte, indirizzi di fatturazione, ecc.): il pagamento è elaborato interamente da Apple;</li>
+      <li>lo stato dell'abbonamento è <strong>verificato tramite il tuo Apple ID</strong>: non serve creare alcun account Mood-E, e con «Ripristina acquisti» puoi recuperare l'abbonamento su un nuovo dispositivo con lo stesso Apple ID;</li>
+      <li>RevenueCat riceve da Apple solo gli identificativi tecnici della transazione (ad esempio la ricevuta d'acquisto e un identificatore anonimo dell'installazione) necessari a confermare che l'abbonamento è attivo; il trattamento è regolato dalla <a href="https://www.revenuecat.com/privacy" target="_blank" rel="noopener">privacy policy di RevenueCat</a>;</li>
+      <li>gli abbonati non vedono alcuna pubblicità: in tal caso l'SDK di Google AdMob (punto 5) non viene avviato.</li>
+    </ul>
+
+    <h2>9. Sincronizzazione iCloud (solo abbonati Premium)</h2>
+    <p>Gli abbonati Premium possono sincronizzare i dati dell'app (diario emotivo, watchlist, film pianificati, ricordi cinematografici e sfide completate) tra i propri dispositivi Apple tramite <strong>iCloud/CloudKit</strong>, l'infrastruttura di Apple:</p>
+    <ul>
+      <li>i dati vengono salvati nel <strong>database privato iCloud del tuo account Apple</strong>, a cui solo tu hai accesso: Mood-E non può leggerli né accedervi da server propri;</li>
+      <li>la sicurezza e la conservazione seguono le <a href="https://www.apple.com/legal/privacy/" target="_blank" rel="noopener">policy di sicurezza e privacy di Apple</a> per iCloud;</li>
+      <li>gli utenti della versione gratuita mantengono i dati <strong>solo in locale sul dispositivo</strong>, senza alcuna sincronizzazione.</li>
+    </ul>
+
+    <h2>10. Nessun'altra condivisione con terze parti</h2>
+    <p>Al di fuori dei servizi sopra descritti (TMDB per i dati sui film, Google AdMob per la pubblicità, il server della community per la sezione «Consigli», le statistiche d'uso anonime del punto 7, Apple e RevenueCat per l'abbonamento Premium e iCloud per la sincronizzazione facoltativa), non raccogliamo, vendiamo né condividiamo i tuoi dati con terze parti a fini pubblicitari o di profilazione.</p>
+
+    <h2>11. Contatti</h2>
     <p>Per domande su questa informativa o per segnalazioni relative alla privacy, apri una richiesta sulla nostra pagina GitHub:</p>
     <p><a href="https://github.com/gourbergnine07-source/rork-mood-e/issues" target="_blank" rel="noopener">github.com/gourbergnine07-source/rork-mood-e/issues</a></p>
 
