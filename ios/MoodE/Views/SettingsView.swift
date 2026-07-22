@@ -192,6 +192,31 @@ struct SettingsView: View {
                 iCloudSyncRow
 
                 Button {
+                    Task { await ICloudSyncService.shared.syncIfPremium() }
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "icloud.and.arrow.up.fill")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(width: 29, height: 29)
+                            .background(Theme.tabSettings, in: .rect(cornerRadius: 7))
+
+                        Text(L("account.syncNow"))
+                            .font(.body)
+                            .foregroundStyle(Theme.ink)
+
+                        Spacer()
+
+                        if iCloudSync.status == .syncing {
+                            ProgressView()
+                        }
+                    }
+                    .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
+                .disabled(iCloudSync.status == .syncing)
+
+                Button {
                     if let url = URL(string: "https://apps.apple.com/account/subscriptions") {
                         openURL(url)
                     }
