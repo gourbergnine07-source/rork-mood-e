@@ -382,6 +382,7 @@
   "icloud.conflict.merge": "Fusionner (recommandé)",
   "icloud.conflict.msg": "%@ éléments ont été modifiés à la fois sur cet appareil et sur un autre. La fusion conserve la version la plus récente de chaque élément ; tu peux aussi garder uniquement les données de cet appareil (la copie iCloud sera remplacée).",
   "icloud.conflict.title": "Conflit de synchronisation",
+  "icloud.success.toast": "Synchronisé avec iCloud",
   "inbox.clear": "Tout effacer",
   "inbox.empty.msg": "Les notifications de Mood-E que tu reçois sont enregistrées ici, pour les relire quand tu veux.",
   "inbox.empty.title": "Aucune notification",

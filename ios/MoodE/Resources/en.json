@@ -382,6 +382,7 @@
   "icloud.conflict.merge": "Merge (recommended)",
   "icloud.conflict.msg": "%@ items were modified both on this device and on another one. Merging keeps the most recent version of each item; alternatively you can keep only this device's data (the iCloud copy will be replaced).",
   "icloud.conflict.title": "Sync conflict",
+  "icloud.success.toast": "Synced with iCloud",
   "inbox.clear": "Clear all",
   "inbox.empty.msg": "Mood-E notifications you receive are saved here, so you can read them again anytime.",
   "inbox.empty.title": "No notifications",

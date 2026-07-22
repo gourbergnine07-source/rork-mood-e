@@ -48,6 +48,10 @@ final class ICloudSyncService {
     private(set) var status: Status = .idle
     private(set) var lastSync: Date?
     private(set) var conflict: MergeConflict?
+    /// Incremented ONLY when a full sync completes successfully with no
+    /// merge conflict detected: the UI observes it to show a discreet
+    /// confirmation toast. Background debounced pushes don't touch it.
+    private(set) var successSignal: Int = 0
     private var pendingMerge: PendingMerge?
 
     private var diary: MoodDiary?
@@ -184,6 +188,7 @@ final class ICloudSyncService {
 
             try await pushRecord()
             markSynced()
+            successSignal += 1
         } catch {
             isApplyingRemote = false
             print("ICloudSync: sync failed: \(error.localizedDescription)")

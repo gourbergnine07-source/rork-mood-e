@@ -13,6 +13,8 @@ struct ContentView: View {
     @State private var deepLinkMovie: TMDBMovie?
     @State private var invitePrefill: InvitePrefill?
     @State private var showSyncConflict = false
+    @State private var showSyncSuccessToast = false
+    @State private var syncToastTask: Task<Void, Never>?
     @Environment(MovieLibrary.self) private var library
     @Environment(MoodDiary.self) private var diary
     @Environment(MoviePlanner.self) private var planner
@@ -74,12 +76,31 @@ struct ContentView: View {
                 }
                 .transition(.move(edge: .top).combined(with: .opacity))
                 .id(reward.id)
+            } else if showSyncSuccessToast {
+                SyncSuccessToastView()
+                    .transition(.move(edge: .top).combined(with: .opacity))
             }
         }
         .animation(
             .spring(response: 0.45, dampingFraction: 0.8),
             value: personalization.pendingRewards
         )
+        .animation(
+            .spring(response: 0.4, dampingFraction: 0.85),
+            value: showSyncSuccessToast
+        )
+        .sensoryFeedback(.impact(weight: .light), trigger: showSyncSuccessToast) { _, newValue in
+            newValue
+        }
+        .onChange(of: iCloudSync.successSignal) { _, _ in
+            showSyncSuccessToast = true
+            syncToastTask?.cancel()
+            syncToastTask = Task {
+                try? await Task.sleep(for: .seconds(2.4))
+                guard !Task.isCancelled else { return }
+                showSyncSuccessToast = false
+            }
+        }
         .task {
             evaluateUnlocks()
             // A conflict may have been detected before this view appeared.
