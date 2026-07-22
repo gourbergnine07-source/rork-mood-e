@@ -5,11 +5,11 @@
 
 import SwiftUI
 
-/// "In evidenza" strip at the top of Home: horizontally scrollable compact
-/// chips (icon + title only, self-sizing width, one thin row) for every
-/// active editorial collection, plus the spectator-quiz invitation as the
-/// last chip. Kept deliberately minimal so the whole Home fits on screen
-/// without scrolling.
+/// "In evidenza" strip at the top of Home: a single ultra-thin row of small
+/// gradient icon buttons (one per active editorial collection, plus the
+/// spectator quiz). Each icon carries a tiny caption underneath; the full
+/// title/subtitle appears in a context menu on long press. Designed so the
+/// whole row is barely taller than a line of text and Home never scrolls.
 struct FeaturedStripView: View {
     @Environment(QuizStore.self) private var quiz
     @Binding var showQuiz: Bool
@@ -34,12 +34,20 @@ struct FeaturedStripView: View {
                 .padding(.horizontal, 24)
 
                 ScrollView(.horizontal) {
-                    HStack(spacing: FeaturedCardMetrics.gutter) {
+                    HStack(alignment: .top, spacing: FeaturedCardMetrics.gutter) {
                         ForEach(collections) { collection in
                             NavigationLink(value: collection) {
                                 FeaturedCardView(collection: collection)
                             }
                             .buttonStyle(PressableCardStyle())
+                            // Long-press tooltip with the full title + subtitle.
+                            .contextMenu {
+                                Section("\(collection.title) — \(collection.subtitle)") {
+                                    NavigationLink(value: collection) {
+                                        Label(L("common.open"), systemImage: "arrow.right.circle")
+                                    }
+                                }
+                            }
                         }
 
                         if !quizBannerHidden {
@@ -56,133 +64,127 @@ struct FeaturedStripView: View {
         }
     }
 
-    /// Spectator-quiz invitation as a compact chip. Dismissible per session;
-    /// shows a lock (→ paywall) for Free users — the only visual difference.
+    /// Spectator-quiz invitation as a small icon button, identical in shape
+    /// to the collection icons; the lock badge (→ paywall) is the only
+    /// difference for Free users. Long press offers the hide action.
     private var quizCard: some View {
-        HStack(spacing: 8) {
-            Button {
-                if isPremium {
-                    showQuiz = true
-                } else {
-                    showPaywall = true
-                }
-            } label: {
-                HStack(spacing: 6) {
-                    Group {
-                        if EmojiSupport.isAvailable {
-                            Text("\u{1F3AD}")
-                                .font(.system(size: 11))
-                        } else {
-                            Image(systemName: "theatermasks.fill")
-                                .font(.system(size: 10, weight: .semibold))
-                                .foregroundStyle(.white)
-                        }
+        Button {
+            if isPremium {
+                showQuiz = true
+            } else {
+                showPaywall = true
+            }
+        } label: {
+            VStack(spacing: FeaturedCardMetrics.captionSpacing) {
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [Theme.primary, Theme.rose],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: FeaturedCardMetrics.iconSize, height: FeaturedCardMetrics.iconSize)
+                        .overlay(Circle().stroke(.white.opacity(0.18), lineWidth: 1))
+
+                    if EmojiSupport.isAvailable {
+                        Text("\u{1F3AD}")
+                            .font(.system(size: 13))
+                    } else {
+                        Image(systemName: "theatermasks.fill")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(.white)
                     }
-                    .frame(width: 20, height: 20)
-                    .background(.white.opacity(0.22), in: .circle)
 
-                    Text(L("quiz.banner.title"))
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(.white)
-                        .lineLimit(1)
-                        .fixedSize(horizontal: true, vertical: false)
-
-                    Image(systemName: isPremium ? "chevron.right" : "lock.fill")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(.white.opacity(0.85))
+                    if !isPremium {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 7, weight: .bold))
+                            .foregroundStyle(.white)
+                            .frame(width: 13, height: 13)
+                            .background(Theme.ink.opacity(0.85), in: .circle)
+                            .offset(x: FeaturedCardMetrics.iconSize / 2 - 4, y: FeaturedCardMetrics.iconSize / 2 - 4)
+                    }
                 }
-                .contentShape(.rect)
-            }
-            .buttonStyle(.plain)
-            .sensoryFeedback(.impact(weight: .light), trigger: showQuiz)
 
-            Button {
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                    quizBannerHidden = true
-                }
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 8, weight: .bold))
-                    .foregroundStyle(.white.opacity(0.9))
-                    .frame(width: 18, height: 18)
-                    .background(.white.opacity(0.18), in: .circle)
-                    .contentShape(.circle)
+                Text(L("quiz.banner.title"))
+                    .font(.system(size: FeaturedCardMetrics.captionSize, weight: .medium))
+                    .foregroundStyle(Theme.inkSoft)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .frame(width: FeaturedCardMetrics.captionWidth)
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(L("common.close"))
+            .contentShape(.rect)
         }
-        .padding(.horizontal, 10)
-        .frame(height: FeaturedCardMetrics.height)
-        .background(
-            LinearGradient(
-                colors: [Theme.primary, Theme.rose],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            ),
-            in: .capsule
-        )
-        .overlay(
-            Capsule()
-                .stroke(.white.opacity(0.18), lineWidth: 1)
-        )
-        .shadow(color: Theme.primary.opacity(0.12), radius: 3, y: 1)
+        .buttonStyle(PressableCardStyle())
+        .sensoryFeedback(.impact(weight: .light), trigger: showQuiz)
+        // Long-press tooltip: full copy + hide action (replaces the old ✕).
+        .contextMenu {
+            Section("\(L("quiz.banner.title")) — \(isPremium ? (quiz.profile == nil ? L("quiz.banner.sub") : L("quiz.banner.retake")) : L("premium.locked"))") {
+                Button {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                        quizBannerHidden = true
+                    }
+                } label: {
+                    Label(L("common.close"), systemImage: "xmark")
+                }
+            }
+        }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(L("quiz.banner.title")). \(isPremium ? (quiz.profile == nil ? L("quiz.banner.sub") : L("quiz.banner.retake")) : L("premium.locked"))")
     }
 }
 
-/// Shared sizing for every chip in the strip: one thin fixed-height row
-/// with a consistent gutter; width is self-sizing (title never truncated).
+/// Shared sizing for the featured strip: small icon circles with a tiny
+/// caption underneath, so the whole row stays about as tall as one line
+/// of text plus a micro-label.
 enum FeaturedCardMetrics {
-    static let height: CGFloat = 34
-    static let gutter: CGFloat = 8
+    static let iconSize: CGFloat = 34
+    static let captionSize: CGFloat = 8
+    static let captionSpacing: CGFloat = 2
+    static let captionWidth: CGFloat = 62
+    static let gutter: CGFloat = 10
 }
 
-/// Compact gradient chip of the featured strip: icon + full title only,
-/// so the whole strip stays as slim as a single row of text.
+/// Small gradient icon button of the featured strip: circle + micro-caption.
+/// The full title/subtitle lives in the long-press context menu applied by
+/// the parent, keeping the row as slim as possible.
 struct FeaturedCardView: View {
     let collection: FeaturedCollection
 
     var body: some View {
-        HStack(spacing: 6) {
-            Group {
+        VStack(spacing: FeaturedCardMetrics.captionSpacing) {
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: collection.gradient,
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: FeaturedCardMetrics.iconSize, height: FeaturedCardMetrics.iconSize)
+                    .overlay(Circle().stroke(.white.opacity(0.18), lineWidth: 1))
+
                 if EmojiSupport.isAvailable {
                     Text(collection.emoji)
-                        .font(.system(size: 11))
+                        .font(.system(size: 13))
                 } else {
                     Image(systemName: collection.icon)
-                        .font(.system(size: 10, weight: .semibold))
+                        .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(.white)
                 }
             }
-            .frame(width: 20, height: 20)
-            .background(.white.opacity(0.22), in: .circle)
+            .shadow(color: (collection.gradient.first ?? .black).opacity(0.18), radius: 2, y: 1)
 
             Text(collection.title)
-                .font(.caption.weight(.bold))
-                .foregroundStyle(.white)
+                .font(.system(size: FeaturedCardMetrics.captionSize, weight: .medium))
+                .foregroundStyle(Theme.inkSoft)
                 .lineLimit(1)
-                .fixedSize(horizontal: true, vertical: false)
-
-            Image(systemName: "chevron.right")
-                .font(.system(size: 9, weight: .bold))
-                .foregroundStyle(.white.opacity(0.7))
+                .minimumScaleFactor(0.7)
+                .frame(width: FeaturedCardMetrics.captionWidth)
         }
-        .padding(.horizontal, 10)
-        .frame(height: FeaturedCardMetrics.height)
-        .background(
-            LinearGradient(
-                colors: collection.gradient,
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            ),
-            in: .capsule
-        )
-        .overlay(
-            Capsule()
-                .stroke(.white.opacity(0.18), lineWidth: 1)
-        )
-        .shadow(color: (collection.gradient.first ?? .black).opacity(0.12), radius: 3, y: 1)
+        .contentShape(.rect)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(collection.title). \(collection.subtitle)")
     }
