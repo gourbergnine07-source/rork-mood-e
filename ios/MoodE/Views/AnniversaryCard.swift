@@ -28,11 +28,11 @@ struct AnniversaryCard: View {
             NavigationLink(value: HomeRoute.diaryDay(checkIn.date)) {
                 HStack(spacing: 10) {
                     Text(mood.emoji)
-                        .font(.system(size: 26))
-                        .frame(width: 40, height: 40)
+                        .font(.system(size: 16))
+                        .frame(width: 28, height: 28)
                         .background(mood.tint.opacity(0.15), in: .circle)
 
-                    VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: 1) {
                         HStack(spacing: 5) {
                             Image(systemName: "clock.arrow.circlepath")
                                 .font(.system(size: 10, weight: .semibold))
@@ -42,7 +42,7 @@ struct AnniversaryCard: View {
                         .foregroundStyle(Theme.amber)
 
                         Text(message(checkIn: checkIn, mood: mood))
-                            .font(.caption)
+                            .font(.caption2)
                             .foregroundStyle(Theme.ink)
                             .lineLimit(2)
                     }
@@ -73,11 +73,11 @@ struct AnniversaryCard: View {
             .buttonStyle(.plain)
             .accessibilityLabel(L("common.close"))
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(Theme.amber.opacity(0.10), in: .rect(cornerRadius: 16))
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(Theme.amber.opacity(0.10), in: .rect(cornerRadius: 13))
         .overlay(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: 13)
                 .stroke(Theme.amber.opacity(0.30), lineWidth: 1)
         )
     }

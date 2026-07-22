@@ -75,14 +75,14 @@ struct FeaturedStripView: View {
                     Group {
                         if EmojiSupport.isAvailable {
                             Text("\u{1F3AD}")
-                                .font(.system(size: 15))
+                                .font(.system(size: 13))
                         } else {
                             Image(systemName: "theatermasks.fill")
-                                .font(.system(size: 13, weight: .semibold))
+                                .font(.system(size: 11, weight: .semibold))
                                 .foregroundStyle(.white)
                         }
                     }
-                    .frame(width: 30, height: 30)
+                    .frame(width: 24, height: 24)
                     .background(.white.opacity(0.22), in: .circle)
 
                     VStack(alignment: .leading, spacing: 1) {
@@ -124,8 +124,8 @@ struct FeaturedStripView: View {
             .buttonStyle(.plain)
             .accessibilityLabel(L("common.close"))
         }
-        .padding(.horizontal, 12)
-        .frame(height: 56)
+        .padding(.horizontal, 10)
+        .frame(height: 44)
         .frame(maxWidth: .infinity)
         .background(
             LinearGradient(
@@ -133,13 +133,13 @@ struct FeaturedStripView: View {
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             ),
-            in: .rect(cornerRadius: 16)
+            in: .rect(cornerRadius: 13)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: 13)
                 .stroke(.white.opacity(0.18), lineWidth: 1)
         )
-        .shadow(color: Theme.primary.opacity(0.18), radius: 5, y: 2)
+        .shadow(color: Theme.primary.opacity(0.12), radius: 3, y: 1)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(L("quiz.banner.title")). \(isPremium ? (quiz.profile == nil ? L("quiz.banner.sub") : L("quiz.banner.retake")) : L("premium.locked"))")
     }
@@ -154,14 +154,14 @@ struct FeaturedCardView: View {
             Group {
                 if EmojiSupport.isAvailable {
                     Text(collection.emoji)
-                        .font(.system(size: 15))
+                        .font(.system(size: 13))
                 } else {
                     Image(systemName: collection.icon)
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(.white)
                 }
             }
-            .frame(width: 30, height: 30)
+            .frame(width: 24, height: 24)
             .background(.white.opacity(0.22), in: .circle)
 
             VStack(alignment: .leading, spacing: 1) {
@@ -181,8 +181,8 @@ struct FeaturedCardView: View {
                 .font(.system(size: 11, weight: .bold))
                 .foregroundStyle(.white.opacity(0.7))
         }
-        .padding(.horizontal, 12)
-        .frame(height: 56)
+        .padding(.horizontal, 10)
+        .frame(height: 44)
         .frame(maxWidth: .infinity)
         .background(
             LinearGradient(
@@ -190,13 +190,13 @@ struct FeaturedCardView: View {
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             ),
-            in: .rect(cornerRadius: 16)
+            in: .rect(cornerRadius: 13)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: 13)
                 .stroke(.white.opacity(0.18), lineWidth: 1)
         )
-        .shadow(color: (collection.gradient.first ?? .black).opacity(0.18), radius: 5, y: 2)
+        .shadow(color: (collection.gradient.first ?? .black).opacity(0.12), radius: 3, y: 1)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(collection.title). \(collection.subtitle)")
     }

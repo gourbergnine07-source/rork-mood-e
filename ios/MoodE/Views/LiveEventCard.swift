@@ -22,61 +22,62 @@ struct LiveEventCard: View {
 
     var body: some View {
         NavigationLink(value: event.collection) {
-            HStack(spacing: 12) {
+            HStack(spacing: 10) {
                 Group {
                     if EmojiSupport.isAvailable {
                         Text(event.emoji)
-                            .font(.system(size: 26))
+                            .font(.system(size: 14))
                     } else {
                         Image(systemName: event.icon)
-                            .font(.system(size: 20, weight: .semibold))
+                            .font(.system(size: 12, weight: .semibold))
                             .foregroundStyle(.white)
                     }
                 }
-                .frame(width: 44, height: 44)
+                .frame(width: 26, height: 26)
                 .background(.white.opacity(0.20), in: .circle)
 
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 1) {
                     HStack(spacing: 6) {
                         Text(event.title)
-                            .font(.subheadline.weight(.bold))
+                            .font(.footnote.weight(.bold))
                             .foregroundStyle(.white)
                             .lineLimit(1)
                         Text(countdownText)
-                            .font(.caption.weight(.bold))
+                            .font(.caption2.weight(.bold))
                             .foregroundStyle(.white)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
                             .background(.white.opacity(0.24), in: .capsule)
                             .layoutPriority(1)
                     }
                     Text(event.detail)
-                        .font(.caption)
+                        .font(.caption2)
                         .foregroundStyle(.white.opacity(0.85))
-                        .lineLimit(2)
+                        .lineLimit(1)
                         .multilineTextAlignment(.leading)
                 }
 
                 Spacer(minLength: 0)
 
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .bold))
+                    .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(.white.opacity(0.75))
             }
-            .padding(14)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
             .background(
                 LinearGradient(
                     colors: event.gradient,
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 ),
-                in: .rect(cornerRadius: 18)
+                in: .rect(cornerRadius: 13)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 18)
+                RoundedRectangle(cornerRadius: 13)
                     .stroke(.white.opacity(0.16), lineWidth: 1)
             )
-            .shadow(color: (event.gradient.first ?? .black).opacity(0.25), radius: 8, y: 4)
+            .shadow(color: (event.gradient.first ?? .black).opacity(0.15), radius: 4, y: 2)
         }
         .buttonStyle(PressableCardStyle())
         .accessibilityLabel("\(event.title), \(countdownText). \(event.detail)")
