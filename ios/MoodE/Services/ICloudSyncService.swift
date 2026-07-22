@@ -24,10 +24,31 @@ final class ICloudSyncService {
         /// No internet connection: sync will retry automatically later.
         case offline
         case unavailable
+        /// A merge conflict was detected and awaits the user's decision.
+        case conflict
+    }
+
+    /// Detected when the same items were edited on two devices: the merge
+    /// is held back until the user confirms via the in-app alert.
+    struct MergeConflict: Equatable {
+        let itemCount: Int
+    }
+
+    /// Merged data computed for a conflicting sync, kept aside until the
+    /// user chooses how to proceed.
+    private struct PendingMerge {
+        let checkIns: [MoodCheckIn]
+        let entries: [LibraryEntry]
+        let scheduled: [ScheduledMovie]
+        let memories: [MovieMemory]
+        let challenges: [String]
+        let remoteUpdated: Double?
     }
 
     private(set) var status: Status = .idle
     private(set) var lastSync: Date?
+    private(set) var conflict: MergeConflict?
+    private var pendingMerge: PendingMerge?
 
     private var diary: MoodDiary?
     private var library: MovieLibrary?
@@ -72,7 +93,7 @@ final class ICloudSyncService {
 
     /// Schedules a debounced upload after any local mutation, Premium only.
     func noteLocalChange() {
-        guard PremiumStore.isPremiumCached, !isApplyingRemote else { return }
+        guard PremiumStore.isPremiumCached, !isApplyingRemote, conflict == nil else { return }
         guard Self.hasICloudAccount else {
             status = .unavailable
             return
@@ -92,7 +113,7 @@ final class ICloudSyncService {
     /// the merged state back. No-op for free users.
     func syncIfPremium() async {
         guard PremiumStore.isPremiumCached else { return }
-        guard status != .syncing else { return }
+        guard status != .syncing, conflict == nil else { return }
         guard let diary, let library, let planner else { return }
         guard Self.hasICloudAccount else {
             status = .unavailable
@@ -127,6 +148,29 @@ final class ICloudSyncService {
                 let mergedScheduled = CloudSyncService.mergeById(local: planner.scheduled, remote: remoteScheduled)
                 let mergedMemories = CloudSyncService.mergeById(local: planner.memories, remote: remoteMemories)
 
+                // Conflict gate: when the same items were modified on both
+                // devices, hold the merge and ask the user before anything
+                // gets overwritten.
+                let conflictCount = Self.conflictCount(local: diary.checkIns, remote: remoteCheckIns)
+                    + Self.conflictCount(local: library.entries, remote: remoteEntries)
+                    + Self.conflictCount(local: planner.scheduled, remote: remoteScheduled)
+                    + Self.conflictCount(local: planner.memories, remote: remoteMemories)
+
+                if conflictCount > 0 {
+                    pendingMerge = PendingMerge(
+                        checkIns: mergedCheckIns,
+                        entries: mergedEntries,
+                        scheduled: mergedScheduled,
+                        memories: mergedMemories,
+                        challenges: remoteChallenges,
+                        remoteUpdated: remoteUpdated
+                    )
+                    conflict = MergeConflict(itemCount: conflictCount)
+                    status = .conflict
+                    print("ICloudSync: merge conflict on \(conflictCount) item(s), waiting for user decision")
+                    return
+                }
+
                 isApplyingRemote = true
                 diary.replaceAll(mergedCheckIns)
                 library.replaceAll(mergedEntries)
@@ -147,10 +191,62 @@ final class ICloudSyncService {
         }
     }
 
+    // MARK: - Conflict resolution
+
+    /// Applies the user's decision on a detected merge conflict.
+    /// - `applyMerge == true`: applies the merged data locally (the most
+    ///   recent version of each item wins) and uploads the result.
+    /// - `applyMerge == false`: keeps this device's data untouched and
+    ///   replaces the cloud copy with it on the next upload.
+    func resolveConflict(applyMerge: Bool) async {
+        guard let pending = pendingMerge else {
+            conflict = nil
+            if status == .conflict { status = .idle }
+            return
+        }
+        pendingMerge = nil
+        conflict = nil
+        status = .idle
+
+        if applyMerge, let diary, let library, let planner {
+            isApplyingRemote = true
+            diary.replaceAll(pending.checkIns)
+            library.replaceAll(pending.entries)
+            planner.replaceAll(scheduled: pending.scheduled, memories: pending.memories)
+            for month in pending.challenges {
+                ChallengeStore.shared.markCompleted(month)
+            }
+            isApplyingRemote = false
+        } else {
+            // Force the next upload to send every section, so this device's
+            // data fully replaces the cloud copy.
+            UserDefaults.standard.removeObject(forKey: Self.pushedHashesKey)
+        }
+        UserDefaults.standard.set(pending.remoteUpdated ?? Date().timeIntervalSince1970, forKey: Self.remoteUpdatedKey)
+        await push()
+    }
+
+    /// Number of items present on both sides (same identity) whose content
+    /// differs — i.e. items the merge would overwrite on one of the devices.
+    nonisolated private static func conflictCount<T: Identifiable & Encodable>(local: [T], remote: [T]) -> Int where T.ID: Hashable {
+        guard !local.isEmpty, !remote.isEmpty else { return 0 }
+        let encoder = JSONEncoder()
+        var remoteById: [T.ID: T] = [:]
+        for item in remote { remoteById[item.id] = item }
+        var count = 0
+        for item in local {
+            guard let other = remoteById[item.id] else { continue }
+            if (try? encoder.encode(item)) != (try? encoder.encode(other)) {
+                count += 1
+            }
+        }
+        return count
+    }
+
     // MARK: - Push only (after local mutations)
 
     private func push() async {
-        guard PremiumStore.isPremiumCached, status != .syncing else { return }
+        guard PremiumStore.isPremiumCached, status != .syncing, conflict == nil else { return }
         guard Self.hasICloudAccount else {
             status = .unavailable
             return

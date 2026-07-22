@@ -294,6 +294,7 @@ struct SettingsView: View {
         case .error: return "exclamationmark.icloud.fill"
         case .offline: return "wifi.slash"
         case .unavailable: return "icloud.slash.fill"
+        case .conflict: return "exclamationmark.triangle.fill"
         default: return "icloud.fill"
         }
     }
@@ -301,7 +302,7 @@ struct SettingsView: View {
     private var iCloudSyncIconColor: Color {
         switch iCloudSync.status {
         case .error: return Theme.rose
-        case .offline, .unavailable: return Theme.amber
+        case .offline, .unavailable, .conflict: return Theme.amber
         default: return Theme.tabSettings
         }
     }
@@ -346,7 +347,7 @@ struct SettingsView: View {
     private var iCloudSyncLabelColor: Color {
         switch iCloudSync.status {
         case .error: return Theme.rose
-        case .offline: return Theme.amber
+        case .offline, .conflict: return Theme.amber
         default: return Theme.inkSoft
         }
     }
@@ -355,6 +356,7 @@ struct SettingsView: View {
         switch iCloudSync.status {
         case .unavailable: return L("premium.icloud.unavailable")
         case .offline: return L("premium.icloud.offline")
+        case .conflict: return L("premium.icloud.conflict")
         case .error: return L("account.error")
         default: break
         }

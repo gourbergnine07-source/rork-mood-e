@@ -12,11 +12,14 @@ struct ContentView: View {
     @State private var selectedTab: Int = 0
     @State private var deepLinkMovie: TMDBMovie?
     @State private var invitePrefill: InvitePrefill?
+    @State private var showSyncConflict = false
     @Environment(MovieLibrary.self) private var library
     @Environment(MoodDiary.self) private var diary
     @Environment(MoviePlanner.self) private var planner
     @Environment(PersonalizationStore.self) private var personalization
     @Environment(QuizStore.self) private var quiz
+
+    private var iCloudSync: ICloudSyncService { .shared }
 
     private var selectedTint: Color {
         switch selectedTab {
@@ -79,10 +82,25 @@ struct ContentView: View {
         )
         .task {
             evaluateUnlocks()
+            // A conflict may have been detected before this view appeared.
+            showSyncConflict = iCloudSync.conflict != nil
             // Siri intent fired on a cold start: launch the ready proposal.
             if let mood = IntentRelay.consumePendingMood() {
                 launchQuickPick(mood: mood)
             }
+        }
+        .onChange(of: iCloudSync.conflict) { _, newValue in
+            showSyncConflict = newValue != nil
+        }
+        .alert(L("icloud.conflict.title"), isPresented: $showSyncConflict) {
+            Button(L("icloud.conflict.merge")) {
+                Task { await ICloudSyncService.shared.resolveConflict(applyMerge: true) }
+            }
+            Button(L("icloud.conflict.keepLocal"), role: .destructive) {
+                Task { await ICloudSyncService.shared.resolveConflict(applyMerge: false) }
+            }
+        } message: {
+            Text(LF("icloud.conflict.msg", String(iCloudSync.conflict?.itemCount ?? 0)))
         }
         .onChange(of: diary.checkIns.count) { _, _ in evaluateUnlocks() }
         .onChange(of: library.lifetimeWatchedCount) { _, _ in evaluateUnlocks() }
