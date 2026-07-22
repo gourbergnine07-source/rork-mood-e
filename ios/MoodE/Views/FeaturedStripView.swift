@@ -17,11 +17,12 @@ struct FeaturedStripView: View {
     @Binding var quizBannerHidden: Bool
 
     private let collections: [FeaturedCollection] = FeaturedCalendar.activeCollections()
+    private let liveEvent: (event: LiveEvent, days: Int)? = LiveEventCalendar.upcoming().first
 
     private var isPremium: Bool { PremiumStore.shared.isPremium }
 
     var body: some View {
-        if !collections.isEmpty || !quizBannerHidden {
+        if !collections.isEmpty || !quizBannerHidden || liveEvent != nil {
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 6) {
                     Image(systemName: "sparkles")
@@ -35,6 +36,10 @@ struct FeaturedStripView: View {
 
                 ScrollView(.horizontal) {
                     HStack(alignment: .top, spacing: FeaturedCardMetrics.gutter) {
+                        if let live = liveEvent {
+                            liveEventChip(live.event, days: live.days)
+                        }
+
                         ForEach(collections) { collection in
                             NavigationLink(value: collection) {
                                 FeaturedCardView(collection: collection)
@@ -61,6 +66,78 @@ struct FeaturedStripView: View {
                 .scrollIndicators(.hidden)
                 .contentMargins(.horizontal, 24, for: .scrollContent)
             }
+        }
+    }
+
+    /// Upcoming live cinema event (e.g. Locarno Film Festival) as a small
+    /// icon button matching the rest of the strip; the countdown sits in a
+    /// tiny badge on the icon and the full copy lives in the long-press menu.
+    private func liveEventChip(_ event: LiveEvent, days: Int) -> some View {
+        NavigationLink(value: event.collection) {
+            VStack(spacing: FeaturedCardMetrics.captionSpacing) {
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: event.gradient,
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: FeaturedCardMetrics.iconSize, height: FeaturedCardMetrics.iconSize)
+                        .overlay(Circle().stroke(.white.opacity(0.18), lineWidth: 1))
+
+                    if EmojiSupport.isAvailable {
+                        Text(event.emoji)
+                            .font(.system(size: 13))
+                    } else {
+                        Image(systemName: event.icon)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(.white)
+                    }
+
+                    // Tiny countdown badge (days left) on the icon corner.
+                    if days > 0 {
+                        Text("\(days)")
+                            .font(.system(size: 8, weight: .bold))
+                            .foregroundStyle(.white)
+                            .frame(minWidth: 13)
+                            .frame(height: 13)
+                            .background(Theme.ink.opacity(0.85), in: .capsule)
+                            .offset(x: FeaturedCardMetrics.iconSize / 2 - 4, y: -(FeaturedCardMetrics.iconSize / 2 - 4))
+                    }
+                }
+                .shadow(color: (event.gradient.first ?? .black).opacity(0.18), radius: 2, y: 1)
+
+                Text(event.title)
+                    .font(.system(size: FeaturedCardMetrics.captionSize, weight: .semibold))
+                    .foregroundStyle(Theme.ink)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+                    .minimumScaleFactor(0.85)
+                    .frame(width: FeaturedCardMetrics.captionWidth)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .contentShape(.rect)
+        }
+        .buttonStyle(PressableCardStyle())
+        // Long-press tooltip: full title, countdown and detail.
+        .contextMenu {
+            Section("\(event.title) — \(countdownText(days: days)). \(event.detail)") {
+                NavigationLink(value: event.collection) {
+                    Label(L("common.open"), systemImage: "arrow.right.circle")
+                }
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(event.title), \(countdownText(days: days)). \(event.detail)")
+    }
+
+    private func countdownText(days: Int) -> String {
+        switch days {
+        case 0: return L("event.today")
+        case 1: return L("event.tomorrow")
+        default: return LF("event.inDays", days)
         }
     }
 

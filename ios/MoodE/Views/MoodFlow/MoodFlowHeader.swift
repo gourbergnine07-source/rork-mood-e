@@ -7,8 +7,8 @@
 
 import SwiftUI
 
-/// Step-1 header: featured carousel (including the quiz card) plus the
-/// occasional anniversary and live-event cards. Kept intentionally short so
+/// Step-1 header: featured icon strip (collections, live events and the
+/// quiz) plus the occasional anniversary card. Kept intentionally short so
 /// the emotion grid stays visible without scrolling.
 struct MoodFlowHeader: View {
     @Binding var showQuiz: Bool
@@ -25,11 +25,6 @@ struct MoodFlowHeader: View {
 
             AnniversaryCard()
                 .padding(.horizontal, 24)
-
-            if let upcoming = LiveEventCalendar.upcoming().first {
-                LiveEventCard(event: upcoming.event, days: upcoming.days)
-                    .padding(.horizontal, 24)
-            }
         }
     }
 }
