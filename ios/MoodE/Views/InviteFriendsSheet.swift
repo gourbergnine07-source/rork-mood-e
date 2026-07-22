@@ -20,11 +20,7 @@ struct InviteFriendsSheet: View {
     private let service = FriendStatsService.shared
 
     private var displayName: String {
-        if let name = auth.user?.name, !name.isEmpty { return name }
-        if let email = auth.user?.email, let prefix = email.split(separator: "@").first {
-            return String(prefix)
-        }
-        return "Cinefilo"
+        ProfileStore.shared.resolvedName(auth: auth)
     }
 
     var body: some View {

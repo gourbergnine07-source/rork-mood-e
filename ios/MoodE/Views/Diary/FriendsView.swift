@@ -55,11 +55,7 @@ struct FriendsView: View {
     }
 
     private var myDisplayName: String {
-        if let name = auth.user?.name, !name.isEmpty { return name }
-        if let email = auth.user?.email, let prefix = email.split(separator: "@").first {
-            return String(prefix)
-        }
-        return "Cinefilo"
+        ProfileStore.shared.resolvedName(auth: auth)
     }
 
     var body: some View {
@@ -479,7 +475,7 @@ private struct FriendCompareSheet: View {
     private var header: some View {
         VStack(spacing: 10) {
             HStack(spacing: 14) {
-                nameBubble(L("friends.compare.you"), tint: Theme.primary)
+                nameBubble(L("friends.compare.you"), tint: Theme.primary, avatar: ProfileStore.shared.avatar)
                 Text(L("friends.compare.vs"))
                     .font(.title3.weight(.black))
                     .foregroundStyle(Theme.amber)
@@ -505,10 +501,10 @@ private struct FriendCompareSheet: View {
         return L("friends.compare.tie")
     }
 
-    private func nameBubble(_ name: String, tint: Color) -> some View {
+    private func nameBubble(_ name: String, tint: Color, avatar: String? = nil) -> some View {
         VStack(spacing: 6) {
-            Text(String(name.prefix(1)).uppercased())
-                .font(.title3.weight(.black))
+            Text(avatar ?? String(name.prefix(1)).uppercased())
+                .font(avatar != nil ? .title2 : .title3.weight(.black))
                 .foregroundStyle(tint)
                 .frame(width: 48, height: 48)
                 .background(tint.opacity(0.14), in: .circle)

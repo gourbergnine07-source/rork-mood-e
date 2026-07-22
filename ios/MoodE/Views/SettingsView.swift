@@ -32,6 +32,11 @@ enum AppLinks {
     }
 }
 
+/// Route to the profile editor (display name + avatar).
+enum ProfileRoute: Hashable {
+    case editor
+}
+
 /// Impostazioni tab: app info, privacy, support and legal sections
 /// in a classic iOS grouped list.
 struct SettingsView: View {
@@ -65,6 +70,7 @@ struct SettingsView: View {
         NavigationStack {
             List {
                 appInfoSection
+                profileSection
                 premiumSection
                 accountSection
                 journeySection
@@ -97,6 +103,9 @@ struct SettingsView: View {
                 case .stats: MyStatsView()
                 case .friends: FriendsView()
                 }
+            }
+            .navigationDestination(for: ProfileRoute.self) { _ in
+                ProfileEditorView()
             }
             .sheet(isPresented: $showAccountSheet) {
                 AccountSheetView()
@@ -562,6 +571,34 @@ struct SettingsView: View {
                 }
             }
             .padding(.vertical, 6)
+        }
+        .listRowBackground(Theme.card)
+    }
+
+    // MARK: - Profilo
+
+    private var profileSection: some View {
+        Section {
+            NavigationLink(value: ProfileRoute.editor) {
+                HStack(spacing: 12) {
+                    Text(ProfileStore.shared.avatar)
+                        .font(.system(size: 20))
+                        .frame(width: 36, height: 36)
+                        .background(Theme.primary.opacity(0.12), in: .circle)
+                        .accessibilityHidden(true)
+
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(ProfileStore.shared.resolvedName(auth: auth))
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(Theme.ink)
+                        Text(L("profile.row.title"))
+                            .font(.caption)
+                            .foregroundStyle(Theme.inkSoft)
+                    }
+                }
+            }
+        } header: {
+            Text(L("profile.header"))
         }
         .listRowBackground(Theme.card)
     }
