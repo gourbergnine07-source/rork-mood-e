@@ -5,10 +5,11 @@
 
 import SwiftUI
 
-/// "In evidenza" carousel at the top of Home: horizontally scrollable compact
-/// cards with a fixed width (~78% of screen, so the next card peeks in as a
-/// scroll hint) and a fixed shared height for every active editorial
-/// collection, plus the spectator-quiz invitation as the last card.
+/// "In evidenza" strip at the top of Home: horizontally scrollable compact
+/// chips (icon + title only, self-sizing width, one thin row) for every
+/// active editorial collection, plus the spectator-quiz invitation as the
+/// last chip. Kept deliberately minimal so the whole Home fits on screen
+/// without scrolling.
 struct FeaturedStripView: View {
     @Environment(QuizStore.self) private var quiz
     @Binding var showQuiz: Bool
@@ -39,16 +40,10 @@ struct FeaturedStripView: View {
                                 FeaturedCardView(collection: collection)
                             }
                             .buttonStyle(PressableCardStyle())
-                            .containerRelativeFrame(.horizontal) { length, _ in
-                                length * FeaturedCardMetrics.widthRatio
-                            }
                         }
 
                         if !quizBannerHidden {
                             quizCard
-                                .containerRelativeFrame(.horizontal) { length, _ in
-                                    length * FeaturedCardMetrics.widthRatio
-                                }
                                 .transition(.opacity)
                         }
                     }
@@ -61,10 +56,10 @@ struct FeaturedStripView: View {
         }
     }
 
-    /// Spectator-quiz invitation as a carousel card. Dismissible per session;
-    /// shows a lock (→ paywall) for Free users, retake copy once completed.
+    /// Spectator-quiz invitation as a compact chip. Dismissible per session;
+    /// shows a lock (→ paywall) for Free users — the only visual difference.
     private var quizCard: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
             Button {
                 if isPremium {
                     showQuiz = true
@@ -72,39 +67,28 @@ struct FeaturedStripView: View {
                     showPaywall = true
                 }
             } label: {
-                HStack(spacing: 10) {
+                HStack(spacing: 6) {
                     Group {
                         if EmojiSupport.isAvailable {
                             Text("\u{1F3AD}")
-                                .font(.system(size: 13))
+                                .font(.system(size: 11))
                         } else {
                             Image(systemName: "theatermasks.fill")
-                                .font(.system(size: 11, weight: .semibold))
+                                .font(.system(size: 10, weight: .semibold))
                                 .foregroundStyle(.white)
                         }
                     }
-                    .frame(width: 24, height: 24)
+                    .frame(width: 20, height: 20)
                     .background(.white.opacity(0.22), in: .circle)
 
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(L("quiz.banner.title"))
-                            .font(.footnote.weight(.bold))
-                            .foregroundStyle(.white)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
-                        WordTailText(
-                            isPremium
-                                ? (quiz.profile == nil ? L("quiz.banner.sub") : L("quiz.banner.retake"))
-                                : L("premium.locked"),
-                            textStyle: .caption2
-                        )
-                        .foregroundStyle(.white.opacity(0.85))
-                    }
-
-                    Spacer(minLength: 4)
+                    Text(L("quiz.banner.title"))
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
 
                     Image(systemName: isPremium ? "chevron.right" : "lock.fill")
-                        .font(.system(size: 11, weight: .bold))
+                        .font(.system(size: 9, weight: .bold))
                         .foregroundStyle(.white.opacity(0.85))
                 }
                 .contentShape(.rect)
@@ -118,9 +102,9 @@ struct FeaturedStripView: View {
                 }
             } label: {
                 Image(systemName: "xmark")
-                    .font(.system(size: 9, weight: .bold))
+                    .font(.system(size: 8, weight: .bold))
                     .foregroundStyle(.white.opacity(0.9))
-                    .frame(width: 22, height: 22)
+                    .frame(width: 18, height: 18)
                     .background(.white.opacity(0.18), in: .circle)
                     .contentShape(.circle)
             }
@@ -129,17 +113,16 @@ struct FeaturedStripView: View {
         }
         .padding(.horizontal, 10)
         .frame(height: FeaturedCardMetrics.height)
-        .frame(maxWidth: .infinity)
         .background(
             LinearGradient(
                 colors: [Theme.primary, Theme.rose],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             ),
-            in: .rect(cornerRadius: 13)
+            in: .capsule
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 13)
+            Capsule()
                 .stroke(.white.opacity(0.18), lineWidth: 1)
         )
         .shadow(color: Theme.primary.opacity(0.12), radius: 3, y: 1)
@@ -148,106 +131,55 @@ struct FeaturedStripView: View {
     }
 }
 
-/// Shared sizing for every carousel card so they are all pixel-identical:
-/// fixed width ratio (next card peeks in ~15%), fixed height, fixed gutter.
+/// Shared sizing for every chip in the strip: one thin fixed-height row
+/// with a consistent gutter; width is self-sizing (title never truncated).
 enum FeaturedCardMetrics {
-    static let widthRatio: CGFloat = 0.78
-    static let height: CGFloat = 48
-    static let gutter: CGFloat = 12
+    static let height: CGFloat = 34
+    static let gutter: CGFloat = 8
 }
 
-/// Single-line text that truncates with an ellipsis ONLY at whole-word
-/// boundaries (never mid-word), based on the actual available width.
-struct WordTailText: View {
-    let text: String
-    let font: UIFont
-
-    @State private var availableWidth: CGFloat = 0
-
-    init(_ text: String, textStyle: UIFont.TextStyle) {
-        self.text = text
-        self.font = UIFont.preferredFont(forTextStyle: textStyle)
-    }
-
-    var body: some View {
-        Text(displayText)
-            .font(Font(font))
-            .lineLimit(1)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .onGeometryChange(for: CGFloat.self) { proxy in
-                proxy.size.width
-            } action: { newWidth in
-                availableWidth = newWidth
-            }
-    }
-
-    private var displayText: String {
-        guard availableWidth > 0 else { return text }
-        if width(of: text) <= availableWidth { return text }
-
-        let words = text.split(separator: " ")
-        var kept = words.count - 1
-        while kept > 0 {
-            let candidate = words[0..<kept].joined(separator: " ") + "\u{2026}"
-            if width(of: candidate) <= availableWidth { return candidate }
-            kept -= 1
-        }
-        return "\u{2026}"
-    }
-
-    private func width(of string: String) -> CGFloat {
-        (string as NSString).size(withAttributes: [.font: font]).width.rounded(.up)
-    }
-}
-
-/// Compact gradient card of the featured carousel.
+/// Compact gradient chip of the featured strip: icon + full title only,
+/// so the whole strip stays as slim as a single row of text.
 struct FeaturedCardView: View {
     let collection: FeaturedCollection
 
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 6) {
             Group {
                 if EmojiSupport.isAvailable {
                     Text(collection.emoji)
-                        .font(.system(size: 13))
+                        .font(.system(size: 11))
                 } else {
                     Image(systemName: collection.icon)
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(.white)
                 }
             }
-            .frame(width: 24, height: 24)
+            .frame(width: 20, height: 20)
             .background(.white.opacity(0.22), in: .circle)
 
-            VStack(alignment: .leading, spacing: 1) {
-                Text(collection.title)
-                    .font(.footnote.weight(.bold))
-                    .foregroundStyle(.white)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-                WordTailText(collection.subtitle, textStyle: .caption2)
-                    .foregroundStyle(.white.opacity(0.85))
-            }
-
-            Spacer(minLength: 4)
+            Text(collection.title)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.white)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
 
             Image(systemName: "chevron.right")
-                .font(.system(size: 11, weight: .bold))
+                .font(.system(size: 9, weight: .bold))
                 .foregroundStyle(.white.opacity(0.7))
         }
         .padding(.horizontal, 10)
         .frame(height: FeaturedCardMetrics.height)
-        .frame(maxWidth: .infinity)
         .background(
             LinearGradient(
                 colors: collection.gradient,
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             ),
-            in: .rect(cornerRadius: 13)
+            in: .capsule
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 13)
+            Capsule()
                 .stroke(.white.opacity(0.18), lineWidth: 1)
         )
         .shadow(color: (collection.gradient.first ?? .black).opacity(0.12), radius: 3, y: 1)
