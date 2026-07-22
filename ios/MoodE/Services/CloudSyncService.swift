@@ -249,12 +249,17 @@ final class CloudSyncService {
         let supabase = SupabaseService.client
         let userId = user.id
 
-        for table in ["diary_check_ins", "library_entries", "planner_scheduled", "planner_memories"] {
+        for table in ["diary_check_ins", "library_entries", "planner_scheduled", "planner_memories", "friend_stats"] {
             try await supabase.from(table)
                 .delete()
                 .eq("user_id", value: userId)
                 .execute()
         }
+        // Friend links reference the user from either side.
+        try await supabase.from("friends")
+            .delete()
+            .or("user_id.eq.\(userId),friend_id.eq.\(userId)")
+            .execute()
         try await supabase.from("profiles")
             .delete()
             .eq("id", value: userId)

@@ -45,6 +45,7 @@ struct SettingsView: View {
     @State private var showOnboarding = false
     @State private var nicknameRefreshTrigger = false
     @State private var showAccountSheet = false
+    @State private var showInviteSheet = false
     @State private var showSignOutConfirm = false
     @State private var showDeleteAccountConfirm = false
     @State private var isDeletingAccount = false
@@ -101,6 +102,9 @@ struct SettingsView: View {
             }
             .sheet(isPresented: $showPaywall) {
                 PaywallView()
+            }
+            .sheet(isPresented: $showInviteSheet) {
+                InviteFriendsSheet()
             }
             .alert(L("premium.restore"), isPresented: restoreAlertBinding) {
                 Button(L("common.ok"), role: .cancel) { premium.restoreMessage = nil }
@@ -305,6 +309,16 @@ struct SettingsView: View {
 
     private var accountSection: some View {
         Section {
+            Button {
+                showInviteSheet = true
+            } label: {
+                SettingsRow(
+                    icon: "person.2.fill",
+                    iconColor: Theme.amber,
+                    title: L("invite.button")
+                )
+            }
+
             if let user = auth.user {
                 HStack(spacing: 12) {
                     Image(systemName: "person.crop.circle.badge.checkmark")

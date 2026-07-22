@@ -1,4 +1,5 @@
 export { AdviceBoard } from "./advice-board";
+import { inviteHtml } from "./invite-page";
 
 type Env = { DO: Fetcher };
 
@@ -18,6 +19,16 @@ export default {
 
     if (url.pathname === "/ping") {
       return Response.json({ ok: true, now: new Date().toISOString() });
+    }
+
+    if (url.pathname === "/invite") {
+      // Friend-invite landing page shared from the iOS app.
+      const rawCode = url.searchParams.get("code") ?? "";
+      const code = rawCode.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12);
+      const lang = (url.searchParams.get("l") ?? "en").toLowerCase().slice(0, 2);
+      return new Response(inviteHtml(code, lang), {
+        headers: { "Content-Type": "text/html; charset=utf-8" },
+      });
     }
 
     if (url.pathname.startsWith("/advice")) {

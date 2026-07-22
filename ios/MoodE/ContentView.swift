@@ -11,6 +11,7 @@ import SwiftUI
 struct ContentView: View {
     @State private var selectedTab: Int = 0
     @State private var deepLinkMovie: TMDBMovie?
+    @State private var invitePrefill: InvitePrefill?
     @Environment(MovieLibrary.self) private var library
     @Environment(MoodDiary.self) private var diary
     @Environment(MoviePlanner.self) private var planner
@@ -98,6 +99,12 @@ struct ContentView: View {
         .onOpenURL { url in
             handleDeepLink(url)
         }
+        .sheet(item: $invitePrefill) { invite in
+            NavigationStack {
+                FriendsView(prefillCode: invite.code)
+            }
+            .tint(Theme.primary)
+        }
         .sheet(item: $deepLinkMovie) { movie in
             NavigationStack {
                 MovieDetailView(movie: movie)
@@ -159,9 +166,10 @@ struct ContentView: View {
         }
     }
 
-    /// Widget deep links:
+    /// Widget and invite deep links:
     /// - moode://movie/<id> opens the movie detail page
     /// - moode://flow/<mood> opens the results screen for that emotion
+    /// - moode://invite/<code> opens Friends with the code pre-filled
     private func handleDeepLink(_ url: URL) {
         guard url.scheme == "moode" else { return }
 
@@ -173,6 +181,13 @@ struct ContentView: View {
             guard let mood = Mood(rawValue: url.lastPathComponent) else { return }
             AnalyticsService.shared.log("widget_mood_tap", meta: ["mood": mood.rawValue])
             launchQuickPick(mood: mood)
+        case "invite":
+            let code = url.lastPathComponent
+                .uppercased()
+                .filter { $0.isLetter || $0.isNumber }
+            guard !code.isEmpty else { return }
+            AnalyticsService.shared.log("invite_link_opened")
+            invitePrefill = InvitePrefill(code: String(code.prefix(12)))
         default:
             break
         }
@@ -201,6 +216,12 @@ struct ContentView: View {
             genreIds: nil
         )
     }
+}
+
+/// Identifiable wrapper for the friend code arriving via an invite link.
+private struct InvitePrefill: Identifiable {
+    let code: String
+    var id: String { code }
 }
 
 #Preview {

@@ -8,6 +8,10 @@ import SwiftUI
 /// "Sfida gli amici": friend-code exchange plus head-to-head comparison
 /// of the aggregate cinema statistics with each linked friend.
 struct FriendsView: View {
+    /// Friend code arriving from an invite deep link, pre-filled in the
+    /// "add friend" field.
+    var prefillCode: String? = nil
+
     @Environment(AuthManager.self) private var auth
     @Environment(MoodDiary.self) private var diary
     @Environment(MovieLibrary.self) private var library
@@ -80,7 +84,12 @@ struct FriendsView: View {
         }
         .navigationTitle(L("friends.title"))
         .toolbarTitleDisplayMode(.inline)
-        .task { await refresh() }
+        .task {
+            if let prefillCode, codeInput.isEmpty {
+                codeInput = String(prefillCode.uppercased().prefix(12))
+            }
+            await refresh()
+        }
         .onChange(of: auth.user?.id) { _, newValue in
             if newValue != nil {
                 Task { await refresh() }
@@ -176,7 +185,7 @@ struct FriendsView: View {
                 .disabled(service.myCode == nil)
 
                 if let code = service.myCode {
-                    ShareLink(item: LF("friends.share.text", code)) {
+                    ShareLink(item: InviteLink.shareMessage(code: code)) {
                         Image(systemName: "square.and.arrow.up")
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(Theme.primary)

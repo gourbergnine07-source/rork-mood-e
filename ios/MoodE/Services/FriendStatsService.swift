@@ -62,6 +62,15 @@ nonisolated private struct FriendStatsUpsert: Encodable, Sendable {
     }
 }
 
+/// Minimal projection used when only the friend code is needed.
+nonisolated private struct FriendCodeRow: Decodable, Sendable {
+    let friendCode: String?
+
+    enum CodingKeys: String, CodingKey {
+        case friendCode = "friend_code"
+    }
+}
+
 nonisolated private struct AddFriendResult: Decodable, Sendable {
     let friendUserId: String
     let friendName: String
@@ -137,6 +146,57 @@ final class FriendStatsService {
         } catch {
             print("FriendStats: refresh failed: \(error.localizedDescription)")
             lastError = true
+        }
+    }
+
+    /// Returns my friend code, creating the cloud row on first use so the
+    /// database can generate one. Used by the invite-friends flow, which
+    /// may run before the full stats snapshot is ever pushed.
+    func ensureCode(auth: AuthManager, displayName: String) async -> String? {
+        if let myCode { return myCode }
+        await auth.ensureValidToken()
+        guard let user = auth.user else { return nil }
+
+        do {
+            let supabase = SupabaseService.client
+
+            let existing: [FriendCodeRow] = try await supabase
+                .from("friend_stats")
+                .select("friend_code")
+                .eq("user_id", value: user.id)
+                .execute().value
+            if let code = existing.first?.friendCode {
+                myCode = code
+                return code
+            }
+
+            // No row yet: insert a zeroed snapshot; the DB generates the code.
+            try await supabase.from("friend_stats").upsert(
+                FriendStatsUpsert(
+                    userId: user.id,
+                    displayName: displayName,
+                    watchedCount: 0,
+                    totalMinutes: 0,
+                    topGenreId: nil,
+                    topDecade: nil,
+                    streak: 0,
+                    bestStreak: 0,
+                    updatedAt: Date()
+                ),
+                onConflict: "user_id",
+                ignoreDuplicates: true
+            ).execute()
+
+            let created: [FriendCodeRow] = try await supabase
+                .from("friend_stats")
+                .select("friend_code")
+                .eq("user_id", value: user.id)
+                .execute().value
+            myCode = created.first?.friendCode
+            return myCode
+        } catch {
+            print("FriendStats: ensureCode failed: \(error.localizedDescription)")
+            return nil
         }
     }
 
