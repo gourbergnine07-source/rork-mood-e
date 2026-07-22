@@ -420,6 +420,10 @@ struct MovieCard: View {
                 }
             }
             .clipShape(.rect(cornerRadius: 14))
+            .overlay(alignment: .topLeading) {
+                AvailableNowBadge(movieId: movie.id)
+                    .padding(5)
+            }
             .overlay(alignment: .bottomLeading) {
                 if let onPlayTrailer {
                     Button(action: onPlayTrailer) {

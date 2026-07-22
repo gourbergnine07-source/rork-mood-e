@@ -365,6 +365,10 @@ struct TrendingCard: View {
                         .padding(6)
                 }
             }
+            .overlay(alignment: .bottomLeading) {
+                AvailableNowBadge(movieId: movie.id)
+                    .padding(6)
+            }
     }
 
     private func rankBadge(_ rank: Int) -> some View {

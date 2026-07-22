@@ -77,6 +77,7 @@ struct SettingsView: View {
                 communitySection
                 appearanceSection
                 personalizationSection
+                streamingServicesSection
                 languageSection
                 notificationsSection
                 librarySection
@@ -756,6 +757,27 @@ struct SettingsView: View {
                     .foregroundStyle(Theme.inkSoft)
             }
         }
+    }
+
+    // MARK: - Servizi streaming
+
+    private var streamingServicesSection: some View {
+        Section {
+            NavigationLink {
+                StreamingServicesView()
+            } label: {
+                SettingsRow(
+                    icon: "play.tv.fill",
+                    iconColor: Theme.seenGreen,
+                    title: L("settings.services.row")
+                )
+            }
+        } footer: {
+            Text(L("settings.services.footer"))
+                .font(.footnote)
+                .foregroundStyle(Theme.inkSoft)
+        }
+        .listRowBackground(Theme.card)
     }
 
     // MARK: - Lingua

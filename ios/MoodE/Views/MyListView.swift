@@ -322,6 +322,10 @@ struct LibraryEntryRow: View {
                 }
             }
             .clipShape(.rect(cornerRadius: 12))
+            .overlay(alignment: .topLeading) {
+                AvailableNowBadge(movieId: entry.id, compact: true)
+                    .padding(4)
+            }
     }
 
     private var posterFallback: some View {
