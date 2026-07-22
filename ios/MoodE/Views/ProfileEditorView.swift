@@ -12,6 +12,8 @@ struct ProfileEditorView: View {
 
     @State private var name: String = ProfileStore.shared.customName
     @State private var avatarHaptic = false
+    @State private var showResetConfirm = false
+    @State private var resetHaptic = false
 
     private var profile: ProfileStore { .shared }
 
@@ -22,12 +24,26 @@ struct ProfileEditorView: View {
             previewSection
             nameSection
             avatarSection
+            resetSection
         }
         .scrollContentBackground(.hidden)
         .background(Theme.background)
         .navigationTitle(L("profile.row.title"))
         .toolbarTitleDisplayMode(.inline)
         .sensoryFeedback(.selection, trigger: avatarHaptic)
+        .sensoryFeedback(.success, trigger: resetHaptic)
+        .alert(L("profile.reset.title"), isPresented: $showResetConfirm) {
+            Button(L("profile.reset.confirm"), role: .destructive) {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                    profile.reset()
+                    name = ""
+                }
+                resetHaptic.toggle()
+            }
+            Button(L("common.cancel"), role: .cancel) {}
+        } message: {
+            Text(L("profile.reset.msg"))
+        }
     }
 
     // MARK: - Live preview
@@ -95,6 +111,30 @@ struct ProfileEditorView: View {
             Text(L("profile.avatar.label"))
         } footer: {
             Text(L("profile.footer"))
+                .font(.footnote)
+                .foregroundStyle(Theme.inkSoft)
+        }
+        .listRowBackground(Theme.card)
+    }
+
+    // MARK: - Reset
+
+    private var resetSection: some View {
+        Section {
+            Button(role: .destructive) {
+                showResetConfirm = true
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "arrow.counterclockwise")
+                        .font(.system(size: 15, weight: .semibold))
+                    Text(L("profile.reset.button"))
+                        .font(.body.weight(.semibold))
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .disabled(!profile.isCustomized)
+        } footer: {
+            Text(L("profile.reset.footer"))
                 .font(.footnote)
                 .foregroundStyle(Theme.inkSoft)
         }

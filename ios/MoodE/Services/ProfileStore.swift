@@ -49,6 +49,21 @@ final class ProfileStore {
         UserDefaults.standard.set(emoji, forKey: Self.avatarKey)
     }
 
+    /// True when the profile differs from the defaults (no custom name,
+    /// first avatar of the set) — drives the Reset button availability.
+    var isCustomized: Bool {
+        !customName.isEmpty || avatar != Self.avatarChoices[0]
+    }
+
+    /// Restores the default profile: empty custom name (the account name
+    /// takes over again) and the first avatar of the predefined set.
+    func reset() {
+        customName = ""
+        avatar = Self.avatarChoices[0]
+        UserDefaults.standard.removeObject(forKey: Self.nameKey)
+        UserDefaults.standard.removeObject(forKey: Self.avatarKey)
+    }
+
     /// Name shown to friends: the custom name first, then the account
     /// name, then the email prefix, then the generic fallback.
     func resolvedName(auth: AuthManager) -> String {
