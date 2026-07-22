@@ -19,7 +19,7 @@ struct FAQView: View {
     /// Computed so questions and answers re-localize on language change.
     /// Uses stable index-based ids so expansion state survives re-renders.
     private var items: [FAQItem] {
-        (1...8).map { index in
+        (1...16).map { index in
             FAQItem(
                 id: index,
                 question: L("faq.q\(index)"),
