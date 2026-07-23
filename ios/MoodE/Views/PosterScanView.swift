@@ -26,7 +26,13 @@ struct PosterScanView: View {
         case pick
         case analyzing
         case chooser([TMDBMovie], tvTitle: String?)
-        case failed(tvTitle: String?)
+        case failed(FailReason)
+
+        enum FailReason: Equatable {
+            case generic
+            case tvSeries(String)
+            case notInDatabase(String)
+        }
     }
 
     private var cameraAvailable: Bool {
@@ -42,7 +48,7 @@ struct PosterScanView: View {
                 case .pick: pickView
                 case .analyzing: analyzingView
                 case .chooser(let movies, let tvTitle): chooserView(movies, tvTitle: tvTitle)
-                case .failed(let tvTitle): failedView(tvTitle: tvTitle)
+                case .failed(let reason): failedView(reason: reason)
                 }
             }
             .navigationTitle(L("scan.title"))
@@ -197,10 +203,16 @@ struct PosterScanView: View {
                 }
             } catch PosterScanError.tvSeries(let title) {
                 AnalyticsService.shared.log("poster_scan_tv_series")
-                phase = .failed(tvTitle: title)
+                phase = .failed(.tvSeries(title))
+            } catch PosterScanError.notFoundOnTMDB(let title) {
+                AnalyticsService.shared.log("poster_scan_not_in_tmdb")
+                // Pre-fill the manual search with the recognized title so
+                // the user can tweak it right away.
+                query = title
+                phase = .failed(.notInDatabase(title))
             } catch {
                 AnalyticsService.shared.log("poster_scan_failed")
-                phase = .failed(tvTitle: nil)
+                phase = .failed(.generic)
             }
         }
     }
@@ -247,7 +259,7 @@ struct PosterScanView: View {
 
                 Button {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
-                        phase = .failed(tvTitle: nil)
+                        phase = .failed(.generic)
                     }
                 } label: {
                     Label(L("scan.notThese"), systemImage: "magnifyingglass")
@@ -265,16 +277,34 @@ struct PosterScanView: View {
 
     // MARK: - Step 4: failure + manual search
 
-    private func failedView(tvTitle: String?) -> some View {
-        VStack(spacing: 12) {
-            Text(tvTitle == nil ? "\u{1F3AC}" : "\u{1F4FA}")
+    private func failedView(reason: Phase.FailReason) -> some View {
+        let emoji: String
+        let title: String
+        let message: String
+        switch reason {
+        case .generic:
+            emoji = "\u{1F3AC}"
+            title = L("scan.failed.title")
+            message = L("scan.failed.msg")
+        case .tvSeries(let name):
+            emoji = "\u{1F4FA}"
+            title = L("scan.tv.title")
+            message = LF("scan.tv.msg", name)
+        case .notInDatabase(let name):
+            emoji = "\u{1F50D}"
+            title = L("scan.notfound.title")
+            message = LF("scan.notfound.msg", name)
+        }
+
+        return VStack(spacing: 12) {
+            Text(emoji)
                 .font(.system(size: 40))
                 .padding(.top, 24)
-            Text(tvTitle == nil ? L("scan.failed.title") : L("scan.tv.title"))
+            Text(title)
                 .font(.headline)
                 .foregroundStyle(Theme.ink)
                 .multilineTextAlignment(.center)
-            Text(tvTitle.map { LF("scan.tv.msg", $0) } ?? L("scan.failed.msg"))
+            Text(message)
                 .font(.subheadline)
                 .foregroundStyle(Theme.inkSoft)
                 .multilineTextAlignment(.center)

@@ -25,11 +25,14 @@ nonisolated enum PosterScanError: LocalizedError {
     case notRecognized
     /// The poster belongs to a TV series (associated value: series title).
     case tvSeries(String)
+    /// The AI recognized a title, but TMDB has no matching movie.
+    case notFoundOnTMDB(String)
 
     var errorDescription: String? {
         switch self {
         case .notRecognized: return LN("scan.failed.title")
         case .tvSeries: return LN("scan.tv.title")
+        case .notFoundOnTMDB: return LN("scan.notfound.title")
         default: return LN("error.generic")
         }
     }
@@ -100,6 +103,11 @@ enum PosterScanService {
         }
         guard !movies.isEmpty else {
             if let tvTitle { throw PosterScanError.tvSeries(tvTitle) }
+            // The model DID read a title, but the movie database has no
+            // match: tell the user explicitly instead of a generic failure.
+            if let recognized = movieCandidates.first?.title {
+                throw PosterScanError.notFoundOnTMDB(recognized)
+            }
             throw PosterScanError.notRecognized
         }
 
