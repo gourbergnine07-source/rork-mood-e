@@ -21,6 +21,8 @@ struct PosterScanView: View {
     @State private var searchResults: [TMDBMovie] = []
     @State private var isSearching = false
     @State private var hasSearched = false
+    @State private var showTutorial = false
+    @AppStorage("posterScanTutorialSeen") private var tutorialSeen = false
 
     private enum Phase: Equatable {
         case pick
@@ -50,6 +52,17 @@ struct PosterScanView: View {
                 case .chooser(let movies, let tvTitle): chooserView(movies, tvTitle: tvTitle)
                 case .failed(let reason): failedView(reason: reason)
                 }
+
+                if showTutorial {
+                    ScanTutorialView {
+                        tutorialSeen = true
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                            showTutorial = false
+                        }
+                    }
+                    .transition(.opacity.combined(with: .scale(scale: 0.94)))
+                    .zIndex(1)
+                }
             }
             .navigationTitle(L("scan.title"))
             .toolbarTitleDisplayMode(.inline)
@@ -66,12 +79,31 @@ struct PosterScanView: View {
                     }
                     .accessibilityLabel(L("common.close"))
                 }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                            showTutorial = true
+                        }
+                    } label: {
+                        Image(systemName: "questionmark.circle")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(Theme.inkSoft)
+                            .frame(width: 30, height: 30)
+                            .background(Theme.card, in: .circle)
+                    }
+                    .accessibilityLabel(L("scan.tut.title"))
+                }
             }
             .navigationDestination(for: TMDBMovie.self) { movie in
                 ScannedMovieDetailView(movie: movie)
             }
         }
         .tint(Theme.primary)
+        .onAppear {
+            if !tutorialSeen {
+                showTutorial = true
+            }
+        }
         .fullScreenCover(isPresented: $showCamera) {
             CameraPicker { image in
                 analyze(image)
