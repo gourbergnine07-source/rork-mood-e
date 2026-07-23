@@ -585,7 +585,7 @@
   "premium.icloud.offline": "Nessuna connessione: la sincronizzazione riprenderà appena torni online",
   "premium.icloud.status": "Sincronizzazione iCloud",
   "premium.icloud.unavailable": "iCloud non disponibile su questo dispositivo",
-  "premium.load.failed": "Impossibile caricare il piano. Controlla la connessione e riprova.",
+  "premium.load.failed": "Impossibile caricare il piano di abbonamento. Controlla la connessione e riprova.",
   "premium.load.retry": "Riprova",
   "premium.locked": "Funzione Premium",
   "premium.manage": "Gestisci abbonamento",

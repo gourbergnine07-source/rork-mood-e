@@ -161,19 +161,37 @@ struct PaywallView: View {
     private var ctaBar: some View {
         VStack(spacing: 8) {
             if store.monthlyPackage == nil && store.offeringsFailed && !store.isLoading {
-                VStack(spacing: 4) {
+                // Distinct alert card so the plan-loading error can't be
+                // mistaken for the feature cards scrolling underneath
+                // (e.g. the iCloud sync one).
+                HStack(spacing: 10) {
+                    Image(systemName: "wifi.exclamationmark")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(Theme.amber)
+
                     Text(L("premium.load.failed"))
                         .font(.caption)
-                        .foregroundStyle(Theme.inkSoft)
-                        .multilineTextAlignment(.center)
+                        .foregroundStyle(Theme.ink)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
                     Button {
                         Task { await store.fetchOfferings() }
                     } label: {
                         Text(L("premium.load.retry"))
                             .font(.footnote.weight(.bold))
                             .foregroundStyle(Theme.amber)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 8)
+                            .background(Theme.amber.opacity(0.14), in: .capsule)
                     }
                 }
+                .padding(10)
+                .background(Theme.card, in: .rect(cornerRadius: 14))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(Theme.amber.opacity(0.35), lineWidth: 1)
+                )
                 .padding(.bottom, 2)
             }
 
@@ -218,6 +236,7 @@ struct PaywallView: View {
         .padding(.horizontal, 24)
         .padding(.top, 10)
         .padding(.bottom, 6)
+        .background(Theme.background.opacity(0.92))
         .background(.ultraThinMaterial)
     }
 
