@@ -68,7 +68,7 @@ struct NotificationInboxView: View {
 
     private func recordRow(_ record: NotificationRecord) -> some View {
         Button {
-            openRoute(record.route)
+            openRoute(record)
         } label: {
             HStack(alignment: .top, spacing: 12) {
                 Image(systemName: icon(for: record.route))
@@ -111,13 +111,21 @@ struct NotificationInboxView: View {
         .buttonStyle(.plain)
     }
 
-    /// Notification tap routes: evening reminder → mood flow, watchlist → list tab.
-    private func openRoute(_ route: String?) {
-        guard let route else { return }
+    /// Notification tap routes: evening reminder → mood flow, watchlist → list
+    /// tab, movie notifications → that movie's detail page.
+    private func openRoute(_ record: NotificationRecord) {
+        guard let route = record.route else { return }
         dismiss()
+
+        var info: [AnyHashable: Any] = [:]
+        if let movieId = record.movieId { info["movieId"] = movieId }
+        if let movieTitle = record.movieTitle { info["movieTitle"] = movieTitle }
+        if let posterPath = record.posterPath { info["posterPath"] = posterPath }
+
         NotificationCenter.default.post(
             name: NotificationRoute.notificationName,
-            object: route
+            object: route,
+            userInfo: info.isEmpty ? nil : info
         )
     }
 
@@ -125,6 +133,7 @@ struct NotificationInboxView: View {
         switch route {
         case NotificationRoute.moodFlow: return "face.smiling"
         case NotificationRoute.watchlist: return "bookmark.fill"
+        case NotificationRoute.movie: return "film"
         default: return "sparkles"
         }
     }
@@ -133,6 +142,7 @@ struct NotificationInboxView: View {
         switch route {
         case NotificationRoute.moodFlow: return Theme.primary
         case NotificationRoute.watchlist: return Theme.amber
+        case NotificationRoute.movie: return Theme.tabCinema
         default: return Theme.rose
         }
     }

@@ -14,6 +14,20 @@ enum NotificationRoute {
     static let watchlist = "watchlist"
     static let community = "community"
     static let forecast = "forecast"
+    /// Opens the movie detail page (userInfo carries movieId/movieTitle/posterPath).
+    static let movie = "movie"
+
+    /// userInfo payload for notifications about one specific movie, so a tap
+    /// can land directly on that movie's detail page.
+    static func movieUserInfo(id: Int, title: String, posterPath: String?) -> [String: Any] {
+        var info: [String: Any] = [
+            "route": movie,
+            "movieId": id,
+            "movieTitle": title
+        ]
+        if let posterPath { info["posterPath"] = posterPath }
+        return info
+    }
 }
 
 /// Manages every local notification of Mood-E:
@@ -501,7 +515,9 @@ final class NotificationService {
                 content.title = L("notif.movienight.title")
                 content.body = LF("notif.movienight.body", movie.title)
                 content.sound = .default
-                content.userInfo = ["route": NotificationRoute.watchlist]
+                content.userInfo = NotificationRoute.movieUserInfo(
+                    id: movie.movieId, title: movie.title, posterPath: movie.posterPath
+                )
 
                 let components = calendar.dateComponents(
                     [.year, .month, .day, .hour, .minute], from: fireDate
@@ -569,7 +585,9 @@ final class NotificationService {
         content.title = L("notif.watchlist.title")
         content.body = LF("notif.watchlist.body", candidate.title)
         content.sound = .default
-        content.userInfo = ["route": NotificationRoute.watchlist]
+        content.userInfo = NotificationRoute.movieUserInfo(
+            id: candidate.id, title: candidate.title, posterPath: candidate.posterPath
+        )
 
         let request = UNNotificationRequest(
             identifier: "watchlist-\(candidate.id)",
@@ -660,6 +678,12 @@ final class NotificationService {
                 : LF("notif.new.many", titles)
         }
         content.sound = .default
+        // Single new arrival: tap lands straight on that movie's page.
+        if totalCount == 1 {
+            content.userInfo = NotificationRoute.movieUserInfo(
+                id: first.id, title: first.title, posterPath: first.posterPath
+            )
+        }
 
         let request = UNNotificationRequest(
             identifier: "new-arrivals-\(Int(Date().timeIntervalSince1970))",
@@ -702,6 +726,9 @@ final class NotificationService {
             content.title = L("notif.release.title")
             content.body = LF("notif.release.body", movie.title)
             content.sound = .default
+            content.userInfo = NotificationRoute.movieUserInfo(
+                id: movie.id, title: movie.title, posterPath: movie.posterPath
+            )
 
             let request = UNNotificationRequest(
                 identifier: identifier,

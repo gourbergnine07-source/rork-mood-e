@@ -132,6 +132,7 @@ struct ContentView: View {
             case NotificationRoute.community: selectedTab = 1
             case NotificationRoute.watchlist: selectedTab = 3
             case NotificationRoute.forecast: handleForecastTap(note.userInfo)
+            case NotificationRoute.movie: handleMovieNotificationTap(note.userInfo)
             default: break
             }
         }
@@ -203,6 +204,27 @@ struct ContentView: View {
             try? await Task.sleep(for: .milliseconds(400))
             NotificationCenter.default.post(name: ForecastLaunch.name, object: selection)
         }
+    }
+
+    /// Movie notification tap (watchlist nudge, movie night, new release):
+    /// opens the movie's detail page directly.
+    private func handleMovieNotificationTap(_ userInfo: [AnyHashable: Any]?) {
+        guard let id = userInfo?["movieId"] as? Int else {
+            selectedTab = 3
+            return
+        }
+        let posterPath = userInfo?["posterPath"] as? String
+        deepLinkMovie = TMDBMovie(
+            id: id,
+            title: userInfo?["movieTitle"] as? String ?? "",
+            overview: "",
+            posterPath: (posterPath?.isEmpty == true) ? nil : posterPath,
+            backdropPath: nil,
+            releaseDate: nil,
+            voteAverage: 0,
+            voteCount: 0,
+            genreIds: nil
+        )
     }
 
     /// Widget and invite deep links:

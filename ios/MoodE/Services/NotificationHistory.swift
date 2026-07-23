@@ -16,6 +16,11 @@ nonisolated struct NotificationRecord: Codable, Identifiable, Equatable {
     let date: Date
     let route: String?
     var isRead: Bool
+    /// Present when the notification is about one specific movie, so a tap
+    /// from the inbox can reopen its detail page. Optional for older records.
+    var movieId: Int?
+    var movieTitle: String?
+    var posterPath: String?
 }
 
 /// Persists every notification Mood-E delivers (evening reminder, watchlist
@@ -98,7 +103,10 @@ final class NotificationHistory {
             body: content.body,
             date: notification.date,
             route: content.userInfo["route"] as? String,
-            isRead: isRead
+            isRead: isRead,
+            movieId: content.userInfo["movieId"] as? Int,
+            movieTitle: content.userInfo["movieTitle"] as? String,
+            posterPath: content.userInfo["posterPath"] as? String
         )
     }
 
