@@ -25,8 +25,8 @@ struct PosterScanView: View {
     private enum Phase: Equatable {
         case pick
         case analyzing
-        case chooser([TMDBMovie])
-        case failed
+        case chooser([TMDBMovie], tvTitle: String?)
+        case failed(tvTitle: String?)
     }
 
     private var cameraAvailable: Bool {
@@ -41,8 +41,8 @@ struct PosterScanView: View {
                 switch phase {
                 case .pick: pickView
                 case .analyzing: analyzingView
-                case .chooser(let movies): chooserView(movies)
-                case .failed: failedView
+                case .chooser(let movies, let tvTitle): chooserView(movies, tvTitle: tvTitle)
+                case .failed(let tvTitle): failedView(tvTitle: tvTitle)
                 }
             }
             .navigationTitle(L("scan.title"))
@@ -190,21 +190,24 @@ struct PosterScanView: View {
         Task {
             do {
                 let outcome = try await PosterScanService.identify(image: image)
-                phase = .chooser(outcome.movies)
+                phase = .chooser(outcome.movies, tvTitle: outcome.tvSeriesTitle)
                 AnalyticsService.shared.log("poster_scan_recognized")
                 if outcome.isConfident, let first = outcome.movies.first {
                     path = [first]
                 }
+            } catch PosterScanError.tvSeries(let title) {
+                AnalyticsService.shared.log("poster_scan_tv_series")
+                phase = .failed(tvTitle: title)
             } catch {
                 AnalyticsService.shared.log("poster_scan_failed")
-                phase = .failed
+                phase = .failed(tvTitle: nil)
             }
         }
     }
 
     // MARK: - Step 3: ambiguity chooser
 
-    private func chooserView(_ movies: [TMDBMovie]) -> some View {
+    private func chooserView(_ movies: [TMDBMovie], tvTitle: String?) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 Text(L("scan.candidates"))
@@ -213,6 +216,26 @@ struct PosterScanView: View {
                 Text(L("scan.candidates.sub"))
                     .font(.subheadline)
                     .foregroundStyle(Theme.inkSoft)
+
+                if let tvTitle {
+                    HStack(alignment: .top, spacing: 10) {
+                        Image(systemName: "tv")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(Theme.primary)
+                            .padding(.top, 2)
+                        Text(LF("scan.tv.banner", tvTitle))
+                            .font(.footnote)
+                            .foregroundStyle(Theme.ink)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Theme.primary.opacity(0.10), in: .rect(cornerRadius: 14))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(Theme.primary.opacity(0.25), lineWidth: 1)
+                    )
+                }
 
                 VStack(spacing: 8) {
                     ForEach(movies) { movie in
@@ -224,7 +247,7 @@ struct PosterScanView: View {
 
                 Button {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
-                        phase = .failed
+                        phase = .failed(tvTitle: nil)
                     }
                 } label: {
                     Label(L("scan.notThese"), systemImage: "magnifyingglass")
@@ -242,16 +265,16 @@ struct PosterScanView: View {
 
     // MARK: - Step 4: failure + manual search
 
-    private var failedView: some View {
+    private func failedView(tvTitle: String?) -> some View {
         VStack(spacing: 12) {
-            Text("\u{1F3AC}")
+            Text(tvTitle == nil ? "\u{1F3AC}" : "\u{1F4FA}")
                 .font(.system(size: 40))
                 .padding(.top, 24)
-            Text(L("scan.failed.title"))
+            Text(tvTitle == nil ? L("scan.failed.title") : L("scan.tv.title"))
                 .font(.headline)
                 .foregroundStyle(Theme.ink)
                 .multilineTextAlignment(.center)
-            Text(L("scan.failed.msg"))
+            Text(tvTitle.map { LF("scan.tv.msg", $0) } ?? L("scan.failed.msg"))
                 .font(.subheadline)
                 .foregroundStyle(Theme.inkSoft)
                 .multilineTextAlignment(.center)

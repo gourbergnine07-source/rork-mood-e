@@ -10,9 +10,11 @@ import UIKit
 nonisolated struct PosterCandidate: Codable {
     let title: String
     let year: Int?
+    let type: String?
     let confidence: String?
 
     var isHighConfidence: Bool { confidence?.lowercased() == "high" }
+    var isTVSeries: Bool { type?.lowercased() == "tv" }
 }
 
 /// Errors surfaced by the poster recognition flow.
@@ -21,10 +23,13 @@ nonisolated enum PosterScanError: LocalizedError {
     case imageTooLarge
     case badResponse
     case notRecognized
+    /// The poster belongs to a TV series (associated value: series title).
+    case tvSeries(String)
 
     var errorDescription: String? {
         switch self {
         case .notRecognized: return LN("scan.failed.title")
+        case .tvSeries: return LN("scan.tv.title")
         default: return LN("error.generic")
         }
     }
@@ -33,9 +38,12 @@ nonisolated enum PosterScanError: LocalizedError {
 /// Recognition result: real TMDB movies matched from the model candidates.
 struct PosterScanOutcome {
     let movies: [TMDBMovie]
-    /// True when there is exactly one high-confidence match: the UI opens
-    /// the detail page directly without asking the user to choose.
+    /// True only when the model was certain AND the TMDB match is solid
+    /// (same title, well-known movie): the UI opens the detail directly.
     let isConfident: Bool
+    /// Set when the poster looks like a TV series: the chooser shows an
+    /// informative banner with the series name.
+    let tvSeriesTitle: String?
 }
 
 /// "Scansiona un poster": sends the photo to the Rork Toolkit AI proxy
@@ -55,31 +63,54 @@ enum PosterScanService {
         let candidates = try await recognize(base64: base64)
         guard !candidates.isEmpty else { throw PosterScanError.notRecognized }
 
-        // Best TMDB match per candidate, plus runner-up results kept aside
-        // so the chooser can always offer 2-3 real alternatives.
+        // TV series are recognized but not matched against the movie DB:
+        // searching a series title on /search/movie is exactly what returns
+        // obscure homonym shorts instead of the real thing.
+        let tvTitle = candidates.first(where: { $0.isTVSeries })?.title
+        let movieCandidates = candidates.filter { !$0.isTVSeries }
+
+        // Best TMDB match per candidate (ranked by title similarity +
+        // popularity + year), plus runner-ups so the chooser always offers
+        // 2-3 real alternatives.
         var movies: [TMDBMovie] = []
         var alternates: [TMDBMovie] = []
-        for candidate in candidates.prefix(3) {
+        var firstMatchIsSolid = false
+        for (index, candidate) in movieCandidates.prefix(3).enumerated() {
             guard let results = try? await TMDBService.searchMovies(query: candidate.title),
                   !results.isEmpty else { continue }
-            let best = pickMatch(from: results, year: candidate.year)
+            let ranked = results
+                .map { (movie: $0, score: matchScore($0, candidate: candidate)) }
+                .sorted { $0.score > $1.score }
+            let best = ranked[0].movie
+            if index == 0 {
+                firstMatchIsSolid = normalized(best.title) == normalized(candidate.title)
+                    && best.voteCount >= 200
+            }
             if !movies.contains(where: { $0.id == best.id }) {
                 movies.append(best)
             }
-            alternates.append(contentsOf: results.prefix(4).filter { $0.id != best.id })
+            alternates.append(contentsOf: ranked.dropFirst().prefix(4)
+                .map(\.movie)
+                .filter { $0.posterPath != nil || $0.voteCount >= 5 })
         }
-        for extra in alternates where movies.count < 3 {
+        for extra in alternates where movies.count < 4 {
             if !movies.contains(where: { $0.id == extra.id }) {
                 movies.append(extra)
             }
         }
-        guard !movies.isEmpty else { throw PosterScanError.notRecognized }
+        guard !movies.isEmpty else {
+            if let tvTitle { throw PosterScanError.tvSeries(tvTitle) }
+            throw PosterScanError.notRecognized
+        }
 
-        // Direct navigation only when the model proposed a single,
-        // high-confidence title. The padded chooser stays available behind
-        // the detail page, so the user can go back and pick another match.
-        let confident = candidates.count == 1 && (candidates.first?.isHighConfidence ?? false)
-        return PosterScanOutcome(movies: movies, isConfident: confident)
+        // Direct navigation only when the model proposed a single
+        // high-confidence movie AND TMDB agrees with a well-known exact
+        // title match; otherwise the user always picks from the chooser.
+        let confident = tvTitle == nil
+            && movieCandidates.count == 1
+            && (movieCandidates.first?.isHighConfidence ?? false)
+            && firstMatchIsSolid
+        return PosterScanOutcome(movies: movies, isConfident: confident, tvSeriesTitle: tvTitle)
     }
 
     // MARK: - Vision call
@@ -93,10 +124,14 @@ enum PosterScanService {
         }
 
         let prompt = """
-        You identify movie posters. The photo may be blurry, tilted, partially cropped, taken at an angle, or a photo of a screen/monitor — do your best anyway using the artwork, typography, actors and any readable text.
+        You identify posters of movies and TV series. The photo may be blurry, tilted, partially cropped, taken at an angle, or a photo of a screen/monitor — do your best anyway using the artwork, typography, actors and any readable text.
         Reply ONLY with minified JSON, no markdown, in this exact shape:
-        {"candidates":[{"title":"<movie title>","year":<release year or null>,"confidence":"high|medium|low"}]}
-        Rules: 1 candidate with confidence "high" ONLY if you are absolutely certain; otherwise ALWAYS return 2-3 plausible candidates ordered from most to least likely. Use the movie's original or best-known international title so it can be found on TMDB. If the image is clearly not a movie poster, reply {"candidates":[]}.
+        {"candidates":[{"title":"<title>","year":<first release year or null>,"type":"movie|tv","confidence":"high|medium|low"}]}
+        Rules:
+        - "type" MUST be "tv" when the poster is for a TV/streaming series (Netflix, Apple TV+, HBO, etc.), "movie" for feature films. Many series posters look like movie posters — check carefully.
+        - Return 1 candidate with confidence "high" ONLY if you are absolutely certain; otherwise ALWAYS return 2-3 plausible candidates ordered from most to least likely.
+        - Use the original or best-known international title so it can be found on TMDB.
+        - If the image is clearly not a movie or TV series poster, reply {"candidates":[]}.
         """
 
         let body: [String: Any] = [
@@ -159,18 +194,43 @@ enum PosterScanService {
 
     // MARK: - TMDB matching
 
-    /// Picks the best TMDB result for a candidate. Preference order:
-    /// release year within ±1 of the model's guess, then the top search
-    /// result (TMDB orders by relevance/popularity).
-    private static func pickMatch(from results: [TMDBMovie], year: Int?) -> TMDBMovie {
-        if let year {
-            let byYear = results.first { movie in
-                guard let movieYear = Int(movie.releaseYear ?? "") else { return false }
-                return abs(movieYear - year) <= 1
-            }
-            if let byYear { return byYear }
+    /// Ranks a TMDB result against a model candidate. Combines title
+    /// similarity, popularity (vote count, log scale) and year proximity so
+    /// obscure homonyms (e.g. short films sharing a famous title) never
+    /// outrank the well-known movie the user actually photographed.
+    private static func matchScore(_ movie: TMDBMovie, candidate: PosterCandidate) -> Double {
+        let movieTitle = normalized(movie.title)
+        let candidateTitle = normalized(candidate.title)
+        var score = 0.0
+
+        if movieTitle == candidateTitle {
+            score += 60
+        } else if movieTitle.contains(candidateTitle) || candidateTitle.contains(movieTitle) {
+            score += 30
         }
-        return results[0]
+
+        // 0 votes → 0 pts, 100 votes → 20 pts, 1000+ votes → 30 pts (cap).
+        score += min(30, log10(Double(max(movie.voteCount, 1))) * 10)
+
+        if let year = candidate.year, let movieYear = Int(movie.releaseYear ?? "") {
+            switch abs(movieYear - year) {
+            case 0: score += 15
+            case 1: score += 8
+            default: break
+            }
+        }
+
+        if movie.posterPath == nil { score -= 20 }
+        return score
+    }
+
+    /// Case/diacritic/punctuation-insensitive form used for title equality.
+    private static func normalized(_ text: String) -> String {
+        text.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: Locale(identifier: "en_US"))
+            .lowercased()
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
     }
 
     // MARK: - Image preparation
