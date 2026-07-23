@@ -88,6 +88,9 @@ struct SettingsView: View {
                 }
                 privacySection
                 supportSection
+                #if DEBUG
+                scanInsightsSection
+                #endif
                 legalSection
             }
             .scrollContentBackground(.hidden)
@@ -1194,6 +1197,31 @@ struct SettingsView: View {
         }
         .listRowBackground(Theme.card)
     }
+
+    #if DEBUG
+    // MARK: - Dashboard interna (solo build di sviluppo)
+
+    private var scanInsightsSection: some View {
+        Section {
+            NavigationLink {
+                ScanInsightsView()
+            } label: {
+                SettingsRow(
+                    icon: "chart.bar.xaxis",
+                    iconColor: Theme.primary,
+                    title: L("settings.dash.row")
+                )
+            }
+        } header: {
+            Text(L("settings.dash.header"))
+        } footer: {
+            Text(L("settings.dash.footer"))
+                .font(.footnote)
+                .foregroundStyle(Theme.inkSoft)
+        }
+        .listRowBackground(Theme.card)
+    }
+    #endif
 
     // MARK: - Introduzione
 

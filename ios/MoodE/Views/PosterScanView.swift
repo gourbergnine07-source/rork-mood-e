@@ -237,7 +237,12 @@ struct PosterScanView: View {
                 AnalyticsService.shared.log("poster_scan_tv_series")
                 phase = .failed(.tvSeries(title))
             } catch PosterScanError.notFoundOnTMDB(let title) {
-                AnalyticsService.shared.log("poster_scan_not_in_tmdb")
+                // The recognized title (non-personal) is the whole point of
+                // this event: it feeds the internal "missing on TMDB" board.
+                AnalyticsService.shared.log(
+                    "poster_scan_not_in_tmdb",
+                    meta: ["title": String(title.prefix(80))]
+                )
                 // Pre-fill the manual search with the recognized title so
                 // the user can tweak it right away.
                 query = title

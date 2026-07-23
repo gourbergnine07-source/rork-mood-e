@@ -387,6 +387,14 @@ export type Database = {
           friend_user_id: string
         }[]
       }
+      scan_missing_titles: {
+        Args: { days?: number }
+        Returns: {
+          last_seen: string
+          title: string
+          total: number
+        }[]
+      }
       user_id: { Args: never; Returns: string }
     }
     Enums: {
