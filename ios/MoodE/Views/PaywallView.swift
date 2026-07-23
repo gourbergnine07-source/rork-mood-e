@@ -80,7 +80,13 @@ struct PaywallView: View {
                 if isPremium { dismiss() }
             }
             .task {
-                await store.fetchOfferings()
+                // Retry automatically: TestFlight/first-launch fetches can
+                // fail transiently before StoreKit warms up.
+                for attempt in 0..<3 {
+                    await store.fetchOfferings()
+                    if store.monthlyPackage != nil { return }
+                    try? await Task.sleep(for: .seconds(Double(attempt + 1) * 2))
+                }
             }
         }
     }
@@ -154,6 +160,23 @@ struct PaywallView: View {
 
     private var ctaBar: some View {
         VStack(spacing: 8) {
+            if store.monthlyPackage == nil && store.offeringsFailed && !store.isLoading {
+                VStack(spacing: 4) {
+                    Text(L("premium.load.failed"))
+                        .font(.caption)
+                        .foregroundStyle(Theme.inkSoft)
+                        .multilineTextAlignment(.center)
+                    Button {
+                        Task { await store.fetchOfferings() }
+                    } label: {
+                        Text(L("premium.load.retry"))
+                            .font(.footnote.weight(.bold))
+                            .foregroundStyle(Theme.amber)
+                    }
+                }
+                .padding(.bottom, 2)
+            }
+
             Button {
                 Task { await store.purchase() }
             } label: {
@@ -201,6 +224,9 @@ struct PaywallView: View {
     private var ctaTitle: String {
         if let price = store.monthlyPackage?.storeProduct.localizedPriceString {
             return LF("premium.cta", price)
+        }
+        if store.offeringsFailed && !store.isLoading {
+            return L("premium.cta.unavailable")
         }
         return L("premium.cta.loading")
     }

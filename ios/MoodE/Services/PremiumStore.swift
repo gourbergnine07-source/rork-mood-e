@@ -21,6 +21,9 @@ final class PremiumStore {
     private(set) var isPremium: Bool
     private(set) var offerings: Offerings?
     private(set) var isLoading: Bool = false
+    /// True when the last offerings fetch failed or returned no plan —
+    /// lets the paywall show a retry action instead of loading forever.
+    private(set) var offeringsFailed: Bool = false
     var isPurchasing: Bool = false
     var errorMessage: String?
     /// One-shot feedback after "Ripristina acquisti".
@@ -76,11 +79,19 @@ final class PremiumStore {
     }
 
     func fetchOfferings() async {
-        guard offerings == nil, !isLoading else { return }
+        guard monthlyPackage == nil, !isLoading else { return }
         isLoading = true
+        offeringsFailed = false
         do {
             offerings = try await Purchases.shared.offerings()
+            if monthlyPackage == nil {
+                // Fetch succeeded but no plan came back (e.g. product not
+                // yet purchasable on this storefront) — keep it retryable.
+                offeringsFailed = true
+                print("PremiumStore: offerings loaded but no monthly package")
+            }
         } catch {
+            offeringsFailed = true
             print("PremiumStore: offerings failed: \(error.localizedDescription)")
         }
         isLoading = false
