@@ -55,17 +55,31 @@ enum PosterScanService {
         let candidates = try await recognize(base64: base64)
         guard !candidates.isEmpty else { throw PosterScanError.notRecognized }
 
+        // Best TMDB match per candidate, plus runner-up results kept aside
+        // so the chooser can always offer 2-3 real alternatives.
         var movies: [TMDBMovie] = []
+        var alternates: [TMDBMovie] = []
         for candidate in candidates.prefix(3) {
-            guard let match = await bestMatch(for: candidate) else { continue }
-            if !movies.contains(where: { $0.id == match.id }) {
-                movies.append(match)
+            guard let results = try? await TMDBService.searchMovies(query: candidate.title),
+                  !results.isEmpty else { continue }
+            let best = pickMatch(from: results, year: candidate.year)
+            if !movies.contains(where: { $0.id == best.id }) {
+                movies.append(best)
+            }
+            alternates.append(contentsOf: results.prefix(4).filter { $0.id != best.id })
+        }
+        for extra in alternates where movies.count < 3 {
+            if !movies.contains(where: { $0.id == extra.id }) {
+                movies.append(extra)
             }
         }
         guard !movies.isEmpty else { throw PosterScanError.notRecognized }
 
+        // Direct navigation only when the model proposed a single,
+        // high-confidence title. The padded chooser stays available behind
+        // the detail page, so the user can go back and pick another match.
         let confident = candidates.count == 1 && (candidates.first?.isHighConfidence ?? false)
-        return PosterScanOutcome(movies: movies, isConfident: confident && movies.count == 1)
+        return PosterScanOutcome(movies: movies, isConfident: confident)
     }
 
     // MARK: - Vision call
@@ -79,16 +93,17 @@ enum PosterScanService {
         }
 
         let prompt = """
-        You identify movie posters. Look at the image and identify the movie.
+        You identify movie posters. The photo may be blurry, tilted, partially cropped, taken at an angle, or a photo of a screen/monitor — do your best anyway using the artwork, typography, actors and any readable text.
         Reply ONLY with minified JSON, no markdown, in this exact shape:
         {"candidates":[{"title":"<movie title>","year":<release year or null>,"confidence":"high|medium|low"}]}
-        Rules: at most 3 candidates, most likely first. Use the movie's original or best-known international title so it can be found on TMDB. If the image is not a movie poster or you cannot identify it, reply {"candidates":[]}.
+        Rules: 1 candidate with confidence "high" ONLY if you are absolutely certain; otherwise ALWAYS return 2-3 plausible candidates ordered from most to least likely. Use the movie's original or best-known international title so it can be found on TMDB. If the image is clearly not a movie poster, reply {"candidates":[]}.
         """
 
         let body: [String: Any] = [
-            "model": "google/gemini-3.6-flash",
+            "model": "google/gemini-3-flash",
             "temperature": 0,
-            "max_tokens": 300,
+            "max_tokens": 2000,
+            "reasoning_effort": "low",
             "messages": [
                 [
                     "role": "user",
@@ -112,14 +127,22 @@ enum PosterScanService {
 
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+            let status = (response as? HTTPURLResponse)?.statusCode ?? -1
+            let snippet = String(data: data.prefix(300), encoding: .utf8) ?? ""
+            print("PosterScan: HTTP \(status) — \(snippet)")
             throw PosterScanError.badResponse
         }
 
         let chat = try JSONDecoder().decode(ChatResponse.self, from: data)
-        guard let content = chat.choices.first?.message.content else {
+        guard let content = chat.choices.first?.message.content, !content.isEmpty else {
+            print("PosterScan: empty model content")
             throw PosterScanError.badResponse
         }
-        return parseCandidates(from: content)
+        let candidates = parseCandidates(from: content)
+        if candidates.isEmpty {
+            print("PosterScan: no candidates parsed from: \(content.prefix(200))")
+        }
+        return candidates
     }
 
     /// Extracts the JSON object from the model output (tolerates fences).
@@ -136,21 +159,18 @@ enum PosterScanService {
 
     // MARK: - TMDB matching
 
-    /// Turns a title/year candidate into a real TMDB movie. Preference
-    /// order: release year within ±1 of the model's guess, then the top
-    /// search result (TMDB orders by relevance/popularity).
-    private static func bestMatch(for candidate: PosterCandidate) async -> TMDBMovie? {
-        guard let results = try? await TMDBService.searchMovies(query: candidate.title),
-              !results.isEmpty else { return nil }
-
-        if let year = candidate.year {
+    /// Picks the best TMDB result for a candidate. Preference order:
+    /// release year within ±1 of the model's guess, then the top search
+    /// result (TMDB orders by relevance/popularity).
+    private static func pickMatch(from results: [TMDBMovie], year: Int?) -> TMDBMovie {
+        if let year {
             let byYear = results.first { movie in
                 guard let movieYear = Int(movie.releaseYear ?? "") else { return false }
                 return abs(movieYear - year) <= 1
             }
             if let byYear { return byYear }
         }
-        return results.first
+        return results[0]
     }
 
     // MARK: - Image preparation
