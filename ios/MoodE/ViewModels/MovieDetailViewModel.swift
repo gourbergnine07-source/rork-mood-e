@@ -13,6 +13,8 @@ final class MovieDetailViewModel {
         case loading
         case loaded(TMDBMovieDetail)
         case failed(String)
+        /// TMDB no longer knows this movie id (removed from the catalog).
+        case unavailable
     }
 
     private(set) var state: LoadState = .loading
@@ -23,6 +25,8 @@ final class MovieDetailViewModel {
         do {
             let detail = try await TMDBService.movieDetail(id: movieID)
             state = .loaded(detail)
+        } catch TMDBError.badResponse(let statusCode) where statusCode == 404 {
+            state = .unavailable
         } catch {
             let message = (error as? TMDBError)?.errorDescription ?? L("error.generic")
             state = .failed(message)

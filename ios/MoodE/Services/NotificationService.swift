@@ -7,6 +7,25 @@ import Foundation
 import UserNotifications
 import Observation
 
+/// Holds the route of a notification tapped before the UI was listening
+/// (cold start): ContentView consumes it as soon as it appears, so the tap
+/// always lands on the right screen instead of just opening the Home.
+@MainActor
+enum NotificationRouteRelay {
+    private static var pending: (route: String, userInfo: [AnyHashable: Any]?)?
+
+    static func store(route: String, userInfo: [AnyHashable: Any]?) {
+        pending = (route, userInfo)
+    }
+
+    static func consume() -> (route: String, userInfo: [AnyHashable: Any]?)? {
+        defer { pending = nil }
+        return pending
+    }
+
+    static func clear() { pending = nil }
+}
+
 /// Deep-link routes attached to local notifications, handled by ContentView.
 enum NotificationRoute {
     static let notificationName = Notification.Name("moodE.notificationRoute")
@@ -71,12 +90,17 @@ final class NotificationService {
     private static let watchlistNotifiedKey = "notifications.watchlist.notifiedIds"
     private static let featuredScheduledKey = "notifications.featured.scheduledIds"
     private static let knownIdsKey = "notifications.knownMovieIds"
+    private static let releasesNotifiedKey = "notifications.releases.notifiedIds"
     private static let lastSyncKey = "notifications.lastSyncDate"
     private static let anniversaryMonthKey = "notifications.anniversary.lastMonth"
     /// Minimum time between two TMDB checks (6 hours, like the data cache).
     private static let syncInterval: TimeInterval = 6 * 60 * 60
     /// Days a watchlist movie sits unwatched before the reminder.
     private static let watchlistReminderDays = 5
+
+    /// Region last resolved by the Al Cinema tab (persisted there), shared so
+    /// "Oggi al cinema" notifications query the exact same TMDB dataset.
+    static let cinemaRegionKey = "cinema.lastRegion"
 
     private static let eveningIdentifier = "evening-reminder"
     private static let movieNightPrefix = "movienight-"
@@ -622,7 +646,10 @@ final class NotificationService {
             return
         }
 
-        let region = Locale.current.region?.identifier ?? "IT"
+        // Same region the Al Cinema tab resolved last (fallback: device locale),
+        // so notifications and the tab always share one TMDB dataset.
+        let region = defaults.string(forKey: Self.cinemaRegionKey)
+            ?? Locale.current.region?.identifier ?? "IT"
 
         do {
             async let nowPlayingTask = TMDBService.nowPlayingMovies(region: region)
@@ -630,6 +657,10 @@ final class NotificationService {
             let (nowPlaying, upcoming) = try await (nowPlayingTask, upcomingTask)
 
             defaults.set(Date(), forKey: Self.lastSyncKey)
+
+            // Share the exact dataset with the Al Cinema tab (same cache key):
+            // any movie notified below is guaranteed to be in that list.
+            TMDBCache.save(nowPlaying, forKey: "nowPlaying.\(region)")
 
             let known = Set(defaults.array(forKey: Self.knownIdsKey) as? [Int] ?? [])
             let isFirstSync = known.isEmpty
@@ -654,7 +685,7 @@ final class NotificationService {
                 notifyNewArrivals(Array(newMovies.prefix(3)), totalCount: newMovies.count)
             }
 
-            await scheduleReleaseReminders(for: upcoming, topGenres: topGenres)
+            await scheduleReleaseReminders(nowPlaying: nowPlaying, topGenres: topGenres)
         } catch {
             print("[Notifications] Sync failed: \(error.localizedDescription)")
         }
@@ -693,17 +724,31 @@ final class NotificationService {
         UNUserNotificationCenter.current().add(request)
     }
 
-    /// Schedules a local reminder at 10:00 on each upcoming movie's release day.
-    /// With history available, only releases matching the user's top genres.
-    private func scheduleReleaseReminders(for movies: [TMDBMovie], topGenres: [Int]) async {
+    /// "Oggi al cinema" notifications built from the SAME now-playing dataset
+    /// shown in the Al Cinema tab, so every notified movie can also be found
+    /// there. Today's releases fire right away (max 3 per sync, once per
+    /// movie); dates still ahead but already listed get a 10:00 reminder.
+    private func scheduleReleaseReminders(nowPlaying: [TMDBMovie], topGenres: [Int]) async {
         let center = UNUserNotificationCenter.current()
-        let pendingIds = Set(await center.pendingNotificationRequests().map(\.identifier))
+
+        // Drop stale reminders about movies no longer in the tab's dataset
+        // (including old ones scheduled from the separate upcoming feed).
+        let currentIds = Set(nowPlaying.map(\.id))
+        let pending = await center.pendingNotificationRequests()
+        let stale = pending.map(\.identifier).filter { identifier in
+            guard identifier.hasPrefix("release-") else { return false }
+            guard let id = Int(identifier.dropFirst("release-".count)) else { return true }
+            return !currentIds.contains(id)
+        }
+        center.removePendingNotificationRequests(withIdentifiers: stale)
+        let pendingIds = Set(pending.map(\.identifier)).subtracting(stale)
 
         let parser = DateFormatter()
         parser.dateFormat = "yyyy-MM-dd"
         parser.locale = Locale(identifier: "en_US_POSIX")
+        let calendar = Calendar.current
 
-        var candidates = Array(movies.prefix(30))
+        var candidates = nowPlaying
         if !topGenres.isEmpty {
             let preferred = candidates.filter { movie in
                 guard let genres = movie.genreIds else { return false }
@@ -712,15 +757,13 @@ final class NotificationService {
             if !preferred.isEmpty { candidates = preferred }
         }
 
-        for movie in candidates {
-            let identifier = "release-\(movie.id)"
-            guard !pendingIds.contains(identifier),
-                  let dateString = movie.releaseDate,
-                  let releaseDate = parser.date(from: dateString),
-                  releaseDate > Date() else { continue }
+        var notified = Set(defaults.array(forKey: Self.releasesNotifiedKey) as? [Int] ?? [])
+        var todayCount = 0
 
-            var components = Calendar.current.dateComponents([.year, .month, .day], from: releaseDate)
-            components.hour = 10
+        for movie in candidates {
+            guard let dateString = movie.releaseDate,
+                  let releaseDate = parser.date(from: dateString) else { continue }
+            let identifier = "release-\(movie.id)"
 
             let content = UNMutableNotificationContent()
             content.title = L("notif.release.title")
@@ -730,13 +773,37 @@ final class NotificationService {
                 id: movie.id, title: movie.title, posterPath: movie.posterPath
             )
 
-            let request = UNNotificationRequest(
-                identifier: identifier,
-                content: content,
-                trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
-            )
-            try? await center.add(request)
+            if calendar.isDateInToday(releaseDate) {
+                // Release day: near-immediate banner, never repeated for a movie.
+                guard !notified.contains(movie.id), todayCount < 3 else { continue }
+                notified.insert(movie.id)
+                todayCount += 1
+
+                try? await center.add(UNNotificationRequest(
+                    identifier: identifier,
+                    content: content,
+                    trigger: UNTimeIntervalNotificationTrigger(
+                        timeInterval: Double(2 + todayCount * 2), repeats: false
+                    )
+                ))
+            } else if releaseDate > Date() {
+                // Already visible in the tab ahead of its release day:
+                // safe to pre-schedule the 10:00 reminder.
+                guard !pendingIds.contains(identifier), !notified.contains(movie.id) else { continue }
+                notified.insert(movie.id)
+
+                var components = calendar.dateComponents([.year, .month, .day], from: releaseDate)
+                components.hour = 10
+
+                try? await center.add(UNNotificationRequest(
+                    identifier: identifier,
+                    content: content,
+                    trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+                ))
+            }
         }
+
+        defaults.set(Array(notified), forKey: Self.releasesNotifiedKey)
     }
 }
 
@@ -768,6 +835,9 @@ final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
             NotificationHistory.shared.add(record)
             AnalyticsService.shared.log("notification_opened", meta: ["route": route ?? "none"])
             if let route {
+                // Cold start: ContentView may not be listening yet, so the
+                // route is also parked in the relay and consumed on appear.
+                NotificationRouteRelay.store(route: route, userInfo: extras)
                 NotificationCenter.default.post(
                     name: NotificationRoute.notificationName,
                     object: route,

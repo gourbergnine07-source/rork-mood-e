@@ -109,6 +109,12 @@ struct ContentView: View {
             if let mood = IntentRelay.consumePendingMood() {
                 launchQuickPick(mood: mood)
             }
+            // Notification tapped on a cold start: the delegate fired before
+            // this view was listening, so consume the relayed route now.
+            try? await Task.sleep(for: .milliseconds(600))
+            if let pending = NotificationRouteRelay.consume() {
+                handleNotificationRoute(pending.route, userInfo: pending.userInfo)
+            }
         }
         .onChange(of: iCloudSync.conflict) { _, newValue in
             showSyncConflict = newValue != nil
@@ -127,14 +133,9 @@ struct ContentView: View {
         .onChange(of: library.lifetimeWatchedCount) { _, _ in evaluateUnlocks() }
         .onReceive(NotificationCenter.default.publisher(for: NotificationRoute.notificationName)) { note in
             guard let route = note.object as? String else { return }
-            switch route {
-            case NotificationRoute.moodFlow: selectedTab = 0
-            case NotificationRoute.community: selectedTab = 1
-            case NotificationRoute.watchlist: selectedTab = 3
-            case NotificationRoute.forecast: handleForecastTap(note.userInfo)
-            case NotificationRoute.movie: handleMovieNotificationTap(note.userInfo)
-            default: break
-            }
+            // Handled live: drop any relayed copy so it can't replay later.
+            NotificationRouteRelay.clear()
+            handleNotificationRoute(route, userInfo: note.userInfo)
         }
         .onOpenURL { url in
             handleDeepLink(url)
@@ -162,6 +163,18 @@ struct ContentView: View {
                     }
             }
             .tint(Theme.primary)
+        }
+    }
+
+    /// Routes a notification tap to the right tab or screen.
+    private func handleNotificationRoute(_ route: String, userInfo: [AnyHashable: Any]?) {
+        switch route {
+        case NotificationRoute.moodFlow: selectedTab = 0
+        case NotificationRoute.community: selectedTab = 1
+        case NotificationRoute.watchlist: selectedTab = 3
+        case NotificationRoute.forecast: handleForecastTap(userInfo)
+        case NotificationRoute.movie: handleMovieNotificationTap(userInfo)
+        default: break
         }
     }
 

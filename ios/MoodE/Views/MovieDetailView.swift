@@ -15,6 +15,7 @@ struct MovieDetailView: View {
     @Environment(MovieLibrary.self) private var library
     @Environment(\.requestReview) private var requestReview
     @Environment(\.openURL) private var openURL
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         ZStack {
@@ -25,6 +26,8 @@ struct MovieDetailView: View {
                 loadingView
             case .failed(let message):
                 errorView(message)
+            case .unavailable:
+                unavailableView
             case .loaded(let detail):
                 detailContent(detail)
             }
@@ -90,6 +93,35 @@ struct MovieDetailView: View {
                 Task { await viewModel.load(movieID: movie.id) }
             } label: {
                 Label(L("common.retry"), systemImage: "arrow.clockwise")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 12)
+                    .background(Theme.primary, in: .capsule)
+            }
+        }
+        .padding(.horizontal, 32)
+    }
+
+    /// Gentle dead-end when TMDB no longer knows this movie (e.g. removed):
+    /// no technical error, just a friendly message and a way back home.
+    private var unavailableView: some View {
+        VStack(spacing: 18) {
+            Image(systemName: "film.stack")
+                .font(.system(size: 40))
+                .foregroundStyle(Theme.inkSoft)
+            Text(L("detail.gone.title"))
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(Theme.ink)
+                .multilineTextAlignment(.center)
+            Text(L("detail.gone.msg"))
+                .font(.subheadline)
+                .foregroundStyle(Theme.inkSoft)
+                .multilineTextAlignment(.center)
+            Button {
+                dismiss()
+            } label: {
+                Label(L("detail.gone.home"), systemImage: "house.fill")
                     .font(.headline)
                     .foregroundStyle(.white)
                     .padding(.horizontal, 24)

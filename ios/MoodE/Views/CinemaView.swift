@@ -78,12 +78,18 @@ struct CinemaView: View {
     }
 
     /// Country from the user's position when authorized, otherwise device locale.
+    /// The result is persisted so "Oggi al cinema" notifications query the
+    /// exact same TMDB dataset (same region) shown in this tab.
     private func resolveRegion() async -> String {
+        let region: String
         if locationService.isAuthorized,
            let code = await locationService.resolveCountryCode() {
-            return code
+            region = code
+        } else {
+            region = Locale.current.region?.identifier ?? "IT"
         }
-        return Locale.current.region?.identifier ?? "IT"
+        UserDefaults.standard.set(region, forKey: NotificationService.cinemaRegionKey)
+        return region
     }
 
     // MARK: - Content

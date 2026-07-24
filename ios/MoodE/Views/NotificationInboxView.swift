@@ -105,28 +105,50 @@ struct NotificationInboxView: View {
                         .foregroundStyle(Theme.inkSoft.opacity(0.7))
                         .padding(.top, 1)
                 }
+
+                if isActionable(record) {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Theme.inkSoft.opacity(0.5))
+                        .frame(maxHeight: .infinity, alignment: .center)
+                        .padding(.top, 10)
+                }
             }
             .padding(.vertical, 4)
         }
         .buttonStyle(.plain)
     }
 
+    /// A record is tappable when it carries a route or points to a movie.
+    private func isActionable(_ record: NotificationRecord) -> Bool {
+        record.route != nil || record.movieId != nil
+    }
+
     /// Notification tap routes: evening reminder → mood flow, watchlist → list
     /// tab, movie notifications → that movie's detail page.
     private func openRoute(_ record: NotificationRecord) {
-        guard let route = record.route else { return }
-        dismiss()
+        // Older movie records saved without a route still open the film.
+        let resolvedRoute = record.route
+            ?? (record.movieId != nil ? NotificationRoute.movie : nil)
+        guard let route = resolvedRoute else { return }
 
         var info: [AnyHashable: Any] = [:]
         if let movieId = record.movieId { info["movieId"] = movieId }
         if let movieTitle = record.movieTitle { info["movieTitle"] = movieTitle }
         if let posterPath = record.posterPath { info["posterPath"] = posterPath }
 
-        NotificationCenter.default.post(
-            name: NotificationRoute.notificationName,
-            object: route,
-            userInfo: info.isEmpty ? nil : info
-        )
+        dismiss()
+
+        // Let the pop animation settle before presenting the destination,
+        // otherwise the presentation gets dropped mid-transition.
+        Task {
+            try? await Task.sleep(for: .milliseconds(400))
+            NotificationCenter.default.post(
+                name: NotificationRoute.notificationName,
+                object: route,
+                userInfo: info.isEmpty ? nil : info
+            )
+        }
     }
 
     private func icon(for route: String?) -> String {
