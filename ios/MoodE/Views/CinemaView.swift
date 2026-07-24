@@ -14,7 +14,14 @@ struct CinemaView: View {
     /// Persisted so "Non ora" is remembered across launches: the tab then
     /// always falls back to national now-playing results (device country, default IT).
     @AppStorage("cinema.skippedPermission") private var skippedPermission: Bool = false
+    /// One-time transparency note about where showtime data comes from.
+    @AppStorage("cinema.infoDismissed") private var infoDismissed: Bool = false
     @State private var cinemaSearchText = ""
+    @State private var movieQuery = ""
+    @State private var remoteResults: [TMDBMovie]?
+    @State private var isSearchingRemote = false
+    @State private var remoteSearchTask: Task<Void, Never>?
+    @State private var userCity: String?
     @State private var selectedGenreId: Int?
     @State private var trailerPlayback = TrailerPlayback()
     @Environment(\.openURL) private var openURL
@@ -60,6 +67,9 @@ struct CinemaView: View {
             // Language switch: refetch now-playing data localized in the new language.
             Task { await loadMovies(forceRefresh: true) }
         }
+        .onChange(of: movieQuery) { _, newValue in
+            scheduleRemoteSearch(for: newValue)
+        }
     }
 
     // MARK: - Loading
@@ -74,6 +84,7 @@ struct CinemaView: View {
     private func loadNearbyCinemas() async {
         guard locationService.isAuthorized,
               let location = await locationService.resolveLocation() else { return }
+        userCity = await locationService.resolveCityName()
         await viewModel.loadNearbyCinemas(around: location)
     }
 
@@ -230,32 +241,31 @@ struct CinemaView: View {
                     deniedBanner
                 }
 
+                if !infoDismissed {
+                    transparencyBanner
+                }
+
                 regionHeader
 
                 if movies.isEmpty {
                     emptyState
                 } else {
-                    genreChips(for: movies)
+                    movieSearchBar
 
-                    let filteredMovies = filteredByGenre(movies)
+                    let query = movieQuery.trimmingCharacters(in: .whitespacesAndNewlines)
 
-                    if filteredMovies.isEmpty {
-                        noGenreResultsCard
-                    } else {
-                        LazyVGrid(columns: columns, spacing: 18) {
-                            ForEach(filteredMovies) { movie in
-                                NavigationLink(value: movie) {
-                                    NowPlayingCard(
-                                        movie: movie,
-                                        isLoadingTrailer: trailerPlayback.loadingMovieId == movie.id,
-                                        onPlayTrailer: { trailerPlayback.play(movie) }
-                                    )
-                                }
-                                .buttonStyle(PressableCardStyle())
-                            }
+                    if query.isEmpty {
+                        genreChips(for: movies)
+
+                        let filteredMovies = filteredByGenre(movies)
+
+                        if filteredMovies.isEmpty {
+                            noGenreResultsCard
+                        } else {
+                            movieGrid(filteredMovies)
                         }
-                        .padding(.horizontal, 24)
-                        .animation(.spring(duration: 0.3), value: filteredMovies)
+                    } else {
+                        movieSearchResults(in: movies, query: query)
                     }
                 }
 
@@ -268,6 +278,182 @@ struct CinemaView: View {
         .refreshable {
             await loadMovies(forceRefresh: true)
         }
+    }
+
+    private func movieGrid(_ movies: [TMDBMovie]) -> some View {
+        LazyVGrid(columns: columns, spacing: 18) {
+            ForEach(movies) { movie in
+                NavigationLink(value: movie) {
+                    NowPlayingCard(
+                        movie: movie,
+                        isLoadingTrailer: trailerPlayback.loadingMovieId == movie.id,
+                        onPlayTrailer: { trailerPlayback.play(movie) },
+                        onFindShowtimes: { openShowtimesSearch(for: movie) }
+                    )
+                }
+                .buttonStyle(PressableCardStyle())
+            }
+        }
+        .padding(.horizontal, 24)
+        .animation(.spring(duration: 0.3), value: movies)
+    }
+
+    // MARK: - Movie search
+
+    /// Local title filter first; when nothing matches the loaded list, shows
+    /// the TMDB /search/movie fallback (recent releases not yet in the cache).
+    @ViewBuilder
+    private func movieSearchResults(in movies: [TMDBMovie], query: String) -> some View {
+        let local = movies.filter { $0.title.localizedStandardContains(query) }
+
+        if !local.isEmpty {
+            movieGrid(local)
+        } else if isSearchingRemote {
+            searchingIndicator
+        } else if let remote = remoteResults, !remote.isEmpty {
+            movieGrid(remote)
+        } else {
+            noMovieResultsCard
+        }
+    }
+
+    /// Debounced TMDB search launched only when the local list has no match.
+    private func scheduleRemoteSearch(for text: String) {
+        remoteSearchTask?.cancel()
+        remoteResults = nil
+        isSearchingRemote = false
+
+        let query = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard query.count >= 2, case .loaded(let movies) = viewModel.state else { return }
+        guard !movies.contains(where: { $0.title.localizedStandardContains(query) }) else { return }
+
+        isSearchingRemote = true
+        remoteSearchTask = Task {
+            try? await Task.sleep(for: .milliseconds(450))
+            guard !Task.isCancelled else { return }
+            let results = (try? await TMDBService.searchMovies(query: query, region: viewModel.regionCode)) ?? []
+            guard !Task.isCancelled else { return }
+            remoteResults = results
+            isSearchingRemote = false
+        }
+    }
+
+    private var movieSearchBar: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(Theme.tabCinema)
+
+            TextField(L("cinema.movieSearch.placeholder"), text: $movieQuery)
+                .font(.subheadline)
+                .foregroundStyle(Theme.ink)
+                .autocorrectionDisabled()
+                .submitLabel(.search)
+
+            if !movieQuery.isEmpty {
+                Button {
+                    withAnimation(.spring(duration: 0.25)) {
+                        movieQuery = ""
+                    }
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 16))
+                        .foregroundStyle(Theme.inkSoft.opacity(0.6))
+                }
+                .accessibilityLabel(L("cinema.clearSearch"))
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+        .background(Theme.cardStrong, in: .rect(cornerRadius: 14))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(Theme.tabCinema.opacity(0.18), lineWidth: 1)
+        )
+        .padding(.horizontal, 24)
+    }
+
+    private var searchingIndicator: some View {
+        HStack(spacing: 12) {
+            ProgressView()
+                .tint(Theme.tabCinema)
+            Text(L("cinema.search.searching"))
+                .font(.subheadline)
+                .foregroundStyle(Theme.inkSoft)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 28)
+        .padding(.horizontal, 24)
+    }
+
+    private var noMovieResultsCard: some View {
+        VStack(spacing: 10) {
+            Text("\u{1F3AC}")
+                .font(.system(size: 36))
+            Text(L("cinema.search.noResults"))
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Theme.ink)
+                .multilineTextAlignment(.center)
+            Button(L("cinema.showAll")) {
+                withAnimation(.spring(duration: 0.3)) {
+                    movieQuery = ""
+                }
+            }
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(Theme.tabCinema)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 28)
+        .padding(.horizontal, 24)
+    }
+
+    /// Opens Safari with a prefilled search "title + cinema showtimes + city":
+    /// TMDB has no per-theatre showtime data, so this is the one-tap shortcut.
+    private func openShowtimesSearch(for movie: TMDBMovie) {
+        var terms = [movie.title, L("cinema.showtimesTerms")]
+        if let userCity, !userCity.isEmpty {
+            terms.append(userCity)
+        }
+        var components = URLComponents(string: "https://www.google.com/search")
+        components?.queryItems = [URLQueryItem(name: "q", value: terms.joined(separator: " "))]
+        guard let url = components?.url else { return }
+        AnalyticsService.shared.log("cinema_showtimes_search", meta: ["movieId": String(movie.id)])
+        openURL(url)
+    }
+
+    /// One-time dismissible note explaining what the tab can and can't show.
+    private var transparencyBanner: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "info.circle.fill")
+                .font(.system(size: 16))
+                .foregroundStyle(Theme.tabCinema)
+
+            Text(L("cinema.transparency"))
+                .font(.caption)
+                .foregroundStyle(Theme.inkSoft)
+                .lineSpacing(2)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            Button {
+                withAnimation(.spring(duration: 0.3)) {
+                    infoDismissed = true
+                }
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(Theme.inkSoft.opacity(0.7))
+                    .frame(width: 24, height: 24)
+                    .background(Theme.inkSoft.opacity(0.12), in: .circle)
+            }
+            .accessibilityLabel(L("common.ok"))
+        }
+        .padding(14)
+        .background(Theme.card, in: .rect(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Theme.tabCinema.opacity(0.15), lineWidth: 1)
+        )
+        .padding(.horizontal, 24)
     }
 
     // MARK: - Genre filter
@@ -659,6 +845,7 @@ struct NowPlayingCard: View {
     let movie: TMDBMovie
     var isLoadingTrailer: Bool = false
     var onPlayTrailer: (() -> Void)? = nil
+    var onFindShowtimes: (() -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -689,6 +876,26 @@ struct NowPlayingCard: View {
                     action: onPlayTrailer
                 )
                 .padding(.top, 2)
+            }
+
+            if let onFindShowtimes {
+                Button(action: onFindShowtimes) {
+                    HStack(alignment: .top, spacing: 4) {
+                        Image(systemName: "mappin.circle.fill")
+                            .font(.system(size: 11, weight: .semibold))
+                            .padding(.top, 1)
+                        Text(L("cinema.findShowtimes"))
+                            .font(.caption2.weight(.semibold))
+                            .multilineTextAlignment(.leading)
+                    }
+                    .foregroundStyle(Theme.tabCinema)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 7)
+                    .background(Theme.tabCinema.opacity(0.10), in: .rect(cornerRadius: 10))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(L("cinema.findShowtimes"))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

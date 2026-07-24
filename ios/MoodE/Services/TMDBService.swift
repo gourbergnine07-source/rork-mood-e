@@ -284,14 +284,19 @@ enum TMDBService {
         return fresh.randomElement() ?? filled.results.randomElement()
     }
 
-    /// Free-text movie search, used when planning a movie on a diary day.
-    static func searchMovies(query: String) async throws -> [TMDBMovie] {
+    /// Free-text movie search, used when planning a movie on a diary day and
+    /// by the Al Cinema tab search. Pass a region to prioritize release dates
+    /// and results for the user's country.
+    static func searchMovies(query: String, region: String? = nil) async throws -> [TMDBMovie] {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return [] }
-        let queryItems = [
+        var queryItems = [
             URLQueryItem(name: "query", value: trimmed),
             URLQueryItem(name: "include_adult", value: "false")
         ]
+        if let region {
+            queryItems.append(URLQueryItem(name: "region", value: region))
+        }
         let response: TMDBMovieListResponse = try await request(path: "/search/movie", queryItems: queryItems)
         return response.results
     }

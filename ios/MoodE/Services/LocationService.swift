@@ -15,6 +15,7 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
 
     private(set) var authorizationStatus: CLAuthorizationStatus = .notDetermined
     private(set) var lastLocation: CLLocation?
+    private var cachedCity: String?
 
     override init() {
         super.init()
@@ -70,9 +71,27 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
 
         do {
             let placemarks = try await CLGeocoder().reverseGeocodeLocation(location)
+            cachedCity = placemarks.first?.locality ?? placemarks.first?.subAdministrativeArea
             return placemarks.first?.isoCountryCode
         } catch {
             print("LocationService: failed to resolve country code: \(error.localizedDescription)")
+            return nil
+        }
+    }
+
+    /// Resolves the user's city name (locality), used to prefill web searches
+    /// like "movie title + showtimes + city". Cached after the first lookup.
+    func resolveCityName() async -> String? {
+        if let cachedCity { return cachedCity }
+        guard let location = await resolveLocation() else { return nil }
+
+        do {
+            let placemarks = try await CLGeocoder().reverseGeocodeLocation(location)
+            let city = placemarks.first?.locality ?? placemarks.first?.subAdministrativeArea
+            cachedCity = city
+            return city
+        } catch {
+            print("LocationService: failed to resolve city: \(error.localizedDescription)")
             return nil
         }
     }
