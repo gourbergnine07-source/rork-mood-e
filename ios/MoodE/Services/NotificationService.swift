@@ -47,7 +47,8 @@ nonisolated struct NotificationTapPayload: Sendable {
 
     /// Notification userInfo round-trips through a plist, so the movie id can
     /// come back as Int, NSNumber, Double or String depending on iOS version.
-    private static func intValue(_ raw: Any?) -> Int? {
+    /// Also reused by NotificationHistory when recording inbox entries.
+    static func intValue(_ raw: Any?) -> Int? {
         switch raw {
         case let value as Int: return value
         case let value as NSNumber: return value.intValue
@@ -749,7 +750,7 @@ final class NotificationService {
 
             // First sync only seeds the known set: no notification burst.
             if !isFirstSync && !newMovies.isEmpty {
-                notifyNewArrivals(Array(newMovies.prefix(3)), totalCount: newMovies.count)
+                await notifyNewArrivals(newMovies)
             }
 
             await scheduleReleaseReminders(nowPlaying: nowPlaying, topGenres: topGenres)
@@ -760,35 +761,66 @@ final class NotificationService {
 
     // MARK: - Notification builders
 
-    /// Immediate banner for movies that just appeared on TMDB.
-    private func notifyNewArrivals(_ movies: [TMDBMovie], totalCount: Int) {
-        guard let first = movies.first else { return }
+    /// GENERAL RULE for every movie notification: a movie may be cited only
+    /// when its detail page verifiably opens inside Mood-E — the TMDB detail
+    /// call must succeed and return at least poster, title and plot. Better
+    /// no notification than one that leads to an error.
+    private func verifiedForNotification(_ movie: TMDBMovie) async -> Bool {
+        guard Self.hasCompleteCardData(movie) else { return false }
+        guard let detail = try? await TMDBService.movieDetail(id: movie.id) else { return false }
+        return !detail.title.isEmpty
+            && detail.posterPath?.isEmpty == false
+            && !detail.overview.isEmpty
+    }
+
+    /// Cheap pre-filter on list payloads: id, title, poster and plot present.
+    nonisolated private static func hasCompleteCardData(_ movie: TMDBMovie) -> Bool {
+        movie.id > 0
+            && !movie.title.isEmpty
+            && movie.posterPath?.isEmpty == false
+            && !movie.overview.isEmpty
+    }
+
+    /// Immediate banner for movies that just arrived in the catalog. Every
+    /// cited movie is verified first (detail page must open in-app) and the
+    /// tap ALWAYS deep-links to the first verified movie's page, exactly
+    /// like the other movie notifications.
+    private func notifyNewArrivals(_ candidates: [TMDBMovie]) async {
+        var verified: [TMDBMovie] = []
+        var failures = 0
+        for movie in candidates {
+            if verified.count == 3 { break }
+            if await verifiedForNotification(movie) {
+                verified.append(movie)
+            } else {
+                failures += 1
+            }
+        }
+        guard let first = verified.first else { return }
+        let totalCount = candidates.count - failures
 
         let content = UNMutableNotificationContent()
         content.title = L("notif.new.title")
         if totalCount == 1 {
             content.body = LF("notif.new.one", first.title)
         } else {
-            let titles = movies.map(\.title).joined(separator: ", ")
-            let extra = totalCount - movies.count
+            let titles = verified.map(\.title).joined(separator: ", ")
+            let extra = totalCount - verified.count
             content.body = extra > 0
                 ? LF("notif.new.manyExtra", titles, extra)
                 : LF("notif.new.many", titles)
         }
         content.sound = .default
-        // Single new arrival: tap lands straight on that movie's page.
-        if totalCount == 1 {
-            content.userInfo = NotificationRoute.movieUserInfo(
-                id: first.id, title: first.title, posterPath: first.posterPath
-            )
-        }
+        content.userInfo = NotificationRoute.movieUserInfo(
+            id: first.id, title: first.title, posterPath: first.posterPath
+        )
 
         let request = UNNotificationRequest(
             identifier: "new-arrivals-\(Int(Date().timeIntervalSince1970))",
             content: content,
             trigger: UNTimeIntervalNotificationTrigger(timeInterval: 2, repeats: false)
         )
-        UNUserNotificationCenter.current().add(request)
+        try? await UNUserNotificationCenter.current().add(request)
     }
 
     /// "Oggi al cinema" notifications built from the SAME now-playing dataset
@@ -815,7 +847,8 @@ final class NotificationService {
         parser.locale = Locale(identifier: "en_US_POSIX")
         let calendar = Calendar.current
 
-        var candidates = nowPlaying
+        // General rule: only movies with complete card data can be notified.
+        var candidates = nowPlaying.filter(Self.hasCompleteCardData)
         if !topGenres.isEmpty {
             let preferred = candidates.filter { movie in
                 guard let genres = movie.genreIds else { return false }
@@ -843,6 +876,8 @@ final class NotificationService {
             if calendar.isDateInToday(releaseDate) {
                 // Release day: near-immediate banner, never repeated for a movie.
                 guard !notified.contains(movie.id), todayCount < 3 else { continue }
+                // Fires right away: confirm the detail page opens before notifying.
+                guard await verifiedForNotification(movie) else { continue }
                 notified.insert(movie.id)
                 todayCount += 1
 

@@ -104,7 +104,7 @@ final class NotificationHistory {
             date: notification.date,
             route: content.userInfo["route"] as? String,
             isRead: isRead,
-            movieId: content.userInfo["movieId"] as? Int,
+            movieId: NotificationTapPayload.intValue(content.userInfo["movieId"]),
             movieTitle: content.userInfo["movieTitle"] as? String,
             posterPath: content.userInfo["posterPath"] as? String
         )
