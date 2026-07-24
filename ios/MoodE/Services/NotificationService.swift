@@ -7,23 +7,90 @@ import Foundation
 import UserNotifications
 import Observation
 
-/// Holds the route of a notification tapped before the UI was listening
-/// (cold start): ContentView consumes it as soon as it appears, so the tap
-/// always lands on the right screen instead of just opening the Home.
+/// Sendable snapshot of a notification tap: only validated primitive values
+/// are extracted from the raw userInfo dictionary, so nothing thread-unsafe
+/// ever crosses a concurrency boundary and no cast can trap at runtime.
+nonisolated struct NotificationTapPayload: Sendable {
+    let route: String
+    let movieId: Int?
+    let movieTitle: String?
+    let posterPath: String?
+    let mood: String?
+    let goal: String?
+
+    init(
+        route: String,
+        movieId: Int? = nil,
+        movieTitle: String? = nil,
+        posterPath: String? = nil,
+        mood: String? = nil,
+        goal: String? = nil
+    ) {
+        self.route = route
+        self.movieId = movieId
+        self.movieTitle = movieTitle
+        self.posterPath = posterPath
+        self.mood = mood
+        self.goal = goal
+    }
+
+    /// Fails softly (nil) when the payload has no usable route.
+    init?(userInfo: [AnyHashable: Any]) {
+        guard let route = userInfo["route"] as? String, !route.isEmpty else { return nil }
+        self.route = route
+        movieId = Self.intValue(userInfo["movieId"])
+        movieTitle = userInfo["movieTitle"] as? String
+        posterPath = userInfo["posterPath"] as? String
+        mood = userInfo["mood"] as? String
+        goal = userInfo["goal"] as? String
+    }
+
+    /// Notification userInfo round-trips through a plist, so the movie id can
+    /// come back as Int, NSNumber, Double or String depending on iOS version.
+    private static func intValue(_ raw: Any?) -> Int? {
+        switch raw {
+        case let value as Int: return value
+        case let value as NSNumber: return value.intValue
+        case let value as String: return Int(value)
+        case let value as Double: return Int(value)
+        default: return nil
+        }
+    }
+}
+
+/// Queues notification taps until the main navigation is ready to handle
+/// them. On a cold start the delegate fires before ContentView is listening:
+/// delivering immediately would drop the navigation, so the payload waits
+/// here and is flushed when ContentView calls `markReady()`.
 @MainActor
 enum NotificationRouteRelay {
-    private static var pending: (route: String, userInfo: [AnyHashable: Any]?)?
+    private static var pending: NotificationTapPayload?
+    private static var isReady = false
 
-    static func store(route: String, userInfo: [AnyHashable: Any]?) {
-        pending = (route, userInfo)
+    /// ContentView is on screen and listening: flush anything queued.
+    static func markReady() {
+        isReady = true
+        if let payload = pending {
+            pending = nil
+            post(payload)
+        }
     }
 
-    static func consume() -> (route: String, userInfo: [AnyHashable: Any]?)? {
-        defer { pending = nil }
-        return pending
+    /// Delivers now when the UI is ready, otherwise queues for later.
+    static func deliver(_ payload: NotificationTapPayload) {
+        if isReady {
+            post(payload)
+        } else {
+            pending = payload
+        }
     }
 
-    static func clear() { pending = nil }
+    private static func post(_ payload: NotificationTapPayload) {
+        NotificationCenter.default.post(
+            name: NotificationRoute.notificationName,
+            object: payload
+        )
+    }
 }
 
 /// Deep-link routes attached to local notifications, handled by ContentView.
@@ -827,23 +894,21 @@ final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse
     ) async {
+        // Extract Sendable snapshots HERE, on the caller's thread: the raw
+        // userInfo dictionary never crosses into the main actor.
         let record = NotificationHistory.payload(from: response.notification, isRead: true)
-        let userInfo = response.notification.request.content.userInfo
-        let route = userInfo["route"] as? String
-        let extras = userInfo as? [String: Any]
+        let payload = NotificationTapPayload(
+            userInfo: response.notification.request.content.userInfo
+        )
         await MainActor.run {
             NotificationHistory.shared.add(record)
-            AnalyticsService.shared.log("notification_opened", meta: ["route": route ?? "none"])
-            if let route {
-                // Cold start: ContentView may not be listening yet, so the
-                // route is also parked in the relay and consumed on appear.
-                NotificationRouteRelay.store(route: route, userInfo: extras)
-                NotificationCenter.default.post(
-                    name: NotificationRoute.notificationName,
-                    object: route,
-                    userInfo: extras
-                )
-            }
+            AnalyticsService.shared.log("notification_opened", meta: [
+                "route": payload?.route ?? "none",
+                "hasMovieId": payload?.movieId != nil ? "yes" : "no"
+            ])
+            guard let payload else { return }
+            // Queued on cold start, delivered immediately when the UI is up.
+            NotificationRouteRelay.deliver(payload)
         }
     }
 }

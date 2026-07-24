@@ -173,6 +173,7 @@
   "common.oops": "Oops!",
   "common.open": "Open",
   "common.retry": "Try again",
+  "deeplink.error": "We couldn't open that movie. Please try again later.",
   "detail.addList": "Add to my list",
   "detail.cast": "Main cast",
   "detail.gone.home": "Back to Home",

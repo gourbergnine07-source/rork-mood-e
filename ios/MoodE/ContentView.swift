@@ -15,6 +15,8 @@ struct ContentView: View {
     @State private var showSyncConflict = false
     @State private var showSyncSuccessToast = false
     @State private var syncToastTask: Task<Void, Never>?
+    @State private var showLinkErrorToast = false
+    @State private var linkErrorTask: Task<Void, Never>?
     @Environment(MovieLibrary.self) private var library
     @Environment(MoodDiary.self) private var diary
     @Environment(MoviePlanner.self) private var planner
@@ -79,6 +81,9 @@ struct ContentView: View {
             } else if showSyncSuccessToast {
                 SyncSuccessToastView()
                     .transition(.move(edge: .top).combined(with: .opacity))
+            } else if showLinkErrorToast {
+                DeepLinkErrorToastView()
+                    .transition(.move(edge: .top).combined(with: .opacity))
             }
         }
         .animation(
@@ -88,6 +93,10 @@ struct ContentView: View {
         .animation(
             .spring(response: 0.4, dampingFraction: 0.85),
             value: showSyncSuccessToast
+        )
+        .animation(
+            .spring(response: 0.4, dampingFraction: 0.85),
+            value: showLinkErrorToast
         )
         .sensoryFeedback(.impact(weight: .light), trigger: showSyncSuccessToast) { _, newValue in
             newValue
@@ -109,12 +118,11 @@ struct ContentView: View {
             if let mood = IntentRelay.consumePendingMood() {
                 launchQuickPick(mood: mood)
             }
-            // Notification tapped on a cold start: the delegate fired before
-            // this view was listening, so consume the relayed route now.
+            // Navigation is on screen: flush any notification tap queued
+            // during the cold start (small delay lets the first layout
+            // pass settle before presenting a sheet).
             try? await Task.sleep(for: .milliseconds(600))
-            if let pending = NotificationRouteRelay.consume() {
-                handleNotificationRoute(pending.route, userInfo: pending.userInfo)
-            }
+            NotificationRouteRelay.markReady()
         }
         .onChange(of: iCloudSync.conflict) { _, newValue in
             showSyncConflict = newValue != nil
@@ -132,10 +140,8 @@ struct ContentView: View {
         .onChange(of: diary.checkIns.count) { _, _ in evaluateUnlocks() }
         .onChange(of: library.lifetimeWatchedCount) { _, _ in evaluateUnlocks() }
         .onReceive(NotificationCenter.default.publisher(for: NotificationRoute.notificationName)) { note in
-            guard let route = note.object as? String else { return }
-            // Handled live: drop any relayed copy so it can't replay later.
-            NotificationRouteRelay.clear()
-            handleNotificationRoute(route, userInfo: note.userInfo)
+            guard let payload = note.object as? NotificationTapPayload else { return }
+            handleNotificationRoute(payload)
         }
         .onOpenURL { url in
             handleDeepLink(url)
@@ -166,15 +172,28 @@ struct ContentView: View {
         }
     }
 
-    /// Routes a notification tap to the right tab or screen.
-    private func handleNotificationRoute(_ route: String, userInfo: [AnyHashable: Any]?) {
-        switch route {
+    /// Routes a notification tap to the right tab or screen. Unknown routes
+    /// fall back to the Home tab instead of doing anything risky.
+    private func handleNotificationRoute(_ payload: NotificationTapPayload) {
+        switch payload.route {
         case NotificationRoute.moodFlow: selectedTab = 0
         case NotificationRoute.community: selectedTab = 1
         case NotificationRoute.watchlist: selectedTab = 3
-        case NotificationRoute.forecast: handleForecastTap(userInfo)
-        case NotificationRoute.movie: handleMovieNotificationTap(userInfo)
-        default: break
+        case NotificationRoute.forecast: handleForecastTap(payload)
+        case NotificationRoute.movie: handleMovieNotificationTap(payload)
+        default: selectedTab = 0
+        }
+    }
+
+    /// Discreet toast shown when a notification link can't be resolved:
+    /// the app stays usable on the Home instead of crashing or going blank.
+    private func showLinkError() {
+        showLinkErrorToast = true
+        linkErrorTask?.cancel()
+        linkErrorTask = Task {
+            try? await Task.sleep(for: .seconds(2.6))
+            guard !Task.isCancelled else { return }
+            showLinkErrorToast = false
         }
     }
 
@@ -190,15 +209,15 @@ struct ContentView: View {
 
     /// Forecast notification tap (also reused by the Siri intent): jump to
     /// Home and open the results screen with the pre-computed mood + goal.
-    private func handleForecastTap(_ userInfo: [AnyHashable: Any]?) {
+    private func handleForecastTap(_ payload: NotificationTapPayload) {
         // Clear any Siri pending mood so it doesn't re-fire at next launch.
         _ = IntentRelay.consumePendingMood()
-        guard let moodRaw = userInfo?["mood"] as? String,
+        guard let moodRaw = payload.mood,
               let mood = Mood(rawValue: moodRaw) else {
             selectedTab = 0
             return
         }
-        let goal = (userInfo?["goal"] as? String).flatMap(ViewingGoal.init)
+        let goal = payload.goal.flatMap(ViewingGoal.init)
         launchQuickPick(mood: mood, goal: goal)
     }
 
@@ -220,16 +239,24 @@ struct ContentView: View {
     }
 
     /// Movie notification tap (watchlist nudge, movie night, new release):
-    /// opens the movie's detail page directly.
-    private func handleMovieNotificationTap(_ userInfo: [AnyHashable: Any]?) {
-        guard let id = userInfo?["movieId"] as? Int else {
-            selectedTab = 3
+    /// opens the movie's detail page directly. Missing or malformed movie
+    /// ids degrade to the Home with a gentle toast — never a crash.
+    private func handleMovieNotificationTap(_ payload: NotificationTapPayload) {
+        guard let id = payload.movieId, id > 0 else {
+            AnalyticsService.shared.log("notification_open_failed", meta: [
+                "reason": "invalid_movie_id",
+                "route": payload.route
+            ])
+            selectedTab = 0
+            showLinkError()
             return
         }
-        let posterPath = userInfo?["posterPath"] as? String
+        // Avoid presenting on top of another active sheet.
+        invitePrefill = nil
+        let posterPath = payload.posterPath
         deepLinkMovie = TMDBMovie(
             id: id,
-            title: userInfo?["movieTitle"] as? String ?? "",
+            title: payload.movieTitle ?? "",
             overview: "",
             posterPath: (posterPath?.isEmpty == true) ? nil : posterPath,
             backdropPath: nil,
@@ -296,6 +323,28 @@ struct ContentView: View {
 private struct InvitePrefill: Identifiable {
     let code: String
     var id: String { code }
+}
+
+/// Small capsule toast shown when a notification deep link can't be opened.
+private struct DeepLinkErrorToastView: View {
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Theme.amber)
+            Text(L("deeplink.error"))
+                .font(.footnote.weight(.medium))
+                .foregroundStyle(Theme.ink)
+                .lineLimit(2)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(Theme.card, in: .capsule)
+        .overlay(Capsule().strokeBorder(Theme.inkSoft.opacity(0.15), lineWidth: 1))
+        .shadow(color: .black.opacity(0.15), radius: 10, y: 4)
+        .padding(.top, 8)
+        .padding(.horizontal, 24)
+    }
 }
 
 #Preview {

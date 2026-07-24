@@ -110,8 +110,7 @@ struct NotificationInboxView: View {
                     Image(systemName: "chevron.right")
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(Theme.inkSoft.opacity(0.5))
-                        .frame(maxHeight: .infinity, alignment: .center)
-                        .padding(.top, 10)
+                        .padding(.top, 12)
                 }
             }
             .padding(.vertical, 4)
@@ -132,10 +131,12 @@ struct NotificationInboxView: View {
             ?? (record.movieId != nil ? NotificationRoute.movie : nil)
         guard let route = resolvedRoute else { return }
 
-        var info: [AnyHashable: Any] = [:]
-        if let movieId = record.movieId { info["movieId"] = movieId }
-        if let movieTitle = record.movieTitle { info["movieTitle"] = movieTitle }
-        if let posterPath = record.posterPath { info["posterPath"] = posterPath }
+        let payload = NotificationTapPayload(
+            route: route,
+            movieId: record.movieId,
+            movieTitle: record.movieTitle,
+            posterPath: record.posterPath
+        )
 
         dismiss()
 
@@ -143,11 +144,7 @@ struct NotificationInboxView: View {
         // otherwise the presentation gets dropped mid-transition.
         Task {
             try? await Task.sleep(for: .milliseconds(400))
-            NotificationCenter.default.post(
-                name: NotificationRoute.notificationName,
-                object: route,
-                userInfo: info.isEmpty ? nil : info
-            )
+            NotificationRouteRelay.deliver(payload)
         }
     }
 

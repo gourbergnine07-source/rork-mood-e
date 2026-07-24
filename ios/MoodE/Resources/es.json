@@ -173,6 +173,7 @@
   "common.oops": "¡Vaya!",
   "common.open": "Abrir",
   "common.retry": "Reintentar",
+  "deeplink.error": "No se pudo abrir la película. Inténtalo de nuevo más tarde.",
   "detail.addList": "Añadir a mi lista",
   "detail.cast": "Reparto principal",
   "detail.gone.home": "Volver al inicio",
