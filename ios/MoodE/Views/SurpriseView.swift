@@ -264,8 +264,11 @@ struct SurpriseView: View {
         withAnimation(.easeInOut(duration: 0.25)) { phase = .spinning }
         movie = nil
 
-        let excluded = library.watchedIds
-        let fetch = Task { try? await TMDBService.surpriseMovie(excluding: excluded) }
+        let watched = library.watchedIds
+        let recentlyShown = RecommendationRegistry.shared.recentlyShownIds().subtracting(watched)
+        let fetch = Task {
+            try? await TMDBService.surpriseMovie(excluding: watched, avoiding: recentlyShown)
+        }
 
         let start = Date()
         var interval = 80
@@ -292,6 +295,11 @@ struct SurpriseView: View {
             } else {
                 phase = .failed
             }
+        }
+
+        // Track the pick so it won't come back for 7 days (here or in the flow).
+        if let result {
+            RecommendationRegistry.shared.registerSurprise(result)
         }
 
         // Auto-open the movie detail shortly after the reveal so the user

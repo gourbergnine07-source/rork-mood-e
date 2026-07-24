@@ -112,6 +112,9 @@ struct ContentView: View {
         }
         .task {
             evaluateUnlocks()
+            // Biweekly renewal of the recommendation pool: compared on
+            // every app open, advances the discover page rotation when due.
+            PoolRotation.shared.renewIfDue()
             // A conflict may have been detected before this view appeared.
             showSyncConflict = iCloudSync.conflict != nil
             // Siri intent fired on a cold start: launch the ready proposal.

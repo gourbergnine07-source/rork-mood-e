@@ -268,8 +268,13 @@ enum TMDBService {
     }
 
     /// Random high-quality movie for the "Sorprendimi" slot machine:
-    /// popular titles rated 7+, excluding horror and already-watched ids.
-    static func surpriseMovie(excluding excluded: Set<Int> = []) async throws -> TMDBMovie? {
+    /// popular titles rated 7+, excluding horror. Watched ids are NEVER
+    /// returned; recently shown ones are avoided but allowed back when the
+    /// page runs dry, so the reveal is never empty.
+    static func surpriseMovie(
+        excluding watched: Set<Int> = [],
+        avoiding recentlyShown: Set<Int> = []
+    ) async throws -> TMDBMovie? {
         let queryItems: [URLQueryItem] = [
             URLQueryItem(name: "sort_by", value: "popularity.desc"),
             URLQueryItem(name: "vote_average.gte", value: "7"),
@@ -280,8 +285,9 @@ enum TMDBService {
         ]
         let response: TMDBMovieListResponse = try await request(path: "/discover/movie", queryItems: queryItems)
         let filled = await fillingMissingOverviews(response, path: "/discover/movie", queryItems: queryItems)
-        let fresh = filled.results.filter { !excluded.contains($0.id) }
-        return fresh.randomElement() ?? filled.results.randomElement()
+        let notWatched = filled.results.filter { !watched.contains($0.id) }
+        let fresh = notWatched.filter { !recentlyShown.contains($0.id) }
+        return fresh.randomElement() ?? notWatched.randomElement()
     }
 
     /// Free-text movie search, used when planning a movie on a diary day and

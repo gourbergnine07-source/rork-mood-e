@@ -44,6 +44,9 @@ final class MovieResultsViewModel {
 
     private static func cacheKey(for selection: MoodSelection) -> String {
         var key = "recommendations.v2.\(String(describing: selection.mood)).\(String(describing: selection.goal)).\(String(describing: selection.era))"
+        // Pool generation: a biweekly renewal starts a fresh cache bucket,
+        // so the rotated discover pages actually reach the screen.
+        key += ".r\(PoolRotation.shared.currentOffset)"
         // Separate cache bucket per streaming-filter configuration, so
         // toggling the filter never serves a stale unfiltered batch.
         let store = StreamingServicesStore.shared
@@ -96,7 +99,7 @@ final class MovieResultsViewModel {
             state = .loading
         }
         currentPage = 1
-        await fetch(selection: selection, startPage: 1, excluding: excludedIds)
+        await fetch(selection: selection, startPage: 1 + PoolRotation.shared.currentOffset, excluding: excludedIds)
     }
 
     /// Silent refresh triggered when the app returns to the foreground:
@@ -108,7 +111,7 @@ final class MovieResultsViewModel {
             return
         }
         guard case .loaded = state else { return }
-        await fetch(selection: selection, startPage: 1, excluding: excludedIds)
+        await fetch(selection: selection, startPage: 1 + PoolRotation.shared.currentOffset, excluding: excludedIds)
     }
 
     /// Fetches a fresh batch (next discover page) keeping the same filters.
@@ -130,9 +133,11 @@ final class MovieResultsViewModel {
         defer { isLoadingBonus = false }
 
         let excluded = excludedIds.union(RecommendationRegistry.shared.excludedIds(for: selection.mood))
+        let recentlyShown = RecommendationRegistry.shared.recentlyShownIds().subtracting(excluded)
 
         do {
             var bonus: [TMDBMovie] = []
+            var recentFallback: [TMDBMovie] = []
             var page = currentPage
             var fetches = 0
 
@@ -143,14 +148,22 @@ final class MovieResultsViewModel {
                 totalPages = max(response.totalPages, 1)
                 fetches += 1
 
-                let fresh = response.results.filter { movie in
+                let unseen = response.results.filter { movie in
                     !excluded.contains(movie.id)
                         && !current.contains(where: { $0.id == movie.id })
                         && !bonus.contains(where: { $0.id == movie.id })
+                        && !recentFallback.contains(where: { $0.id == movie.id })
                 }
+                let fresh = unseen.filter { !recentlyShown.contains($0.id) }
+                recentFallback += unseen.filter { recentlyShown.contains($0.id) }
                 bonus += await filterToSelectedServices(fresh)
 
                 if page == 1 { break }
+            }
+
+            // Pool ran dry: a light repeat beats no bonus after a rewarded ad.
+            if bonus.isEmpty, !recentFallback.isEmpty {
+                bonus = await filterToSelectedServices(recentFallback)
             }
 
             guard !bonus.isEmpty else { return }
@@ -165,13 +178,18 @@ final class MovieResultsViewModel {
     /// Fetches pages starting at `startPage`, filtering out watched movies and
     /// pulling additional pages until the batch is full enough.
     private func fetch(selection: MoodSelection, startPage: Int, excluding excludedIds: Set<Int>) async {
-        // Movies recently proposed for a DIFFERENT emotion are excluded,
-        // so each emotion keeps its own distinct list.
+        // HARD exclusions, never re-proposed: watched movies (passed by the
+        // caller) + titles recently assigned to a DIFFERENT emotion.
         let excluded = excludedIds.union(RecommendationRegistry.shared.excludedIds(for: selection.mood))
+        // SOFT exclusion: anything shown in recommendations in the last 7
+        // days. Skipped first, allowed back only if the pool runs too dry.
+        let recentlyShown = RecommendationRegistry.shared.recentlyShownIds().subtracting(excluded)
         do {
             var collected: [TMDBMovie] = []
+            var recentFallback: [TMDBMovie] = []
             var page = startPage
             var fetches = 0
+            var didRewind = false
 
             repeat {
                 let response = try await TMDBService.discoverMovies(for: selection, page: page)
@@ -179,10 +197,21 @@ final class MovieResultsViewModel {
                 totalPages = max(response.totalPages, 1)
                 fetches += 1
 
-                let fresh = response.results.filter { movie in
+                // The rotated start page can overshoot a small pool: rewind
+                // once to page 1 so narrow combos still fill up.
+                if response.results.isEmpty, page > totalPages, page > 1, !didRewind {
+                    didRewind = true
+                    page = 1
+                    continue
+                }
+
+                let unseen = response.results.filter { movie in
                     !excluded.contains(movie.id)
                         && !collected.contains(where: { $0.id == movie.id })
+                        && !recentFallback.contains(where: { $0.id == movie.id })
                 }
+                let fresh = unseen.filter { !recentlyShown.contains($0.id) }
+                recentFallback += unseen.filter { recentlyShown.contains($0.id) }
                 collected += await filterToSelectedServices(fresh)
 
                 // The streaming filter discards many titles per page, so it
@@ -200,14 +229,26 @@ final class MovieResultsViewModel {
                 var relaxedPage = 1
                 while collected.count < minBatchSize && relaxedPage <= 2 {
                     let response = try await TMDBService.discoverMovies(for: selection, page: relaxedPage, relaxed: true)
-                    let fresh = response.results.filter { movie in
+                    let unseen = response.results.filter { movie in
                         !excluded.contains(movie.id)
                             && !collected.contains(where: { $0.id == movie.id })
+                            && !recentFallback.contains(where: { $0.id == movie.id })
                     }
+                    let fresh = unseen.filter { !recentlyShown.contains($0.id) }
+                    recentFallback += unseen.filter { recentlyShown.contains($0.id) }
                     collected += await filterToSelectedServices(fresh)
                     if response.page >= response.totalPages { break }
                     relaxedPage += 1
                 }
+            }
+
+            // Very specific combos can drop under 5 titles once watched and
+            // recently shown movies are removed: exceptionally re-admit the
+            // recently shown ones (never the watched ones) — a light repeat
+            // beats an empty result.
+            if collected.count < 5, !recentFallback.isEmpty {
+                let refill = await filterToSelectedServices(recentFallback)
+                collected += refill.prefix(minBatchSize - collected.count)
             }
 
             // Light spectator-profile boost: refines, never replaces, the flow.

@@ -24,6 +24,9 @@ final class RecommendationRegistry {
     private static let ttl: TimeInterval = 7 * 24 * 3600
     /// Cap so the registry never grows unbounded.
     private static let maxEntries = 600
+    /// Tag for "Sorprendimi" picks: tracked as recently shown, but never
+    /// hard-locked to an emotion like regular batches.
+    private static let surpriseTag = "_surprise"
 
     private init() {
         if let data = UserDefaults.standard.data(forKey: Self.storageKey),
@@ -37,14 +40,40 @@ final class RecommendationRegistry {
 
     /// Movie ids recently proposed for a DIFFERENT emotion: excluded from
     /// the given mood's batches so lists never overlap between emotions.
+    /// "Sorprendimi" picks are not counted here (soft exclusion only).
     func excludedIds(for mood: Mood) -> Set<Int> {
         let now = Date()
         var ids: Set<Int> = []
         for (id, entry) in entries
-        where entry.mood != mood.rawValue && now.timeIntervalSince(entry.date) < Self.ttl {
+        where entry.mood != mood.rawValue
+            && entry.mood != Self.surpriseTag
+            && now.timeIntervalSince(entry.date) < Self.ttl {
             ids.insert(id)
         }
         return ids
+    }
+
+    /// EVERY movie shown in recommendations in the last 7 days, whatever
+    /// the emotion (including "Sorprendimi"). Used as a SOFT exclusion so
+    /// new batches rotate titles during the week; after 7 days a movie
+    /// automatically becomes proposable again.
+    func recentlyShownIds() -> Set<Int> {
+        let now = Date()
+        return Set(entries.filter { now.timeIntervalSince($0.value.date) < Self.ttl }.keys)
+    }
+
+    /// Tracks a "Sorprendimi" pick as recently shown without stealing the
+    /// movie from an emotion it was already assigned to.
+    func registerSurprise(_ movie: TMDBMovie) {
+        let now = Date()
+        if let existing = entries[movie.id],
+           existing.mood != Self.surpriseTag,
+           now.timeIntervalSince(existing.date) < Self.ttl {
+            return
+        }
+        entries[movie.id] = Entry(mood: Self.surpriseTag, date: now)
+        prune()
+        save()
     }
 
     /// Assigns a batch to an emotion. The first emotion a movie is shown
