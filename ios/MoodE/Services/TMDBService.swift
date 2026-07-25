@@ -342,6 +342,83 @@ enum TMDBService {
         return detail
     }
 
+    // MARK: - TV series (Emissioni televisive)
+
+    /// TV shows for one of the four TMDB list categories: popular,
+    /// airing today, on the air, top rated.
+    static func tvShows(category: TVCategory, page: Int = 1) async throws -> TMDBTVShowListResponse {
+        let path = "/tv/\(category.rawValue)"
+        let queryItems = [URLQueryItem(name: "page", value: String(page))]
+        let response: TMDBTVShowListResponse = try await request(path: path, queryItems: queryItems)
+        return await fillingMissingTVOverviews(response, path: path, queryItems: queryItems)
+    }
+
+    /// Watch providers for a TV show — same region logic as movies,
+    /// session-cached in WatchProviderCache.
+    static func tvWatchProviders(id: Int) async throws -> TMDBWatchProviderResults {
+        try await request(path: "/tv/\(id)/watch/providers", queryItems: [])
+    }
+
+    /// Next episode on air for a show, when TMDB knows one.
+    /// Lightweight call used by the lazy per-card lookup.
+    static func tvNextEpisode(id: Int) async throws -> TMDBTVEpisodeInfo? {
+        let envelope: TMDBTVNextEpisodeEnvelope = try await request(path: "/tv/\(id)", queryItems: [])
+        return envelope.nextEpisodeToAir
+    }
+
+    /// Full TV show detail with cast, videos and watch providers in one call.
+    /// Falls back to the English overview when the localized one is missing.
+    static func tvDetail(id: Int) async throws -> TMDBTVShowDetail {
+        let queryItems = [
+            URLQueryItem(name: "append_to_response", value: "credits,videos,watch/providers"),
+            URLQueryItem(name: "include_video_language", value: videoLanguageParam)
+        ]
+        let detail: TMDBTVShowDetail = try await request(path: "/tv/\(id)", queryItems: queryItems)
+
+        guard detail.overview.isEmpty, LocalizationManager.shared.language != .english else {
+            return detail
+        }
+        if let english: TMDBTVShowDetail = try? await request(
+            path: "/tv/\(id)", queryItems: queryItems, languageOverride: "en-US"
+        ), !english.overview.isEmpty {
+            return detail.withOverview(english.overview)
+        }
+        return detail
+    }
+
+    /// TV twin of `fillingMissingOverviews`: fills only the missing localized
+    /// overviews from the same page fetched in English (one extra call at most).
+    private static func fillingMissingTVOverviews(
+        _ response: TMDBTVShowListResponse,
+        path: String,
+        queryItems: [URLQueryItem]
+    ) async -> TMDBTVShowListResponse {
+        guard LocalizationManager.shared.language != .english,
+              response.results.contains(where: { $0.overview.isEmpty }) else {
+            return response
+        }
+        guard let english: TMDBTVShowListResponse = try? await request(
+            path: path, queryItems: queryItems, languageOverride: "en-US"
+        ) else { return response }
+
+        let englishOverviews = Dictionary(
+            english.results.map { ($0.id, $0.overview) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        let merged = response.results.map { show -> TMDBTVShow in
+            guard show.overview.isEmpty,
+                  let fallback = englishOverviews[show.id],
+                  !fallback.isEmpty else { return show }
+            return show.withOverview(fallback)
+        }
+        return TMDBTVShowListResponse(
+            page: response.page,
+            results: merged,
+            totalPages: response.totalPages,
+            totalResults: response.totalResults
+        )
+    }
+
     /// When TMDB has no localized overview for some movies in a list,
     /// fetches the same page in English (one extra call at most) and fills
     /// only the missing overviews — no field is ever left empty needlessly.

@@ -9,6 +9,8 @@ import SwiftUI
 enum TrendTabSection: Hashable {
     case trending
     case advice
+    /// "Emissioni televisive" — Premium-only TV series section.
+    case tv
 }
 
 /// Tendenze tab: trending movies from TMDB with a week/day selector,
@@ -17,8 +19,11 @@ struct TrendingView: View {
     @State private var viewModel = TrendingViewModel()
     @State private var trailerPlayback = TrailerPlayback()
     @State private var section: TrendTabSection = .trending
+    @State private var showTVPaywall = false
     @Environment(MovieLibrary.self) private var library
     @Environment(\.scenePhase) private var scenePhase
+
+    private var premium: PremiumStore { .shared }
 
     private let columns = [
         GridItem(.flexible(), spacing: 14),
@@ -31,28 +36,34 @@ struct TrendingView: View {
                 Theme.background.ignoresSafeArea()
                 VStack(spacing: 0) {
                     sectionSelector
-                        .padding(.horizontal, 24)
                         .padding(.top, 4)
                         .padding(.bottom, 8)
 
                     switch section {
                     case .trending: content
                     case .advice: AdviceBoardView()
+                    case .tv: TVShowsView()
                     }
                 }
             }
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 AdBannerView()
             }
-            .navigationTitle(section == .advice ? L("advice.title") : L("tab.trending"))
+            .navigationTitle(navigationTitle)
             .toolbarTitleDisplayMode(.large)
             .navigationDestination(for: TMDBMovie.self) { movie in
                 MovieDetailView(movie: movie)
+            }
+            .navigationDestination(for: TMDBTVShow.self) { show in
+                TVShowDetailView(show: show)
             }
             .navigationDestination(for: AdviceRequest.self) { request in
                 AdviceDetailView(request: request)
             }
             .trailerPlayer(trailerPlayback)
+            .sheet(isPresented: $showTVPaywall) {
+                PaywallView()
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: NotificationRoute.notificationName)) { note in
             guard let route = note.object as? String, route == NotificationRoute.community else { return }
@@ -78,30 +89,75 @@ struct TrendingView: View {
 
     // MARK: - Section selector
 
-    private var sectionSelector: some View {
-        HStack(spacing: 8) {
-            WindowSelectorChip(
-                label: L("tab.trending"),
-                icon: "flame.fill",
-                isSelected: section == .trending
-            ) {
-                guard section != .trending else { return }
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                    section = .trending
-                }
-            }
-            WindowSelectorChip(
-                label: L("advice.title"),
-                icon: "bubble.left.and.bubble.right.fill",
-                isSelected: section == .advice
-            ) {
-                guard section != .advice else { return }
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                    section = .advice
-                }
-            }
-            Spacer(minLength: 0)
+    private var navigationTitle: String {
+        switch section {
+        case .trending: return L("tab.trending")
+        case .advice: return L("advice.title")
+        case .tv: return L("tv.title")
         }
+    }
+
+    private var sectionSelector: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                WindowSelectorChip(
+                    label: L("tab.trending"),
+                    icon: "flame.fill",
+                    isSelected: section == .trending
+                ) {
+                    guard section != .trending else { return }
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                        section = .trending
+                    }
+                }
+                WindowSelectorChip(
+                    label: L("advice.title"),
+                    icon: "bubble.left.and.bubble.right.fill",
+                    isSelected: section == .advice
+                ) {
+                    guard section != .advice else { return }
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                        section = .advice
+                    }
+                }
+                tvChip
+            }
+        }
+        .contentMargins(.horizontal, 24)
+    }
+
+    /// "Serie TV" entry: Premium users open the Emissioni televisive
+    /// section, Free users see the lock and are sent to the paywall.
+    private var tvChip: some View {
+        ZStack(alignment: .topTrailing) {
+            WindowSelectorChip(
+                label: L("tv.chip"),
+                icon: "tv.fill",
+                isSelected: section == .tv
+            ) {
+                if premium.isPremium {
+                    guard section != .tv else { return }
+                    AnalyticsService.shared.log("tv_section_opened")
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                        section = .tv
+                    }
+                } else {
+                    showTVPaywall = true
+                }
+            }
+
+            if !premium.isPremium {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 6, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 12, height: 12)
+                    .background(Theme.ink.opacity(0.85), in: .circle)
+                    .offset(x: 2, y: -2)
+                    .allowsHitTesting(false)
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(premium.isPremium ? L("tv.chip") : L("tv.a11y.locked"))
     }
 
     // MARK: - Content

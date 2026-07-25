@@ -27,7 +27,8 @@ struct PaywallView: View {
         Feature(id: "icloud", icon: "icloud.fill", tint: Theme.tabSettings),
         Feature(id: "perso", icon: "paintpalette.fill", tint: Theme.tabTrending),
         Feature(id: "quiz", icon: "theatermasks.fill", tint: Theme.primary),
-        Feature(id: "siri", icon: "waveform", tint: Color(red: 0.57, green: 0.42, blue: 0.83))
+        Feature(id: "siri", icon: "waveform", tint: Color(red: 0.57, green: 0.42, blue: 0.83)),
+        Feature(id: "tv", icon: "tv.fill", tint: Theme.tabCinema)
     ]
 
     var body: some View {
