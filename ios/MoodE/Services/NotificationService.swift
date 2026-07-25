@@ -115,6 +115,20 @@ enum NotificationRoute {
         if let posterPath { info["posterPath"] = posterPath }
         return info
     }
+
+    /// Opens the TV show detail page. Reuses the movieId/movieTitle keys so
+    /// the same validated Sendable payload path works for TV shows too.
+    static let tvShow = "tvshow"
+
+    static func tvShowUserInfo(id: Int, name: String, posterPath: String?) -> [String: Any] {
+        var info: [String: Any] = [
+            "route": tvShow,
+            "movieId": id,
+            "movieTitle": name
+        ]
+        if let posterPath { info["posterPath"] = posterPath }
+        return info
+    }
 }
 
 /// Manages every local notification of Mood-E:
@@ -345,6 +359,7 @@ final class NotificationService {
         await syncAnniversaryReminder(checkIns: checkIns)
         await syncMoodForecast(checkIns: checkIns)
         await syncLiveEventReminders()
+        await TVEpisodeNotifier.sync()
         await sync(topGenres: topGenres)
     }
 

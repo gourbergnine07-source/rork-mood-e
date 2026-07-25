@@ -1,26 +1,30 @@
 //
-//  TVSearchHistory.swift
+//  SearchHistory.swift
 //  MoodE
 //
 
 import Foundation
 import Observation
 
-/// Local history of the user's last TV searches, shown as quick
-/// suggestions under the search bar in "Emissioni televisive".
-/// Stored only on device (UserDefaults), capped at 5 entries,
-/// most recent first, deduplicated case-insensitively.
+/// Local history of the user's recent searches, shown as quick suggestion
+/// chips under a search bar. Stored only on device (UserDefaults), capped
+/// at 5 entries, most recent first, deduplicated case-insensitively.
+/// One instance per search surface (TV shows, Al Cinema).
 @Observable
-final class TVSearchHistory {
-    static let shared = TVSearchHistory()
+final class SearchHistory {
+    /// "Emissioni televisive" TV show search.
+    static let tv = SearchHistory(storageKey: "tv.search.recent")
+    /// Al Cinema movie search.
+    static let cinema = SearchHistory(storageKey: "cinema.search.recent")
 
-    private static let storageKey = "tv.search.recent"
     private static let maxEntries = 5
 
+    private let storageKey: String
     private(set) var items: [String]
 
-    private init() {
-        items = UserDefaults.standard.stringArray(forKey: Self.storageKey) ?? []
+    private init(storageKey: String) {
+        self.storageKey = storageKey
+        items = UserDefaults.standard.stringArray(forKey: storageKey) ?? []
     }
 
     /// Records a search: trims it, moves duplicates to the top and
@@ -44,6 +48,6 @@ final class TVSearchHistory {
     }
 
     private func persist() {
-        UserDefaults.standard.set(items, forKey: Self.storageKey)
+        UserDefaults.standard.set(items, forKey: storageKey)
     }
 }

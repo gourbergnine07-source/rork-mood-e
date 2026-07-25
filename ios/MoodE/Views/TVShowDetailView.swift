@@ -142,6 +142,8 @@ struct TVShowDetailView: View {
                         watchTrailerButton(trailer)
                     }
 
+                    followSection
+
                     if !detail.genres.isEmpty {
                         genreChips(detail.genres)
                     }
@@ -312,6 +314,40 @@ struct TVShowDetailView: View {
             RoundedRectangle(cornerRadius: 16)
                 .stroke(Theme.tabCinema.opacity(0.20), lineWidth: 1)
         )
+    }
+
+    // MARK: - Follow (new-episode alerts)
+
+    private var isFollowing: Bool { TVFollowStore.shared.isFollowing(show.id) }
+
+    /// "Avvisami sui nuovi episodi": follows the series for a local alert
+    /// on the day TMDB says a new episode airs (Premium feature, like the
+    /// whole TV section). The alert deep-links back to this page.
+    private var followSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            LibraryActionButton(
+                title: isFollowing ? L("tv.following") : L("tv.follow"),
+                icon: isFollowing ? "bell.fill" : "bell",
+                tint: Theme.tabCinema,
+                isActive: isFollowing
+            ) {
+                let turningOn = !isFollowing
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+                    TVFollowStore.shared.toggle(
+                        id: show.id, name: show.name, posterPath: show.posterPath
+                    )
+                }
+                AnalyticsService.shared.log("tv_follow", meta: ["state": turningOn ? "on" : "off"])
+            }
+            .sensoryFeedback(.impact(weight: .medium), trigger: isFollowing)
+
+            if isFollowing {
+                Text(L("tv.follow.hint"))
+                    .font(.caption)
+                    .foregroundStyle(Theme.inkSoft)
+                    .transition(.opacity)
+            }
+        }
     }
 
     // MARK: - Trailer

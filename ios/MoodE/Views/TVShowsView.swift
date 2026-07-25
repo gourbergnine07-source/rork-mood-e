@@ -19,7 +19,7 @@ struct TVShowsView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     private var premium: PremiumStore { .shared }
-    private var history: TVSearchHistory { .shared }
+    private var history: SearchHistory { .tv }
 
     private var trimmedQuery: String {
         searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -66,8 +66,11 @@ struct TVShowsView: View {
                 .padding(.top, 8)
 
             if trimmedQuery.isEmpty && !history.items.isEmpty {
-                recentSearches
-                    .padding(.top, 10)
+                RecentSearchesRow(history: history, tint: Theme.tabTrending) { term in
+                    searchQuery = term
+                    history.add(term)
+                }
+                .padding(.top, 10)
             }
 
             if !trimmedQuery.isEmpty {
@@ -155,63 +158,6 @@ struct TVShowsView: View {
                 searchResults = results
                 isSearching = false
             }
-        }
-    }
-
-    // MARK: - Recent searches
-
-    /// Quick suggestions with the user's last 5 searches (stored on device).
-    private var recentSearches: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Label(L("tv.search.recent"), systemImage: "clock.arrow.circlepath")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Theme.inkSoft)
-
-                Spacer(minLength: 0)
-
-                Button {
-                    withAnimation(.spring(duration: 0.3)) {
-                        history.clear()
-                    }
-                } label: {
-                    Text(L("tv.search.clear"))
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Theme.tabTrending)
-                }
-                .accessibilityLabel(L("tv.search.clear"))
-            }
-            .padding(.horizontal, 24)
-
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(history.items, id: \.self) { term in
-                        Button {
-                            searchQuery = term
-                            history.add(term)
-                        } label: {
-                            HStack(spacing: 5) {
-                                Image(systemName: "magnifyingglass")
-                                    .font(.system(size: 10, weight: .semibold))
-                                Text(term)
-                                    .font(.footnote.weight(.medium))
-                                    .lineLimit(1)
-                            }
-                            .foregroundStyle(Theme.ink)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 7)
-                            .background(Theme.card, in: .capsule)
-                            .overlay(
-                                Capsule()
-                                    .stroke(Theme.tabTrending.opacity(0.20), lineWidth: 1)
-                            )
-                        }
-                        .buttonStyle(PressableCardStyle())
-                        .accessibilityLabel(LF("tv.search.a11y.recent", term))
-                    }
-                }
-            }
-            .contentMargins(.horizontal, 24)
         }
     }
 

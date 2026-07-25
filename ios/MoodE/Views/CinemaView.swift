@@ -254,6 +254,13 @@ struct CinemaView: View {
 
                     let query = movieQuery.trimmingCharacters(in: .whitespacesAndNewlines)
 
+                    if query.isEmpty && !SearchHistory.cinema.items.isEmpty {
+                        RecentSearchesRow(history: SearchHistory.cinema, tint: Theme.tabCinema) { term in
+                            movieQuery = term
+                            SearchHistory.cinema.add(term)
+                        }
+                    }
+
                     if query.isEmpty {
                         genreChips(for: movies)
 
@@ -349,6 +356,12 @@ struct CinemaView: View {
                 .foregroundStyle(Theme.ink)
                 .autocorrectionDisabled()
                 .submitLabel(.search)
+                .onSubmit {
+                    let query = movieQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard !query.isEmpty else { return }
+                    SearchHistory.cinema.add(query)
+                    AnalyticsService.shared.log("cinema_search")
+                }
 
             if !movieQuery.isEmpty {
                 Button {

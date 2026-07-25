@@ -11,6 +11,7 @@ import SwiftUI
 struct ContentView: View {
     @State private var selectedTab: Int = 0
     @State private var deepLinkMovie: TMDBMovie?
+    @State private var deepLinkTVShow: TMDBTVShow?
     @State private var invitePrefill: InvitePrefill?
     @State private var showSyncConflict = false
     @State private var showSyncSuccessToast = false
@@ -115,6 +116,8 @@ struct ContentView: View {
             // Biweekly renewal of the recommendation pool: compared on
             // every app open, advances the discover page rotation when due.
             PoolRotation.shared.renewIfDue()
+            // Refresh "new episode" reminders for the followed TV series.
+            Task { await TVEpisodeNotifier.sync() }
             // A conflict may have been detected before this view appeared.
             showSyncConflict = iCloudSync.conflict != nil
             // Siri intent fired on a cold start: launch the ready proposal.
@@ -173,6 +176,24 @@ struct ContentView: View {
             }
             .tint(Theme.primary)
         }
+        .sheet(item: $deepLinkTVShow) { show in
+            NavigationStack {
+                TVShowDetailView(show: show)
+                    .toolbar {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button {
+                                deepLinkTVShow = nil
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.system(size: 20))
+                                    .foregroundStyle(Theme.inkSoft)
+                            }
+                            .accessibilityLabel(L("common.close"))
+                        }
+                    }
+            }
+            .tint(Theme.primary)
+        }
     }
 
     /// Routes a notification tap to the right tab or screen. Unknown routes
@@ -184,6 +205,7 @@ struct ContentView: View {
         case NotificationRoute.watchlist: selectedTab = 3
         case NotificationRoute.forecast: handleForecastTap(payload)
         case NotificationRoute.movie: handleMovieNotificationTap(payload)
+        case NotificationRoute.tvShow: handleTVShowNotificationTap(payload)
         default: selectedTab = 0
         }
     }
@@ -264,6 +286,34 @@ struct ContentView: View {
             posterPath: (posterPath?.isEmpty == true) ? nil : posterPath,
             backdropPath: nil,
             releaseDate: nil,
+            voteAverage: 0,
+            voteCount: 0,
+            genreIds: nil
+        )
+    }
+
+    /// TV episode notification tap: opens the show's detail page directly.
+    /// Malformed ids degrade to the Home with a gentle toast — never a crash.
+    private func handleTVShowNotificationTap(_ payload: NotificationTapPayload) {
+        guard let id = payload.movieId, id > 0 else {
+            AnalyticsService.shared.log("notification_open_failed", meta: [
+                "reason": "invalid_tv_id",
+                "route": payload.route
+            ])
+            selectedTab = 0
+            showLinkError()
+            return
+        }
+        invitePrefill = nil
+        deepLinkMovie = nil
+        let posterPath = payload.posterPath
+        deepLinkTVShow = TMDBTVShow(
+            id: id,
+            name: payload.movieTitle ?? "",
+            overview: "",
+            posterPath: (posterPath?.isEmpty == true) ? nil : posterPath,
+            backdropPath: nil,
+            firstAirDate: nil,
             voteAverage: 0,
             voteCount: 0,
             genreIds: nil
