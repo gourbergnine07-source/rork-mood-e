@@ -353,6 +353,18 @@ enum TMDBService {
         return await fillingMissingTVOverviews(response, path: path, queryItems: queryItems)
     }
 
+    /// Free-text TV show search for the Emissioni televisive search bar.
+    static func searchTVShows(query: String) async throws -> [TMDBTVShow] {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return [] }
+        let queryItems = [
+            URLQueryItem(name: "query", value: trimmed),
+            URLQueryItem(name: "include_adult", value: "false")
+        ]
+        let response: TMDBTVShowListResponse = try await request(path: "/search/tv", queryItems: queryItems)
+        return response.results
+    }
+
     /// Watch providers for a TV show — same region logic as movies,
     /// session-cached in WatchProviderCache.
     static func tvWatchProviders(id: Int) async throws -> TMDBWatchProviderResults {

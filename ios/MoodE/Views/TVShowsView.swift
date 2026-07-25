@@ -12,9 +12,18 @@ import SwiftUI
 struct TVShowsView: View {
     @State private var viewModel = TVShowsViewModel()
     @State private var showPaywall = false
+    @State private var searchQuery = ""
+    @State private var searchResults: [TMDBTVShow] = []
+    @State private var isSearching = false
+    @State private var searchTask: Task<Void, Never>?
     @Environment(\.scenePhase) private var scenePhase
 
     private var premium: PremiumStore { .shared }
+    private var history: TVSearchHistory { .shared }
+
+    private var trimmedQuery: String {
+        searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 
     private let columns = [
         GridItem(.flexible(), spacing: 14),
@@ -50,8 +59,29 @@ struct TVShowsView: View {
 
     // MARK: - Content
 
-    @ViewBuilder
     private var content: some View {
+        VStack(spacing: 0) {
+            searchBar
+                .padding(.horizontal, 24)
+                .padding(.top, 8)
+
+            if trimmedQuery.isEmpty && !history.items.isEmpty {
+                recentSearches
+                    .padding(.top, 10)
+            }
+
+            if !trimmedQuery.isEmpty {
+                searchContent
+                    .padding(.top, 10)
+            } else {
+                categoryContent
+                    .padding(.top, 10)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var categoryContent: some View {
         switch viewModel.state {
         case .idle, .loading:
             loadingView
@@ -59,6 +89,176 @@ struct TVShowsView: View {
             errorView(message)
         case .loaded(let shows):
             showsGrid(shows)
+        }
+    }
+
+    // MARK: - Search bar
+
+    private var searchBar: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(Theme.tabTrending)
+
+            TextField(L("tv.search.placeholder"), text: $searchQuery)
+                .font(.subheadline)
+                .foregroundStyle(Theme.ink)
+                .autocorrectionDisabled()
+                .submitLabel(.search)
+                .onSubmit {
+                    guard !trimmedQuery.isEmpty else { return }
+                    history.add(trimmedQuery)
+                    AnalyticsService.shared.log("tv_search")
+                }
+
+            if !searchQuery.isEmpty {
+                Button {
+                    withAnimation(.spring(duration: 0.25)) {
+                        searchQuery = ""
+                    }
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 16))
+                        .foregroundStyle(Theme.inkSoft.opacity(0.6))
+                }
+                .accessibilityLabel(L("cinema.clearSearch"))
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+        .background(Theme.cardStrong, in: .rect(cornerRadius: 14))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(Theme.tabTrending.opacity(0.18), lineWidth: 1)
+        )
+        .onChange(of: searchQuery) { _, newValue in
+            scheduleSearch(newValue)
+        }
+    }
+
+    /// Debounced remote search: waits for a typing pause, then queries TMDB.
+    private func scheduleSearch(_ query: String) {
+        searchTask?.cancel()
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            searchResults = []
+            isSearching = false
+            return
+        }
+        isSearching = true
+        searchTask = Task {
+            try? await Task.sleep(for: .milliseconds(450))
+            guard !Task.isCancelled else { return }
+            let results = (try? await TMDBService.searchTVShows(query: trimmed)) ?? []
+            guard !Task.isCancelled else { return }
+            withAnimation(.spring(duration: 0.3)) {
+                searchResults = results
+                isSearching = false
+            }
+        }
+    }
+
+    // MARK: - Recent searches
+
+    /// Quick suggestions with the user's last 5 searches (stored on device).
+    private var recentSearches: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Label(L("tv.search.recent"), systemImage: "clock.arrow.circlepath")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Theme.inkSoft)
+
+                Spacer(minLength: 0)
+
+                Button {
+                    withAnimation(.spring(duration: 0.3)) {
+                        history.clear()
+                    }
+                } label: {
+                    Text(L("tv.search.clear"))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Theme.tabTrending)
+                }
+                .accessibilityLabel(L("tv.search.clear"))
+            }
+            .padding(.horizontal, 24)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(history.items, id: \.self) { term in
+                        Button {
+                            searchQuery = term
+                            history.add(term)
+                        } label: {
+                            HStack(spacing: 5) {
+                                Image(systemName: "magnifyingglass")
+                                    .font(.system(size: 10, weight: .semibold))
+                                Text(term)
+                                    .font(.footnote.weight(.medium))
+                                    .lineLimit(1)
+                            }
+                            .foregroundStyle(Theme.ink)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 7)
+                            .background(Theme.card, in: .capsule)
+                            .overlay(
+                                Capsule()
+                                    .stroke(Theme.tabTrending.opacity(0.20), lineWidth: 1)
+                            )
+                        }
+                        .buttonStyle(PressableCardStyle())
+                        .accessibilityLabel(LF("tv.search.a11y.recent", term))
+                    }
+                }
+            }
+            .contentMargins(.horizontal, 24)
+        }
+    }
+
+    // MARK: - Search results
+
+    @ViewBuilder
+    private var searchContent: some View {
+        if isSearching {
+            HStack(spacing: 12) {
+                ProgressView()
+                    .tint(Theme.tabTrending)
+                Text(L("tv.search.searching"))
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.inkSoft)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 28)
+            Spacer(minLength: 0)
+        } else if searchResults.isEmpty {
+            VStack(spacing: 10) {
+                Image(systemName: "tv")
+                    .font(.system(size: 36))
+                    .foregroundStyle(Theme.tabTrending.opacity(0.5))
+                Text(LF("tv.search.noResults", trimmedQuery))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.ink)
+                    .multilineTextAlignment(.center)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 28)
+            .padding(.horizontal, 24)
+            Spacer(minLength: 0)
+        } else {
+            ScrollView {
+                LazyVGrid(columns: columns, spacing: 18) {
+                    ForEach(searchResults) { show in
+                        NavigationLink(value: show) {
+                            TVShowCard(show: show, showsNextEpisode: false)
+                        }
+                        .buttonStyle(PressableCardStyle())
+                    }
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, 8)
+                .padding(.bottom, 32)
+            }
+            .scrollIndicators(.hidden)
         }
     }
 
@@ -70,7 +270,6 @@ struct TVShowsView: View {
                 SkeletonPosterGrid()
                     .padding(.horizontal, 24)
             }
-            .padding(.top, 8)
             .padding(.bottom, 32)
         }
         .scrollIndicators(.hidden)
@@ -111,6 +310,7 @@ struct TVShowsView: View {
                 categorySelector
 
                 if shows.isEmpty {
+
                     emptyState
                 } else {
                     LazyVGrid(columns: columns, spacing: 18) {
@@ -128,7 +328,6 @@ struct TVShowsView: View {
                     .animation(.spring(duration: 0.3), value: shows)
                 }
             }
-            .padding(.top, 8)
             .padding(.bottom, 32)
         }
         .scrollIndicators(.hidden)
