@@ -940,25 +940,35 @@ final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
         return [.banner, .sound]
     }
 
+    /// IMPORTANT: this must stay the completion-handler variant, NOT the
+    /// async one. With the async variant the compiler-generated thunk calls
+    /// UIKit's completion handler on the background thread where the Task
+    /// finished, and on iOS 26 that completion updates the app snapshot /
+    /// state restoration, which asserts (and aborts) off the main thread.
+    /// Here we hop to the main actor and call the completion from there.
     nonisolated func userNotificationCenter(
         _ center: UNUserNotificationCenter,
-        didReceive response: UNNotificationResponse
-    ) async {
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping @Sendable () -> Void
+    ) {
         // Extract Sendable snapshots HERE, on the caller's thread: the raw
         // userInfo dictionary never crosses into the main actor.
         let record = NotificationHistory.payload(from: response.notification, isRead: true)
         let payload = NotificationTapPayload(
             userInfo: response.notification.request.content.userInfo
         )
-        await MainActor.run {
+        Task { @MainActor in
             NotificationHistory.shared.add(record)
             AnalyticsService.shared.log("notification_opened", meta: [
                 "route": payload?.route ?? "none",
                 "hasMovieId": payload?.movieId != nil ? "yes" : "no"
             ])
-            guard let payload else { return }
-            // Queued on cold start, delivered immediately when the UI is up.
-            NotificationRouteRelay.deliver(payload)
+            if let payload {
+                // Queued on cold start, delivered immediately when the UI is up.
+                NotificationRouteRelay.deliver(payload)
+            }
+            // Called on the main thread: UIKit's snapshot update is safe here.
+            completionHandler()
         }
     }
 }
