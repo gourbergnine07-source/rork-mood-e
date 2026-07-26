@@ -169,6 +169,7 @@ struct StatusComposerView: View {
                     .lineLimit(1)
                     .frame(width: 66)
             }
+            .contentShape(.rect)
         }
         .buttonStyle(PressableCardStyle())
         .sensoryFeedback(.selection, trigger: isSelected)
@@ -351,7 +352,9 @@ struct StatusComposerView: View {
     // MARK: - Shared pieces
 
     private func posterThumb(url: URL?, width: CGFloat, height: CGFloat) -> some View {
-        Color.clear
+        // Solid base color: transparent areas don't receive taps in SwiftUI,
+        // so a clear base would make the poster buttons unclickable.
+        Theme.card
             .overlay {
                 AsyncImage(url: url) { phase in
                     switch phase {
