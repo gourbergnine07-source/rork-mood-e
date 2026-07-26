@@ -37,18 +37,27 @@ final class CommunityService {
     private(set) var profile: CommunityProfile
     /// Content hidden locally by the user ("Nascondi").
     private(set) var hiddenIds: Set<String>
+    /// Ids of requests published from this device. The public board list is
+    /// served from a shared edge cache (same payload for everyone), so the
+    /// "mine" badge is overlaid locally from these ids.
+    private(set) var myRequestIds: Set<String>
     /// Whether the one-time privacy notice has been dismissed.
     private(set) var hasSeenPrivacyNotice: Bool
 
     private static let deviceIdKey = "community.deviceId"
     private static let nicknameKey = "community.nickname"
     private static let hiddenKey = "community.hiddenIds"
+    private static let myRequestsKey = "community.myRequestIds"
     private static let noticeKey = "community.noticeSeen"
     private static let lastCheckKey = "community.lastActivityCheck"
     static let helpfulReceivedKey = "community.helpfulReceived"
     static let requestsPublishedKey = "community.requestsPublished"
 
     private let defaults = UserDefaults.standard
+
+    /// Most recent request published from this device, merged into cached
+    /// list responses that may not include it yet (edge cache TTL window).
+    private var recentlyPublished: (request: AdviceRequest, at: Date)?
 
     private init() {
         let defaults = UserDefaults.standard
@@ -67,6 +76,7 @@ final class CommunityService {
             nickname = fresh
         }
         hiddenIds = Set(defaults.stringArray(forKey: Self.hiddenKey) ?? [])
+        myRequestIds = Set(defaults.stringArray(forKey: Self.myRequestsKey) ?? [])
         hasSeenPrivacyNotice = defaults.bool(forKey: Self.noticeKey)
         profile = CommunityProfile(
             helpfulReceived: defaults.integer(forKey: Self.helpfulReceivedKey),
@@ -114,11 +124,47 @@ final class CommunityService {
     // MARK: - API
 
     /// Newest public requests, optionally filtered by mood.
+    /// Served from a shared edge cache (no deviceId sent): ownership is
+    /// overlaid locally and a just-published request is merged in while the
+    /// cached copy may still predate it.
     func loadRequests(mood: Mood?) async throws -> [AdviceRequest] {
-        var query = "deviceId=\(deviceId)"
-        if let mood { query += "&mood=\(mood.rawValue)" }
-        let payload: RequestsPayload = try await get("/advice/requests?\(query)")
-        return payload.requests.filter { !hiddenIds.contains($0.id) }
+        var query = ""
+        if let mood { query = "?mood=\(mood.rawValue)" }
+        let payload: RequestsPayload = try await get("/advice/requests\(query)")
+        var result = payload.requests
+            .filter { !hiddenIds.contains($0.id) }
+            .map(overlayOwnership)
+
+        if let recent = recentlyPublished {
+            if Date().timeIntervalSince(recent.at) > 120 {
+                recentlyPublished = nil
+            } else if !result.contains(where: { $0.id == recent.request.id }),
+                      mood == nil || recent.request.mood == mood?.rawValue {
+                result.insert(recent.request, at: 0)
+            }
+        }
+        return result
+    }
+
+    /// Rebuilds a request with `isMine` set when it was published here.
+    private func overlayOwnership(_ request: AdviceRequest) -> AdviceRequest {
+        guard myRequestIds.contains(request.id), !request.isMine else { return request }
+        return AdviceRequest(
+            id: request.id,
+            nickname: request.nickname,
+            mood: request.mood,
+            text: request.text,
+            createdAt: request.createdAt,
+            replyCount: request.replyCount,
+            isMine: true
+        )
+    }
+
+    /// Persists the id of a request published (or recognized) as ours.
+    private func rememberMyRequest(_ id: String) {
+        guard !myRequestIds.contains(id) else { return }
+        myRequestIds.insert(id)
+        defaults.set(Array(myRequestIds), forKey: Self.myRequestsKey)
     }
 
     /// Publishes a new anonymous advice request.
@@ -132,13 +178,18 @@ final class CommunityService {
         ])
         // Counts the action only: the text never enters the analytics pipeline.
         AnalyticsService.shared.log("advice_posted")
+        rememberMyRequest(payload.request.id)
+        recentlyPublished = (payload.request, Date())
         await refreshProfile()
         return payload.request
     }
 
     /// Full request detail with its replies (most helpful first).
+    /// Uncached and personalized: also backfills ownership ids for requests
+    /// published before local overlay tracking existed.
     func loadDetail(id: String) async throws -> AdviceDetail {
         let detail: AdviceDetail = try await get("/advice/requests/\(id)?deviceId=\(deviceId)")
+        if detail.request.isMine { rememberMyRequest(detail.request.id) }
         return AdviceDetail(
             request: detail.request,
             replies: detail.replies.filter { !hiddenIds.contains($0.id) }
