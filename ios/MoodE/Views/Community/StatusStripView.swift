@@ -16,11 +16,34 @@ struct StatusStripView: View {
     @State private var hasLoaded: Bool = false
     @State private var showComposer: Bool = false
     @State private var viewerTarget: StatusViewerTarget?
+    @State private var moodFilter: Mood?
 
     private var service: StatusService { StatusService.shared }
 
     private var myGroup: StatusGroup? { groups.first { $0.isMine } }
-    private var otherGroups: [StatusGroup] { groups.filter { !$0.isMine } }
+
+    /// Moods actually present in the current feed, in canonical order.
+    private var availableMoods: [Mood] {
+        let present = Set(groups.flatMap { $0.statuses.compactMap(\.mood) })
+        return Mood.allCases.filter { present.contains($0.rawValue) }
+    }
+
+    /// Groups restricted to the selected mood (statuses without that tag drop out).
+    private var filteredGroups: [StatusGroup] {
+        guard let moodFilter else { return groups }
+        return groups.compactMap { group in
+            let matching = group.statuses.filter { $0.mood == moodFilter.rawValue }
+            guard !matching.isEmpty else { return nil }
+            return StatusGroup(
+                authorId: group.authorId,
+                nickname: group.nickname,
+                isMine: group.isMine,
+                statuses: matching
+            )
+        }
+    }
+
+    private var otherGroups: [StatusGroup] { filteredGroups.filter { !$0.isMine } }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -28,6 +51,10 @@ struct StatusStripView: View {
                 .font(.subheadline.weight(.bold))
                 .foregroundStyle(Theme.ink)
                 .padding(.horizontal, 24)
+
+            if !availableMoods.isEmpty {
+                moodFilterRow
+            }
 
             ScrollView(.horizontal) {
                 HStack(alignment: .top, spacing: 14) {
@@ -48,6 +75,9 @@ struct StatusStripView: View {
                     } else {
                         ForEach(otherGroups) { group in
                             bubble(for: group)
+                        }
+                        if moodFilter != nil && otherGroups.isEmpty {
+                            filterEmptyHint
                         }
                     }
                 }
@@ -70,6 +100,75 @@ struct StatusStripView: View {
                 Task { await load() }
             }
         }
+    }
+
+    // MARK: - Mood filters
+
+    /// Icon chips filtering the strip by the mood tagged on each status.
+    private var moodFilterRow: some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: 8) {
+                filterChip(
+                    title: L("status.filter.all"),
+                    icon: "line.3.horizontal.decrease",
+                    tint: Theme.tabTrending,
+                    isSelected: moodFilter == nil
+                ) {
+                    moodFilter = nil
+                }
+
+                ForEach(availableMoods) { mood in
+                    filterChip(
+                        title: mood.title,
+                        icon: mood.icon,
+                        tint: mood.tint,
+                        isSelected: moodFilter == mood
+                    ) {
+                        moodFilter = moodFilter == mood ? nil : mood
+                    }
+                }
+            }
+        }
+        .contentMargins(.horizontal, 24)
+        .scrollIndicators(.hidden)
+        .sensoryFeedback(.selection, trigger: moodFilter)
+    }
+
+    private func filterChip(
+        title: String,
+        icon: String,
+        tint: Color,
+        isSelected: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button {
+            withAnimation(.spring(duration: 0.25)) {
+                action()
+            }
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: icon)
+                    .font(.system(size: 11, weight: .semibold))
+                Text(title)
+                    .font(.caption.weight(.semibold))
+            }
+            .foregroundStyle(isSelected ? .white : tint)
+            .padding(.horizontal, 11)
+            .frame(height: 30)
+            .background(isSelected ? tint : tint.opacity(0.14), in: .capsule)
+            .overlay(
+                Capsule().stroke(tint.opacity(isSelected ? 0 : 0.35), lineWidth: 1)
+            )
+        }
+        .buttonStyle(PressableCardStyle())
+    }
+
+    /// Shown when the selected mood matches no one else's status.
+    private var filterEmptyHint: some View {
+        Text(L("status.filter.empty"))
+            .font(.caption)
+            .foregroundStyle(Theme.inkSoft)
+            .frame(height: 62)
     }
 
     // MARK: - Bubbles
@@ -119,8 +218,9 @@ struct StatusStripView: View {
 
     private func bubble(for group: StatusGroup) -> some View {
         Button {
-            if let index = groups.firstIndex(of: group) {
-                viewerTarget = StatusViewerTarget(groups: groups, startIndex: index)
+            let visible = filteredGroups
+            if let index = visible.firstIndex(of: group) {
+                viewerTarget = StatusViewerTarget(groups: visible, startIndex: index)
             }
         } label: {
             VStack(spacing: 5) {
@@ -147,6 +247,10 @@ struct StatusStripView: View {
         if let fresh = try? await service.loadFeed() {
             withAnimation(.spring(duration: 0.3)) {
                 groups = fresh
+                // Drop the filter if that mood disappeared from the feed.
+                if let moodFilter, !availableMoods.contains(moodFilter) {
+                    self.moodFilter = nil
+                }
             }
         }
     }

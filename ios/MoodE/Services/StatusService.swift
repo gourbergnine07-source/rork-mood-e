@@ -47,8 +47,8 @@ final class StatusService {
         }
     }
 
-    /// Publishes a new status: TMDB movie + optional short comment (max 150).
-    func publish(movie: TMDBMovie, text: String) async throws -> MoodStatusItem {
+    /// Publishes a new status: TMDB movie + optional mood tag + short comment (max 150).
+    func publish(movie: TMDBMovie, mood: Mood?, text: String) async throws -> MoodStatusItem {
         guard ContentModeration.isClean(text) else { throw CommunityError.offensive }
         var body: [String: Any] = [
             "deviceId": deviceId,
@@ -58,6 +58,7 @@ final class StatusService {
             "text": text
         ]
         if let poster = movie.posterPath { body["posterPath"] = poster }
+        if let mood { body["mood"] = mood.rawValue }
         let payload: StatusPayload = try await post("/status/publish", body: body)
         // Counts the action only: text and movie stay out of analytics.
         AnalyticsService.shared.log("status_posted")

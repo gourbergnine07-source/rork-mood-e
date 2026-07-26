@@ -21,6 +21,11 @@ const MAX_STATUSES_PER_DAY = 5;
 const MAX_COMMENTS_PER_DAY = 60;
 const REPORT_HIDE_THRESHOLD = 3;
 const ALLOWED_REACTIONS = new Set(["❤️", "🔥", "😂", "👀"]);
+/** Moods a status can be tagged with; mirrors the iOS Mood enum raw values. */
+const ALLOWED_MOODS = new Set([
+  "felice", "triste", "stressato", "annoiato", "innamorato", "nostalgico",
+  "arrabbiato", "motivato", "malinconico", "spensierato", "curioso", "impaurito",
+]);
 /** Hour of day (UTC) at which the nightly purge alarm fires. */
 const MAINTENANCE_HOUR_UTC = 4;
 
@@ -41,6 +46,7 @@ type StatusRow = {
   movie_title: string;
   poster_path: string | null;
   text: string | null;
+  mood: string | null;
   created_at: number;
   expires_at: number;
 };
@@ -119,6 +125,12 @@ export class MoodStatusBoard extends DurableObject<Env> {
         PRIMARY KEY (target_type, target_id, device_id)
       );
     `);
+    // Migration: mood tag column added after the initial release.
+    try {
+      this.ctx.storage.sql.exec("ALTER TABLE statuses ADD COLUMN mood TEXT");
+    } catch {
+      // Column already exists.
+    }
   }
 
   override async fetch(request: Request): Promise<Response> {
@@ -278,6 +290,7 @@ export class MoodStatusBoard extends DurableObject<Env> {
         movieTitle: row.movie_title,
         posterPath: row.poster_path,
         text: row.text,
+        mood: row.mood ?? null,
         createdAt: row.created_at,
         expiresAt: row.expires_at,
         seen: seenIds.has(row.id) || row.device_id === deviceId,
@@ -333,8 +346,10 @@ export class MoodStatusBoard extends DurableObject<Env> {
     const movieId = Number((body as Record<string, unknown>)?.movieId ?? 0);
     const posterPath = ((body as Record<string, unknown>)?.posterPath as string | undefined) ?? null;
     const rawText = ((body as Record<string, unknown>)?.text as string | undefined) ?? "";
+    const rawMood = ((body as Record<string, unknown>)?.mood as string | undefined) ?? null;
 
     if (!deviceId || !nickname || !movieTitle || !movieId) return bad("missing fields");
+    const mood = rawMood && ALLOWED_MOODS.has(rawMood) ? rawMood : null;
     if (nickname.length > MAX_NICKNAME) return bad("nickname too long");
     const trimmed = rawText.trim().slice(0, MAX_STATUS_TEXT);
     if (!isCleanText(trimmed) || !isCleanText(nickname) || !isCleanText(movieTitle)) {
@@ -352,15 +367,15 @@ export class MoodStatusBoard extends DurableObject<Env> {
     const expiresAt = now + STATUS_TTL_MS;
     this.authorId(deviceId);
     this.ctx.storage.sql.exec(
-      `INSERT INTO statuses (id, device_id, nickname, movie_id, movie_title, poster_path, text, created_at, expires_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      id, deviceId, nickname, movieId, movieTitle, posterPath, trimmed || null, now, expiresAt,
+      `INSERT INTO statuses (id, device_id, nickname, movie_id, movie_title, poster_path, text, mood, created_at, expires_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      id, deviceId, nickname, movieId, movieTitle, posterPath, trimmed || null, mood, now, expiresAt,
     );
 
     return Response.json({
       status: {
         id, movieId, movieTitle, posterPath,
-        text: trimmed || null, createdAt: now, expiresAt,
+        text: trimmed || null, mood, createdAt: now, expiresAt,
         seen: true, commentCount: 0, reactionCounts: {}, myReaction: null, viewCount: 0,
       },
     });

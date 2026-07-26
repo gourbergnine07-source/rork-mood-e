@@ -202,6 +202,19 @@ struct StatusViewerView: View {
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
 
+                if let mood = item.moodTag {
+                    HStack(spacing: 5) {
+                        Image(systemName: mood.icon)
+                            .font(.system(size: 11, weight: .semibold))
+                        Text(mood.title)
+                            .font(.caption.weight(.bold))
+                    }
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 11)
+                    .frame(height: 26)
+                    .background(mood.tint.opacity(0.85), in: .capsule)
+                }
+
                 if let text = item.text, !text.isEmpty {
                     Text(text)
                         .font(.subheadline)

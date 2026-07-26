@@ -17,6 +17,7 @@ struct StatusComposerView: View {
     @Environment(MovieLibrary.self) private var library
 
     @State private var selectedMovie: TMDBMovie?
+    @State private var selectedMood: Mood?
     @State private var searchQuery: String = ""
     @State private var searchResults: [TMDBMovie] = []
     @State private var isSearching: Bool = false
@@ -48,6 +49,8 @@ struct StatusComposerView: View {
                         watchedRow
 
                         searchSection
+
+                        moodSection
 
                         commentSection
 
@@ -251,6 +254,54 @@ struct StatusComposerView: View {
         }
     }
 
+    // MARK: - Mood tag
+
+    /// Optional mood tag: lets the feed filter statuses by feeling.
+    private var moodSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(L("status.composer.moodLabel"))
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Theme.inkSoft)
+
+            ScrollView(.horizontal) {
+                HStack(spacing: 8) {
+                    ForEach(Mood.allCases) { mood in
+                        moodChip(mood)
+                    }
+                }
+            }
+            .scrollIndicators(.hidden)
+        }
+    }
+
+    private func moodChip(_ mood: Mood) -> some View {
+        let isSelected = selectedMood == mood
+        return Button {
+            withAnimation(.spring(duration: 0.25)) {
+                selectedMood = isSelected ? nil : mood
+            }
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: mood.icon)
+                    .font(.system(size: 12, weight: .semibold))
+                Text(mood.title)
+                    .font(.caption.weight(.semibold))
+            }
+            .foregroundStyle(isSelected ? .white : mood.tint)
+            .padding(.horizontal, 12)
+            .frame(height: 32)
+            .background(
+                isSelected ? mood.tint : mood.tint.opacity(0.14),
+                in: .capsule
+            )
+            .overlay(
+                Capsule().stroke(mood.tint.opacity(isSelected ? 0 : 0.35), lineWidth: 1)
+            )
+        }
+        .buttonStyle(PressableCardStyle())
+        .sensoryFeedback(.selection, trigger: isSelected)
+    }
+
     // MARK: - Comment
 
     private var commentSection: some View {
@@ -339,6 +390,7 @@ struct StatusComposerView: View {
             do {
                 _ = try await service.publish(
                     movie: movie,
+                    mood: selectedMood,
                     text: text.trimmingCharacters(in: .whitespacesAndNewlines)
                 )
                 onPublished()

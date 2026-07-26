@@ -14,6 +14,8 @@ nonisolated struct MoodStatusItem: Codable, Identifiable, Hashable {
     let movieTitle: String
     let posterPath: String?
     let text: String?
+    /// Raw value of the `Mood` the author tagged the movie with, if any.
+    let mood: String?
     /// Milliseconds since epoch (server clock).
     let createdAt: Double
     let expiresAt: Double
@@ -33,6 +35,12 @@ nonisolated struct MoodStatusItem: Codable, Identifiable, Hashable {
     var posterURL: URL? {
         guard let posterPath else { return nil }
         return URL(string: "https://image.tmdb.org/t/p/w500\(posterPath)")
+    }
+
+    /// Typed mood tag, when the raw value matches a known mood.
+    var moodTag: Mood? {
+        guard let mood else { return nil }
+        return Mood(rawValue: mood)
     }
 }
 
