@@ -1,4 +1,5 @@
 export { AdviceBoard } from "./advice-board";
+export { MoodStatusBoard } from "./mood-status";
 import { inviteHtml } from "./invite-page";
 
 type Env = { DO: Fetcher };
@@ -58,10 +59,10 @@ function jsonResponse(body: string, ttl: number, cacheState: string): Response {
   });
 }
 
-/** Routes a request to the single global AdviceBoard Durable Object. */
-function fetchFromBoard(env: Env, targetURL: string, original?: Request): Promise<Response> {
+/** Routes a request to a single global Durable Object instance. */
+function fetchFromBoard(env: Env, targetURL: string, original?: Request, className = "AdviceBoard"): Promise<Response> {
   const wrapped = original ? new Request(targetURL, original) : new Request(targetURL);
-  wrapped.headers.set("X-Rork-DO-Class", "AdviceBoard");
+  wrapped.headers.set("X-Rork-DO-Class", className);
   wrapped.headers.set("X-Rork-DO-Id", "global");
   return env.DO.fetch(wrapped);
 }
@@ -149,6 +150,16 @@ export default {
       return new Response(inviteHtml(code, lang), {
         headers: { "Content-Type": "text/html; charset=utf-8" },
       });
+    }
+
+    if (url.pathname.startsWith("/status")) {
+      // Ephemeral "Stato Mood" board (personalized reads, no edge cache).
+      const response = await fetchFromBoard(env, request.url, request, "MoodStatusBoard");
+      const withCors = new Response(response.body, response);
+      for (const [key, value] of Object.entries(CORS)) {
+        withCors.headers.set(key, value);
+      }
+      return withCors;
     }
 
     if (url.pathname.startsWith("/advice")) {

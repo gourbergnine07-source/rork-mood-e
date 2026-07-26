@@ -106,7 +106,17 @@
     </ul>
     <p>Evita di inserire dati personali (tuoi o di altri) nel testo delle richieste o dei commenti.</p>
 
-    <h2>7. Account facoltativo e backup cloud</h2>
+    <h2>7. «Stati Mood» (effimeri e anonimi)</h2>
+    <p>Gli «Stati Mood» permettono di condividere un film preferito come stato anonimo ed effimero, ispirato alle storie:</p>
+    <ul>
+      <li>la card dello stato è <strong>generata automaticamente dall'app</strong> a partire da locandina e titolo del film scelto (dati TMDB), con un eventuale <strong>breve testo facoltativo</strong> filtrato dal controllo automatico del linguaggio offensivo: <strong>non è mai possibile caricare foto o video personali</strong>;</li>
+      <li>ogni stato è <strong>pubblico in forma anonima</strong> (solo nickname anonimo) e <strong>scade automaticamente dopo 24 ore</strong>: alla scadenza viene eliminato definitivamente dal server insieme a commenti, reazioni e conteggi delle visualizzazioni;</li>
+      <li>gli altri utenti possono lasciare <strong>brevi commenti pubblici</strong> e <strong>reazioni emoji</strong>, anch'essi filtrati automaticamente e <strong>segnalabili o nascondibili</strong>; i contenuti segnalati più volte vengono rimossi automaticamente; non esistono messaggi privati;</li>
+      <li>chi pubblica vede solo <strong>quante persone</strong> hanno visto lo stato e le reazioni e i commenti ricevuti, sempre associati ai soli nickname anonimi, mai ad altri dati identificativi;</li>
+      <li>gli avatar della community sono <strong>generati automaticamente</strong> da iniziali e colore del nickname: non esistono foto profilo.</li>
+    </ul>
+
+    <h2>8. Account facoltativo e backup cloud</h2>
     <p>Se scegli di accedere con <strong>Apple o Google</strong>, puoi attivare il <strong>backup cloud</strong> del diario emotivo, della watchlist e dei film pianificati, così da ritrovarli se cambi dispositivo:</p>
     <ul>
       <li>dal provider di accesso riceviamo solo un <strong>identificatore tecnico</strong> dell'account (con «Sign in with Apple» puoi anche nascondere la tua email);</li>
@@ -114,7 +124,7 @@
       <li>puoi <strong>uscire dall'account</strong> quando vuoi (i dati locali restano sul dispositivo) e puoi <strong>eliminare definitivamente l'account e tutti i dati associati</strong> direttamente dalle Impostazioni dell'app.</li>
     </ul>
 
-    <h2>8. Amici e sfide (facoltative, con account)</h2>
+    <h2>9. Amici e sfide (facoltative, con account)</h2>
     <p>Le funzioni «Sfida un amico» e «Invita amici» permettono di collegarti ad altri utenti tramite un <strong>codice amico</strong> generato dall'app o un link di invito. Se le usi:</p>
     <ul>
       <li>con gli amici collegati vengono condivisi solo il <strong>nome visualizzato</strong> che scegli tu, l'<strong>avatar</strong> (un'emoji scelta da un set predefinito) e <strong>statistiche aggregate</strong> di visione: numero di film visti, minuti totali, genere e decennio preferiti, serie di giorni consecutivi;</li>
@@ -122,14 +132,14 @@
       <li>puoi scollegare un amico in qualsiasi momento; eliminando l'account, anche questi dati vengono rimossi.</li>
     </ul>
 
-    <h2>9. Serata in Duo e sfide in coppia (anonime)</h2>
+    <h2>10. Serata in Duo e sfide in coppia (anonime)</h2>
     <p>«Serata in Duo» e la sfida mensile in coppia funzionano tramite <strong>codici temporanei a 6 cifre</strong> da condividere con l'altra persona, senza alcun account:</p>
     <ul>
       <li>sul server transitano solo il codice della sessione e le selezioni di gioco (umore/obiettivo scelti o il progresso della sfida): <strong>nessun nome, nessun dato personale</strong>;</li>
       <li>le sessioni <strong>scadono automaticamente</strong> (poche ore per la Serata in Duo, fine mese per la sfida) e vengono eliminate.</li>
     </ul>
 
-    <h2>10. Statistiche d'uso anonime e aggregate</h2>
+    <h2>11. Statistiche d'uso anonime e aggregate</h2>
     <p>Per capire quali funzionalità dell'app vengono usate di più e migliorare Mood-E, l'app registra alcuni <strong>eventi d'uso in forma anonima e aggregata</strong> (ad esempio: "è stato completato un percorso emozione→obiettivo→epoca", "è stato riprodotto un trailer", "è stato aggiunto un film alla watchlist").</p>
     <ul>
       <li>ogni evento contiene solo il <strong>nome dell'evento e la data/ora</strong>, insieme a un <strong>identificatore casuale generato localmente</strong> al primo avvio, diverso per ogni installazione e <strong>non collegabile in alcun modo alla tua identità</strong>;</li>
@@ -139,7 +149,7 @@
     </ul>
     <p>Questo sistema è separato e indipendente dalla pubblicità di Google AdMob descritta al punto 5: non utilizza l'IDFA e non richiede il consenso al tracciamento.</p>
 
-    <h2>11. Abbonamento Mood-E Premium (acquisti in-app)</h2>
+    <h2>12. Abbonamento Mood-E Premium (acquisti in-app)</h2>
     <p>Mood-E offre un abbonamento mensile facoltativo («Mood-E Premium») che rimuove la pubblicità e sblocca alcune funzionalità aggiuntive. L'acquisto avviene tramite gli <strong>acquisti in-app di Apple (App Store)</strong> ed è gestito con l'aiuto di <strong>RevenueCat</strong>, un servizio che si appoggia ad Apple per la convalida delle ricevute e la gestione dei piani:</p>
     <ul>
       <li><strong>Mood-E non gestisce né salva alcun dato di pagamento</strong> (carte, indirizzi di fatturazione, ecc.): il pagamento è elaborato interamente da Apple;</li>
@@ -148,7 +158,7 @@
       <li>gli abbonati non vedono alcuna pubblicità: in tal caso l'SDK di Google AdMob (punto 5) non viene avviato.</li>
     </ul>
 
-    <h2>12. Sincronizzazione iCloud (solo abbonati Premium)</h2>
+    <h2>13. Sincronizzazione iCloud (solo abbonati Premium)</h2>
     <p>Gli abbonati Premium possono sincronizzare i dati dell'app (diario emotivo, watchlist, film pianificati, ricordi cinematografici e sfide completate) tra i propri dispositivi Apple tramite <strong>iCloud/CloudKit</strong>, l'infrastruttura di Apple:</p>
     <ul>
       <li>i dati vengono salvati nel <strong>database privato iCloud del tuo account Apple</strong>, a cui solo tu hai accesso: Mood-E non può leggerli né accedervi da server propri;</li>
@@ -156,7 +166,7 @@
       <li>gli utenti della versione gratuita mantengono i dati <strong>solo in locale sul dispositivo</strong>, senza alcuna sincronizzazione.</li>
     </ul>
 
-    <h2>13. Scansione dei poster (solo abbonati Premium)</h2>
+    <h2>14. Scansione dei poster (solo abbonati Premium)</h2>
     <p>La funzione «Scansiona un poster» permette di fotografare la locandina di un film (o sceglierne una foto dalla libreria) per identificarlo automaticamente:</p>
     <ul>
       <li>la foto viene trasmessa in modo sicuro a un <strong>servizio di riconoscimento basato su intelligenza artificiale</strong> al solo scopo di identificare il titolo del film;</li>
@@ -165,13 +175,13 @@
       <li>ti consigliamo di inquadrare solo la locandina, evitando di includere persone o informazioni personali nella foto.</li>
     </ul>
 
-    <h2>14. Link verso gli store (affiliazione)</h2>
+    <h2>15. Link verso gli store (affiliazione)</h2>
     <p>Alcuni pulsanti (ad esempio «Noleggia» o «Acquista») aprono pagine esterne di store come Amazon o Apple TV. Questi link possono contenere un <strong>codice di affiliazione</strong>: se completi un acquisto, Mood-E può ricevere una piccola commissione, <strong>senza alcun costo aggiuntivo per te</strong>. Il link non trasmette alcun dato personale dall'app: una volta aperto lo store, si applicano le rispettive privacy policy (Amazon, Apple).</p>
 
-    <h2>15. Nessun'altra condivisione con terze parti</h2>
+    <h2>16. Nessun'altra condivisione con terze parti</h2>
     <p>Al di fuori dei servizi sopra descritti (TMDB per i dati sui film, Google AdMob per la pubblicità, il server sicuro dell'app per community, backup facoltativo, amici e sessioni in duo, le statistiche d'uso anonime, il servizio di riconoscimento AI per la scansione dei poster, Apple e RevenueCat per l'abbonamento Premium e iCloud per la sincronizzazione facoltativa), non raccogliamo, vendiamo né condividiamo i tuoi dati con terze parti a fini pubblicitari o di profilazione.</p>
 
-    <h2>16. Eliminazione dei dati</h2>
+    <h2>17. Eliminazione dei dati</h2>
     <p>Puoi eliminare in qualsiasi momento:</p>
     <ul>
       <li>i dati locali, disinstallando l'app;</li>
@@ -179,7 +189,7 @@
       <li>il backup iCloud, disattivando la sincronizzazione o gestendo i dati dell'app da Impostazioni iOS &gt; iCloud.</li>
     </ul>
 
-    <h2>17. Contatti</h2>
+    <h2>18. Contatti</h2>
     <p>Per domande su questa informativa o per segnalazioni relative alla privacy, apri una richiesta sulla nostra pagina GitHub:</p>
     <p><a href="https://github.com/gourbergnine07-source/rork-mood-e/issues" target="_blank" rel="noopener">github.com/gourbergnine07-source/rork-mood-e/issues</a></p>
 

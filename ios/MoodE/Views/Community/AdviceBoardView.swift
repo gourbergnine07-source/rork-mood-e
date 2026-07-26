@@ -21,6 +21,8 @@ struct AdviceBoardView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
+                StatusStripView()
+
                 if !community.hasSeenPrivacyNotice {
                     privacyNotice
                         .padding(.horizontal, 24)
