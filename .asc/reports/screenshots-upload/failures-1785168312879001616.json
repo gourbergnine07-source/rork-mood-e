@@ -1,0 +1,52 @@
+{
+  "versionLocalizationId": "9426d82f-b39c-4ade-9537-00786fbeca50",
+  "path": ".asc/reports/screenshots-upload/failures-1785168312879001616.json",
+  "deviceType": "IPAD_PRO_3GEN_129",
+  "displayType": "APP_IPAD_PRO_3GEN_129",
+  "setId": "f6128c95-c26f-46df-94c6-67016d5f2f45",
+  "files": [
+    "/home/user/rork-app/screenshots/ipad/en/01_scelta_emozione.png",
+    "/home/user/rork-app/screenshots/ipad/en/02_film_consigliati.png",
+    "/home/user/rork-app/screenshots/ipad/en/03_dettaglio_e_trailer.png",
+    "/home/user/rork-app/screenshots/ipad/en/04_tendenze.png",
+    "/home/user/rork-app/screenshots/ipad/en/05_la_mia_lista.png"
+  ],
+  "orderedIds": [
+    "ccdb53a4-0d76-4cba-873b-3d462b9fc429",
+    "8ed45516-4e6b-4892-8255-4a956176e79b",
+    "78c0bde2-0991-4200-8ce6-9540338157b8"
+  ],
+  "pendingFiles": [
+    "/home/user/rork-app/screenshots/ipad/en/04_tendenze.png",
+    "/home/user/rork-app/screenshots/ipad/en/05_la_mia_lista.png"
+  ],
+  "results": [
+    {
+      "fileName": "01_scelta_emozione.png",
+      "filePath": "/home/user/rork-app/screenshots/ipad/en/01_scelta_emozione.png",
+      "assetId": "ccdb53a4-0d76-4cba-873b-3d462b9fc429",
+      "state": "COMPLETE"
+    },
+    {
+      "fileName": "02_film_consigliati.png",
+      "filePath": "/home/user/rork-app/screenshots/ipad/en/02_film_consigliati.png",
+      "assetId": "8ed45516-4e6b-4892-8255-4a956176e79b",
+      "state": "COMPLETE"
+    },
+    {
+      "fileName": "03_dettaglio_e_trailer.png",
+      "filePath": "/home/user/rork-app/screenshots/ipad/en/03_dettaglio_e_trailer.png",
+      "assetId": "78c0bde2-0991-4200-8ce6-9540338157b8",
+      "state": "COMPLETE"
+    }
+  ],
+  "failures": [
+    {
+      "fileName": "04_tendenze.png",
+      "filePath": "/home/user/rork-app/screenshots/ipad/en/04_tendenze.png",
+      "error": "asset 0422b636-8031-449c-a80d-ad1dea3cee6b delivery failed: IMAGE_ALPHA_NOT_ALLOWED"
+    }
+  ],
+  "error": "asset 0422b636-8031-449c-a80d-ad1dea3cee6b delivery failed: IMAGE_ALPHA_NOT_ALLOWED",
+  "generatedAt": "2026-07-27T16:05:12Z"
+}
