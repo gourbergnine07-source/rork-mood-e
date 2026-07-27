@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import UIKit
 import WebKit
 
 /// Legal pages opened inside the app via an embedded WebView.
@@ -183,6 +184,25 @@ struct WebPageView: UIViewRepresentable {
             Task { @MainActor in
                 loadState.wrappedValue = .loaded
             }
+        }
+
+        /// Links tapped inside the page (e.g. the GitHub contact link) open
+        /// in the external browser: the WebView only renders the legal text
+        /// itself. Without this, taps on links in a locally bundled page are
+        /// silently blocked (file→https navigation) and nothing happens.
+        nonisolated func webView(
+            _ webView: WKWebView,
+            decidePolicyFor navigationAction: WKNavigationAction
+        ) async -> WKNavigationActionPolicy {
+            guard navigationAction.navigationType == .linkActivated,
+                  let url = navigationAction.request.url,
+                  url.scheme == "https" || url.scheme == "http" || url.scheme == "mailto" else {
+                return .allow
+            }
+            await MainActor.run {
+                UIApplication.shared.open(url)
+            }
+            return .cancel
         }
 
         /// Treats HTTP error responses (404, 500, ...) as failures: without
