@@ -17,12 +17,20 @@ import Foundation
 ///   https://tv.apple.com/movie/[movie-id]?at=[AFFILIATE_ID]
 /// - `amazonAssociateTag`: REAL tag `moode26-21` (Amazon Associates,
 ///   registered on amazon.it — commissions track on the .it marketplace).
-///   Final per-title URL format:
-///   https://www.amazon.it/dp/[asin]?tag=moode26-21
+///   Final per-title URL format (when the Prime Video ASIN is known):
+///   https://www.amazon.it/dp/[asin]?tag=moode26-21 — see `amazonTitleURL`.
 ///
 /// Until we resolve real per-title IDs (e.g. via a JustWatch-like service),
 /// links point to the store SEARCH page for the movie title + year, keeping
 /// the affiliate parameter in place so tracking works from day one.
+///
+/// Prime Video note: the search fallback deliberately targets
+/// www.primevideo.com (streaming-only storefront, geo-localized by Amazon
+/// for every market) instead of the amazon.xx marketplace search, which
+/// mixes in physical DVDs/merchandise even with the instant-video filter.
+/// Earnings note (developer-facing): the Prime Video program pays mostly
+/// as fixed bounties for trial sign-ups plus a flat "Movies" rate on
+/// eligible digital purchases — not the variable physical-goods rates.
 enum AffiliateLinks {
     /// Apple Services Performance Partners token (placeholder).
     static let appleAffiliateID = "AFFILIATE_ID"
@@ -45,15 +53,31 @@ enum AffiliateLinks {
     }
 
     /// Amazon (Prime Video rent/buy) affiliate link for a movie.
-    /// Search-based fallback until real ASINs are wired in.
+    /// Lands on Prime Video search results — streaming/rent/buy only,
+    /// never the generic Amazon shopping marketplace. primevideo.com is a
+    /// single worldwide host that Amazon geo-localizes per market, so the
+    /// same URL is correct for it/es/fr/en users.
     static func amazonURL(title: String, year: String?) -> URL? {
         var components = URLComponents()
         components.scheme = "https"
-        components.host = amazonHost
-        components.path = "/s"
+        components.host = "www.primevideo.com"
+        components.path = "/search/ref=atv_nb_sr"
         components.queryItems = [
-            URLQueryItem(name: "k", value: searchTerm(title: title, year: year)),
-            URLQueryItem(name: "i", value: "instant-video"),
+            URLQueryItem(name: "phrase", value: searchTerm(title: title, year: year)),
+            URLQueryItem(name: "tag", value: amazonTag(for: amazonHost))
+        ]
+        return components.url
+    }
+
+    /// Direct Prime Video detail page for a title whose ASIN is known
+    /// (10-char id, different per marketplace). Preferred over the search
+    /// fallback whenever an ASIN resolver is wired in.
+    static func amazonTitleURL(asin: String) -> URL? {
+        var components = URLComponents()
+        components.scheme = "https"
+        components.host = amazonHost
+        components.path = "/dp/\(asin)"
+        components.queryItems = [
             URLQueryItem(name: "tag", value: amazonTag(for: amazonHost))
         ]
         return components.url
