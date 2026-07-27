@@ -69,6 +69,22 @@ enum AffiliateLinks {
         return components.url
     }
 
+    /// Amazon marketplace search for the PHYSICAL edition (Blu-ray/DVD)
+    /// of a movie — deliberately the generic amazon.xx store, unlike
+    /// `amazonURL` which targets the Prime Video digital storefront.
+    /// Host follows the app language (it/es/fr → local marketplace).
+    static func amazonPhysicalURL(title: String, year: String?) -> URL? {
+        var components = URLComponents()
+        components.scheme = "https"
+        components.host = amazonHost
+        components.path = "/s"
+        components.queryItems = [
+            URLQueryItem(name: "k", value: "\(title) blu-ray"),
+            URLQueryItem(name: "tag", value: amazonTag(for: amazonHost))
+        ]
+        return components.url
+    }
+
     /// Direct Prime Video detail page for a title whose ASIN is known
     /// (10-char id, different per marketplace). Preferred over the search
     /// fallback whenever an ASIN resolver is wired in.

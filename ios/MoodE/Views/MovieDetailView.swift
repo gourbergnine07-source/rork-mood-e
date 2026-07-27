@@ -382,6 +382,17 @@ struct MovieDetailView: View {
                 )
             }
 
+            AffiliateStoreButton(
+                title: L("detail.rent.amazonDisc"),
+                icon: "opticaldisc.fill",
+                tint: Color(red: 0.9, green: 0.55, blue: 0.0)
+            ) {
+                openAffiliate(
+                    AffiliateLinks.amazonPhysicalURL(title: detail.title, year: detail.releaseYear),
+                    store: "amazon_disc"
+                )
+            }
+
             Text(L("detail.rent.disclosure"))
                 .font(.caption2)
                 .italic()
