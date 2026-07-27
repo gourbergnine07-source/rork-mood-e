@@ -128,6 +128,10 @@ final class CommunityService {
     /// overlaid locally and a just-published request is merged in while the
     /// cached copy may still predate it.
     func loadRequests(mood: Mood?) async throws -> [AdviceRequest] {
+        // Backfill ownership ids from the server first, so "mine" badges
+        // (and the Delete action) appear even for requests published
+        // before local tracking existed or after a reinstall.
+        await syncMyRequestIds()
         var query = ""
         if let mood { query = "?mood=\(mood.rawValue)" }
         let payload: RequestsPayload = try await get("/advice/requests\(query)")
@@ -144,6 +148,17 @@ final class CommunityService {
             }
         }
         return result
+    }
+
+    /// Merges the server-side list of my request ids into the local set.
+    /// The board list is edge-cached without deviceId, so this uncached
+    /// call is the source of truth for ownership overlay.
+    private func syncMyRequestIds() async {
+        guard let payload: MinePayload = try? await get("/advice/mine?deviceId=\(deviceId)") else { return }
+        let fresh = Set(payload.requestIds)
+        guard fresh != myRequestIds else { return }
+        myRequestIds.formUnion(fresh)
+        defaults.set(Array(myRequestIds), forKey: Self.myRequestsKey)
     }
 
     /// Rebuilds a request with `isMine` set when it was published here.
@@ -355,4 +370,5 @@ private nonisolated struct ReplyPayload: Decodable { let reply: AdviceReply }
 private nonisolated struct HelpfulPayload: Decodable { let ok: Bool; let helpfulCount: Int }
 private nonisolated struct OkPayload: Decodable { let ok: Bool }
 private nonisolated struct ActivityPayload: Decodable { let newReplies: Int; let moodMatches: Int; let now: Double }
+private nonisolated struct MinePayload: Decodable { let requestIds: [String] }
 private nonisolated struct ErrorPayload: Decodable { let error: String; let code: String? }

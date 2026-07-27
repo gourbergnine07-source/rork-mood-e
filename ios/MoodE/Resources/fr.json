@@ -194,6 +194,7 @@
   "delete.comment.title": "Supprimer ce commentaire ?",
   "delete.reply.msg": "Cette action est irréversible.",
   "delete.reply.title": "Supprimer cette réponse ?",
+  "delete.request.button": "Supprimer cette demande",
   "delete.request.msg": "Cette action est irréversible.",
   "delete.request.msgWithReplies": "Les réponses reçues seront également supprimées. Cette action est irréversible.",
   "delete.request.title": "Supprimer cette demande ?",

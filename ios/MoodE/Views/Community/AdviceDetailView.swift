@@ -38,7 +38,9 @@ struct AdviceDetailView: View {
                         onDelete: displayRequest.isMine ? { showDeleteRequestConfirm = true } : nil
                     )
 
-                    if !displayRequest.isMine {
+                    if displayRequest.isMine {
+                        deleteRequestButton
+                    } else {
                         suggestButton
                     }
 
@@ -143,6 +145,30 @@ struct AdviceDetailView: View {
             }
             .animation(.spring(duration: 0.3), value: replies)
         }
+    }
+
+    /// Clearly visible destructive action for the author's own request
+    /// (the "…" menu stays as a secondary path).
+    private var deleteRequestButton: some View {
+        Button(role: .destructive) {
+            showDeleteRequestConfirm = true
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "trash")
+                    .font(.system(size: 14, weight: .semibold))
+                Text(L("delete.request.button"))
+                    .font(.subheadline.weight(.semibold))
+            }
+            .foregroundStyle(Theme.rose)
+            .frame(maxWidth: .infinity)
+            .frame(height: 44)
+            .background(Theme.rose.opacity(0.12), in: .rect(cornerRadius: 14))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(Theme.rose.opacity(0.3), lineWidth: 1)
+            )
+        }
+        .buttonStyle(PressableCardStyle())
     }
 
     private var suggestButton: some View {

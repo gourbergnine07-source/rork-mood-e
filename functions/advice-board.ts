@@ -135,6 +135,9 @@ export class AdviceBoard extends DurableObject<Env> {
       if (method === "GET" && path === "/advice/profile") {
         return this.profile(url);
       }
+      if (method === "GET" && path === "/advice/mine") {
+        return this.mine(url);
+      }
       if (method === "POST" && path === "/advice/report") {
         return this.report(await request.json());
       }
@@ -400,6 +403,23 @@ export class AdviceBoard extends DurableObject<Env> {
       .one().n;
 
     return Response.json({ helpfulReceived, requestsPublished, repliesGiven });
+  }
+
+  /**
+   * Ids of the requests published by this device. The public board list
+   * is served from a shared edge cache without deviceId, so the app
+   * overlays ownership locally — this endpoint backfills those ids for
+   * requests published before local tracking existed (or after a
+   * reinstall), so "Elimina" appears on the author's own content.
+   */
+  private mine(url: URL): Response {
+    const deviceId = url.searchParams.get("deviceId") ?? "";
+    if (!deviceId) return bad("missing deviceId");
+    const requestIds = this.ctx.storage.sql
+      .exec<{ id: string }>("SELECT id FROM requests WHERE device_id = ? AND hidden = 0", deviceId)
+      .toArray()
+      .map((row) => row.id);
+    return Response.json({ requestIds });
   }
 
   private report(body: unknown): Response {

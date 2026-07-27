@@ -194,6 +194,7 @@
   "delete.comment.title": "Delete this comment?",
   "delete.reply.msg": "This action cannot be undone.",
   "delete.reply.title": "Delete this reply?",
+  "delete.request.button": "Delete this request",
   "delete.request.msg": "This action cannot be undone.",
   "delete.request.msgWithReplies": "The replies you received will also be deleted. This action cannot be undone.",
   "delete.request.title": "Delete this request?",

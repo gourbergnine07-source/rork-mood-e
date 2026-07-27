@@ -194,6 +194,7 @@
   "delete.comment.title": "Vuoi eliminare questo commento?",
   "delete.reply.msg": "L'azione non è reversibile.",
   "delete.reply.title": "Vuoi eliminare questa risposta?",
+  "delete.request.button": "Elimina questa richiesta",
   "delete.request.msg": "L'azione non è reversibile.",
   "delete.request.msgWithReplies": "Verranno eliminate anche le risposte ricevute. L'azione non è reversibile.",
   "delete.request.title": "Vuoi eliminare questa richiesta?",
