@@ -163,6 +163,9 @@ export class MoodStatusBoard extends DurableObject<Env> {
       if (method === "POST" && path === "/status/report") {
         return this.report(await request.json());
       }
+      if (method === "POST" && path === "/status/delete") {
+        return this.deleteContent(await request.json());
+      }
       return new Response("not found", { status: 404 });
     } catch (error) {
       console.error("MoodStatusBoard error", path, error);
@@ -522,6 +525,44 @@ export class MoodStatusBoard extends DurableObject<Env> {
         createdAt: row.created_at,
       })),
     });
+  }
+
+  // MARK: Deletion
+
+  /**
+   * Author-only permanent deletion. The device id must match the original
+   * author's (server-side rule, not just UI). Deleting a status cascades
+   * to its comments, reactions, views and reports.
+   */
+  private deleteContent(body: unknown): Response {
+    const { deviceId, targetType, targetId } = (body ?? {}) as Record<string, string>;
+    if (!deviceId || !targetId || (targetType !== "status" && targetType !== "comment")) {
+      return bad("missing fields");
+    }
+
+    const table = targetType === "status" ? "statuses" : "comments";
+    const rows = this.ctx.storage.sql
+      .exec<{ device_id: string }>(`SELECT device_id FROM ${table} WHERE id = ?`, targetId)
+      .toArray();
+    if (rows.length === 0) return bad("not found", "not_found", 404);
+    if (rows[0].device_id !== deviceId) return bad("not allowed", "forbidden", 403);
+
+    const sql = this.ctx.storage.sql;
+    if (targetType === "status") {
+      sql.exec(
+        "DELETE FROM reports WHERE target_type = 'comment' AND target_id IN (SELECT id FROM comments WHERE status_id = ?)",
+        targetId,
+      );
+      sql.exec("DELETE FROM comments WHERE status_id = ?", targetId);
+      sql.exec("DELETE FROM reactions WHERE status_id = ?", targetId);
+      sql.exec("DELETE FROM views WHERE status_id = ?", targetId);
+      sql.exec("DELETE FROM reports WHERE target_type = 'status' AND target_id = ?", targetId);
+      sql.exec("DELETE FROM statuses WHERE id = ?", targetId);
+    } else {
+      sql.exec("DELETE FROM reports WHERE target_type = 'comment' AND target_id = ?", targetId);
+      sql.exec("DELETE FROM comments WHERE id = ?", targetId);
+    }
+    return Response.json({ ok: true });
   }
 
   // MARK: Reports

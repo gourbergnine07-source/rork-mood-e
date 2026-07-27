@@ -108,6 +108,27 @@ final class StatusService {
         try await get("/status/insights?deviceId=\(deviceId)&statusId=\(statusId)")
     }
 
+    /// Permanently deletes one of MY statuses. The server verifies the
+    /// device id matches the author; comments, reactions and views are
+    /// removed as well.
+    func deleteStatus(id: String) async throws {
+        let _: OkOnly = try await post("/status/delete", body: [
+            "deviceId": deviceId,
+            "targetType": "status",
+            "targetId": id
+        ])
+        AnalyticsService.shared.log("status_deleted")
+    }
+
+    /// Permanently deletes one of MY comments (server verifies authorship).
+    func deleteComment(id: String) async throws {
+        let _: OkOnly = try await post("/status/delete", body: [
+            "deviceId": deviceId,
+            "targetType": "comment",
+            "targetId": id
+        ])
+    }
+
     /// Reports a status or a comment (hidden for everyone after 3 reports).
     func report(targetType: String, targetId: String) async {
         let _: OkOnly? = try? await post("/status/report", body: [

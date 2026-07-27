@@ -17,6 +17,8 @@ struct AdviceBoardView: View {
     @State private var filterMood: Mood?
     @State private var showComposer: Bool = false
     @State private var hasLoaded: Bool = false
+    @State private var requestToDelete: AdviceRequest?
+    @State private var showDeleteConfirm: Bool = false
 
     var body: some View {
         ScrollView {
@@ -58,6 +60,18 @@ struct AdviceBoardView: View {
             AdviceComposerView { newRequest in
                 requests.insert(newRequest, at: 0)
             }
+        }
+        .alert(
+            L("delete.request.title"),
+            isPresented: $showDeleteConfirm,
+            presenting: requestToDelete
+        ) { request in
+            Button(L("common.delete"), role: .destructive) {
+                performDelete(request)
+            }
+            Button(L("common.cancel"), role: .cancel) {}
+        } message: { request in
+            Text(request.replyCount > 0 ? L("delete.request.msgWithReplies") : L("delete.request.msg"))
         }
     }
 
@@ -214,14 +228,20 @@ struct AdviceBoardView: View {
             LazyVStack(spacing: 12) {
                 ForEach(requests) { request in
                     NavigationLink(value: request) {
-                        AdviceRequestCard(request: request) {
-                            hideAndRemove(request)
-                        } onReport: {
-                            Task {
-                                await community.report(targetType: "request", targetId: request.id)
-                            }
-                            hideAndRemove(request)
-                        }
+                        AdviceRequestCard(
+                            request: request,
+                            onHide: { hideAndRemove(request) },
+                            onReport: {
+                                Task {
+                                    await community.report(targetType: "request", targetId: request.id)
+                                }
+                                hideAndRemove(request)
+                            },
+                            onDelete: request.isMine ? {
+                                requestToDelete = request
+                                showDeleteConfirm = true
+                            } : nil
+                        )
                     }
                     .buttonStyle(PressableCardStyle())
                 }
@@ -255,6 +275,21 @@ struct AdviceBoardView: View {
             requests.removeAll { $0.id == request.id }
         }
     }
+
+    /// Deletes MY request permanently (server re-checks authorship) and
+    /// removes it from the list right away.
+    private func performDelete(_ request: AdviceRequest) {
+        Task {
+            do {
+                try await community.deleteRequest(id: request.id)
+                withAnimation(.spring(duration: 0.3)) {
+                    requests.removeAll { $0.id == request.id }
+                }
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
 }
 
 /// Card for a single advice request on the board.
@@ -262,6 +297,8 @@ struct AdviceRequestCard: View {
     let request: AdviceRequest
     var onHide: (() -> Void)? = nil
     var onReport: (() -> Void)? = nil
+    /// Shown only for the author's own request ("Elimina" in the menu).
+    var onDelete: (() -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -283,16 +320,23 @@ struct AdviceRequestCard: View {
                     moodChip(mood)
                 }
 
-                if !request.isMine, onHide != nil || onReport != nil {
+                if hasMenuActions {
                     Menu {
-                        if let onReport {
-                            Button(role: .destructive, action: onReport) {
-                                Label(L("advice.report"), systemImage: "flag")
+                        if request.isMine, let onDelete {
+                            Button(role: .destructive, action: onDelete) {
+                                Label(L("common.delete"), systemImage: "trash")
                             }
                         }
-                        if let onHide {
-                            Button(action: onHide) {
-                                Label(L("advice.hide"), systemImage: "eye.slash")
+                        if !request.isMine {
+                            if let onReport {
+                                Button(role: .destructive, action: onReport) {
+                                    Label(L("advice.report"), systemImage: "flag")
+                                }
+                            }
+                            if let onHide {
+                                Button(action: onHide) {
+                                    Label(L("advice.hide"), systemImage: "eye.slash")
+                                }
                             }
                         }
                     } label: {
@@ -333,6 +377,11 @@ struct AdviceRequestCard: View {
                     lineWidth: 1
                 )
         )
+    }
+
+    /// Own content gets "Elimina"; other people's gets "Segnala"/"Nascondi".
+    private var hasMenuActions: Bool {
+        request.isMine ? onDelete != nil : (onHide != nil || onReport != nil)
     }
 
     private var nicknameBadge: some View {

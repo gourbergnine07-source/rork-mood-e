@@ -138,6 +138,9 @@ export class AdviceBoard extends DurableObject<Env> {
       if (method === "POST" && path === "/advice/report") {
         return this.report(await request.json());
       }
+      if (method === "POST" && path === "/advice/delete") {
+        return this.deleteContent(await request.json());
+      }
       if (method === "GET" && path === "/advice/activity") {
         return this.activity(url);
       }
@@ -424,6 +427,46 @@ export class AdviceBoard extends DurableObject<Env> {
       }
     }
     return Response.json({ ok: true, hidden });
+  }
+
+  /**
+   * Author-only permanent deletion. The device id in the body must match
+   * the original author's (server-side rule, not just UI): nobody can
+   * delete someone else's content by tampering with the app.
+   * Deleting a request cascades to its replies, helpful marks and reports.
+   */
+  private deleteContent(body: unknown): Response {
+    const { deviceId, targetType, targetId } = (body ?? {}) as Record<string, string>;
+    if (!deviceId || !targetId || (targetType !== "request" && targetType !== "reply")) {
+      return bad("missing fields");
+    }
+
+    const table = targetType === "request" ? "requests" : "replies";
+    const rows = this.ctx.storage.sql
+      .exec<{ device_id: string }>(`SELECT device_id FROM ${table} WHERE id = ?`, targetId)
+      .toArray();
+    if (rows.length === 0) return bad("not found", "not_found", 404);
+    if (rows[0].device_id !== deviceId) return bad("not allowed", "forbidden", 403);
+
+    const sql = this.ctx.storage.sql;
+    if (targetType === "request") {
+      sql.exec(
+        "DELETE FROM helpful WHERE reply_id IN (SELECT id FROM replies WHERE request_id = ?)",
+        targetId,
+      );
+      sql.exec(
+        "DELETE FROM reports WHERE target_type = 'reply' AND target_id IN (SELECT id FROM replies WHERE request_id = ?)",
+        targetId,
+      );
+      sql.exec("DELETE FROM replies WHERE request_id = ?", targetId);
+      sql.exec("DELETE FROM reports WHERE target_type = 'request' AND target_id = ?", targetId);
+      sql.exec("DELETE FROM requests WHERE id = ?", targetId);
+    } else {
+      sql.exec("DELETE FROM helpful WHERE reply_id = ?", targetId);
+      sql.exec("DELETE FROM reports WHERE target_type = 'reply' AND target_id = ?", targetId);
+      sql.exec("DELETE FROM replies WHERE id = ?", targetId);
+    }
+    return Response.json({ ok: true });
   }
 
   private activity(url: URL): Response {

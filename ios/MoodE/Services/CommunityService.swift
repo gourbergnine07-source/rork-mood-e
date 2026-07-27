@@ -223,6 +223,35 @@ final class CommunityService {
         ])
     }
 
+    /// Permanently deletes one of MY requests. The server verifies the
+    /// device id matches the author before deleting; replies received are
+    /// removed as well. The id is also hidden locally so cached board
+    /// lists (edge cache TTL window) never resurface it.
+    func deleteRequest(id: String) async throws {
+        let _: OkPayload = try await post("/advice/delete", body: [
+            "deviceId": deviceId,
+            "targetType": "request",
+            "targetId": id
+        ])
+        hide(id: id)
+        myRequestIds.remove(id)
+        defaults.set(Array(myRequestIds), forKey: Self.myRequestsKey)
+        if recentlyPublished?.request.id == id { recentlyPublished = nil }
+        AnalyticsService.shared.log("advice_deleted")
+        await refreshProfile()
+    }
+
+    /// Permanently deletes one of MY replies (server verifies authorship).
+    func deleteReply(id: String) async throws {
+        let _: OkPayload = try await post("/advice/delete", body: [
+            "deviceId": deviceId,
+            "targetType": "reply",
+            "targetId": id
+        ])
+        hide(id: id)
+        await refreshProfile()
+    }
+
     /// Reports a request or reply for moderation (hidden after 3 reports).
     func report(targetType: String, targetId: String) async {
         let _: OkPayload? = try? await post("/advice/report", body: [

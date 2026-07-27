@@ -27,6 +27,9 @@ struct StatusViewerView: View {
     @State private var commentError: String?
     @State private var showInsights: Bool = false
     @State private var insights: StatusInsights?
+    @State private var showDeleteStatusConfirm: Bool = false
+    @State private var commentToDelete: StatusComment?
+    @State private var showDeleteCommentConfirm: Bool = false
     @FocusState private var commentFocused: Bool
 
     private var service: StatusService { StatusService.shared }
@@ -49,7 +52,7 @@ struct StatusViewerView: View {
     }
 
     private var isPaused: Bool {
-        commentFocused || showInsights
+        commentFocused || showInsights || showDeleteStatusConfirm || showDeleteCommentConfirm
     }
 
     var body: some View {
@@ -91,6 +94,24 @@ struct StatusViewerView: View {
         }
         .sheet(isPresented: $showInsights) {
             insightsSheet
+        }
+        .alert(L("delete.status.title"), isPresented: $showDeleteStatusConfirm) {
+            Button(L("common.delete"), role: .destructive) {
+                if let item = currentItem { deleteStatus(item) }
+            }
+            Button(L("common.cancel"), role: .cancel) {}
+        } message: {
+            Text(L("delete.status.msg"))
+        }
+        .alert(
+            L("delete.comment.title"),
+            isPresented: $showDeleteCommentConfirm,
+            presenting: commentToDelete
+        ) { comment in
+            Button(L("common.delete"), role: .destructive) { deleteComment(comment) }
+            Button(L("common.cancel"), role: .cancel) {}
+        } message: { _ in
+            Text(L("delete.comment.msg"))
         }
         .onDisappear { onClosed() }
     }
@@ -138,8 +159,14 @@ struct StatusViewerView: View {
 
             Spacer()
 
-            if !group.isMine {
-                Menu {
+            Menu {
+                if group.isMine {
+                    Button(role: .destructive) {
+                        showDeleteStatusConfirm = true
+                    } label: {
+                        Label(L("common.delete"), systemImage: "trash")
+                    }
+                } else {
                     Button(role: .destructive) {
                         reportCurrentStatus(item)
                     } label: {
@@ -150,13 +177,13 @@ struct StatusViewerView: View {
                     } label: {
                         Label(L("advice.hide"), systemImage: "eye.slash")
                     }
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.85))
-                        .frame(width: 34, height: 34)
-                        .contentShape(.rect)
                 }
+            } label: {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.85))
+                    .frame(width: 34, height: 34)
+                    .contentShape(.rect)
             }
 
             Button {
@@ -272,7 +299,14 @@ struct StatusViewerView: View {
             Spacer(minLength: 0)
         }
         .contextMenu {
-            if !comment.isMine {
+            if comment.isMine {
+                Button(role: .destructive) {
+                    commentToDelete = comment
+                    showDeleteCommentConfirm = true
+                } label: {
+                    Label(L("common.delete"), systemImage: "trash")
+                }
+            } else {
                 Button(role: .destructive) {
                     Task { await service.report(targetType: "comment", targetId: comment.id) }
                     service.hide(id: comment.id)
@@ -571,8 +605,41 @@ struct StatusViewerView: View {
         hideCurrentStatus(item)
     }
 
+    /// Deletes MY status permanently (server re-checks authorship) and
+    /// removes it from the viewer right away.
+    private func deleteStatus(_ item: MoodStatusItem) {
+        Task {
+            do {
+                try await service.deleteStatus(id: item.id)
+                removeStatusLocally(item)
+            } catch {
+                commentError = error.localizedDescription
+            }
+        }
+    }
+
+    /// Deletes MY comment permanently and removes it from the thread.
+    private func deleteComment(_ comment: StatusComment) {
+        Task {
+            do {
+                try await service.deleteComment(id: comment.id)
+                withAnimation(.spring(duration: 0.25)) {
+                    comments.removeAll { $0.id == comment.id }
+                }
+            } catch {
+                commentError = error.localizedDescription
+            }
+        }
+    }
+
     private func hideCurrentStatus(_ item: MoodStatusItem) {
         service.hide(id: item.id)
+        removeStatusLocally(item)
+    }
+
+    /// Drops a status from the in-memory groups, adjusting the position
+    /// (or closing the viewer when nothing is left).
+    private func removeStatusLocally(_ item: MoodStatusItem) {
         guard groups.indices.contains(groupIndex) else { return dismiss() }
         groups[groupIndex].statuses.removeAll { $0.id == item.id }
         if groups[groupIndex].statuses.isEmpty {

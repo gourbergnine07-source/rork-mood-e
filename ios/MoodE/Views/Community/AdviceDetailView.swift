@@ -12,11 +12,15 @@ struct AdviceDetailView: View {
     let request: AdviceRequest
 
     @Environment(MoodDiary.self) private var diary
+    @Environment(\.dismiss) private var dismiss
     @State private var detail: AdviceDetail?
     @State private var isLoading: Bool = true
     @State private var errorMessage: String?
     @State private var showSuggestSheet: Bool = false
     @State private var helpfulTrigger: Bool = false
+    @State private var showDeleteRequestConfirm: Bool = false
+    @State private var replyToDelete: AdviceReply?
+    @State private var showDeleteReplyConfirm: Bool = false
 
     private var community: CommunityService { CommunityService.shared }
 
@@ -29,7 +33,10 @@ struct AdviceDetailView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    AdviceRequestCard(request: displayRequest)
+                    AdviceRequestCard(
+                        request: displayRequest,
+                        onDelete: displayRequest.isMine ? { showDeleteRequestConfirm = true } : nil
+                    )
 
                     if !displayRequest.isMine {
                         suggestButton
@@ -58,6 +65,22 @@ struct AdviceDetailView: View {
             }
         }
         .sensoryFeedback(.success, trigger: helpfulTrigger)
+        .alert(L("delete.request.title"), isPresented: $showDeleteRequestConfirm) {
+            Button(L("common.delete"), role: .destructive) { deleteRequest() }
+            Button(L("common.cancel"), role: .cancel) {}
+        } message: {
+            Text(displayRequest.replyCount > 0 ? L("delete.request.msgWithReplies") : L("delete.request.msg"))
+        }
+        .alert(
+            L("delete.reply.title"),
+            isPresented: $showDeleteReplyConfirm,
+            presenting: replyToDelete
+        ) { reply in
+            Button(L("common.delete"), role: .destructive) { deleteReply(reply) }
+            Button(L("common.cancel"), role: .cancel) {}
+        } message: { _ in
+            Text(L("delete.reply.msg"))
+        }
     }
 
     // MARK: - Replies
@@ -110,7 +133,11 @@ struct AdviceDetailView: View {
                             Task { await community.report(targetType: "reply", targetId: reply.id) }
                             hideReply(reply)
                         },
-                        onHide: reply.isMine ? nil : { hideReply(reply) }
+                        onHide: reply.isMine ? nil : { hideReply(reply) },
+                        onDelete: reply.isMine ? {
+                            replyToDelete = reply
+                            showDeleteReplyConfirm = true
+                        } : nil
                     )
                 }
             }
@@ -173,6 +200,36 @@ struct AdviceDetailView: View {
             )
         }
     }
+
+    /// Deletes MY request (server re-checks authorship) and leaves the page.
+    private func deleteRequest() {
+        Task {
+            do {
+                try await community.deleteRequest(id: displayRequest.id)
+                dismiss()
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+
+    /// Deletes MY reply and removes it from the list right away.
+    private func deleteReply(_ reply: AdviceReply) {
+        Task {
+            do {
+                try await community.deleteReply(id: reply.id)
+                guard let current = detail else { return }
+                withAnimation(.spring(duration: 0.3)) {
+                    detail = AdviceDetail(
+                        request: current.request,
+                        replies: current.replies.filter { $0.id != reply.id }
+                    )
+                }
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
 }
 
 /// Card for a movie suggestion under a request.
@@ -182,6 +239,8 @@ struct AdviceReplyCard: View {
     var onHelpful: (() -> Void)? = nil
     var onReport: (() -> Void)? = nil
     var onHide: (() -> Void)? = nil
+    /// Shown only for the author's own reply ("Elimina" in the menu).
+    var onDelete: (() -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -193,8 +252,13 @@ struct AdviceReplyCard: View {
                     .font(.caption2)
                     .foregroundStyle(Theme.inkSoft.opacity(0.7))
                 Spacer()
-                if onReport != nil || onHide != nil {
+                if onReport != nil || onHide != nil || onDelete != nil {
                     Menu {
+                        if let onDelete {
+                            Button(role: .destructive, action: onDelete) {
+                                Label(L("common.delete"), systemImage: "trash")
+                            }
+                        }
                         if let onReport {
                             Button(role: .destructive, action: onReport) {
                                 Label(L("advice.report"), systemImage: "flag")
