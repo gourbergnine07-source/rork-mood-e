@@ -7,6 +7,12 @@ import SwiftUI
 
 /// Guided 3-step flow: emotion → goal → era, with animated transitions.
 struct MoodFlowView: View {
+    /// Navigation path of the Home stack (owned by HomeView). Pushing the
+    /// results screen appends a MoodSelection value here — every
+    /// navigationDestination lives at the stack root, so links keep
+    /// working on pushed screens too.
+    @Binding var path: NavigationPath
+
     @Environment(MoodDiary.self) private var diary
     @Environment(QuizStore.self) private var quiz
     @State private var step: Int = 0
@@ -17,7 +23,6 @@ struct MoodFlowView: View {
     @State private var selectedGoal: ViewingGoal?
     @State private var selectedEras: Set<MovieEra> = []
 
-    @State private var resultSelection: MoodSelection?
     @State private var showSurprise: Bool = false
     @State private var showQuiz: Bool = false
     @State private var showDuo: Bool = false
@@ -64,19 +69,6 @@ struct MoodFlowView: View {
                 .padding(.horizontal, 24)
                 .padding(.bottom, 6)
         }
-        .navigationDestination(item: $resultSelection) { selection in
-            MovieResultsView(selection: selection)
-        }
-        .navigationDestination(for: FeaturedCollection.self) { collection in
-            FeaturedCollectionView(collection: collection)
-        }
-        // Registered HERE (stack root) and not inside the pushed screens:
-        // declaring it on a view that is itself pushed via
-        // navigationDestination(item:) fails silently and leaves every
-        // movie-card NavigationLink inert.
-        .navigationDestination(for: TMDBMovie.self) { movie in
-            MovieDetailView(movie: movie)
-        }
         .sheet(isPresented: $showSurprise) {
             SurpriseView()
         }
@@ -94,7 +86,7 @@ struct MoodFlowView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: ForecastLaunch.name)) { note in
             guard let selection = note.object as? MoodSelection else { return }
-            resultSelection = selection
+            path.append(selection)
         }
         .alert(L("flow.quick.alert.title"), isPresented: $showQuickPickHint) {
             Button(L("common.ok"), role: .cancel) {}
@@ -472,7 +464,7 @@ struct MoodFlowView: View {
             AnalyticsService.shared.log("flow_completed")
             // Interstitial al massimo 1 ogni 3 ricerche, poi si aprono i risultati.
             AdsManager.shared.showSearchInterstitialIfDue {
-                resultSelection = selection
+                path.append(selection)
             }
         }
     }
@@ -493,7 +485,7 @@ struct MoodFlowView: View {
         )
         AnalyticsService.shared.log("quick_pick_used")
         AdsManager.shared.showSearchInterstitialIfDue {
-            resultSelection = selection
+            path.append(selection)
         }
     }
 
@@ -554,10 +546,11 @@ struct MoodFlowView: View {
 }
 
 #Preview {
-    NavigationStack {
+    @Previewable @State var path = NavigationPath()
+    NavigationStack(path: $path) {
         ZStack {
             Theme.background.ignoresSafeArea()
-            MoodFlowView()
+            MoodFlowView(path: $path)
         }
     }
 }

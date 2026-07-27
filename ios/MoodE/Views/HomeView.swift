@@ -14,12 +14,17 @@ struct HomeView: View {
 
     @State private var showPosterScan: Bool = false
     @State private var showScanPaywall: Bool = false
+    /// Explicit path so every destination is registered once, at the stack
+    /// root. Mixing navigationDestination(item:) on inner views with
+    /// value-based links broke navigation from pushed screens (movie cards
+    /// in the results list did nothing on tap).
+    @State private var path = NavigationPath()
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             ZStack {
                 Theme.background.ignoresSafeArea()
-                MoodFlowView()
+                MoodFlowView(path: $path)
             }
             .navigationTitle("Mood-E")
             .toolbarTitleDisplayMode(.inline)
@@ -117,6 +122,15 @@ struct HomeView: View {
                 case .stats: MyStatsView()
                 case .friends: FriendsView()
                 }
+            }
+            .navigationDestination(for: MoodSelection.self) { selection in
+                MovieResultsView(selection: selection)
+            }
+            .navigationDestination(for: FeaturedCollection.self) { collection in
+                FeaturedCollectionView(collection: collection)
+            }
+            .navigationDestination(for: TMDBMovie.self) { movie in
+                MovieDetailView(movie: movie)
             }
             .sheet(isPresented: $showPosterScan) {
                 PosterScanView()
