@@ -59,6 +59,7 @@ struct SettingsView: View {
     @State private var showPaywall = false
     private var cloudSync: CloudSyncService { CloudSyncService.shared }
     @AppStorage("onboarding.completed") private var hasCompletedOnboarding: Bool = true
+    @AppStorage(WhatsNew.lastSeenVersionKey) private var whatsNewLastSeen: String = ""
     private var theme: ThemeManager { ThemeManager.shared }
 
     private var appVersion: String {
@@ -575,6 +576,26 @@ struct SettingsView: View {
                 }
             }
             .padding(.vertical, 6)
+
+            NavigationLink {
+                WhatsNewView()
+            } label: {
+                HStack(spacing: 8) {
+                    SettingsRow(
+                        icon: "sparkles",
+                        iconColor: Theme.amber,
+                        title: L("whatsnew.row")
+                    )
+                    if whatsNewLastSeen != WhatsNew.appVersion {
+                        Text("NEW")
+                            .font(.caption2.weight(.heavy))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 3)
+                            .background(Theme.rose, in: .capsule)
+                    }
+                }
+            }
         }
         .listRowBackground(Theme.card)
     }
