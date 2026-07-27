@@ -76,6 +76,22 @@ final class StreamingServicesStore {
         } else {
             selectedIds.insert(service.id)
         }
+        persist()
+    }
+
+    /// Marks every service as subscribed (quick link in the filter panel).
+    func selectAll() {
+        selectedIds = Set(Self.allServices.map(\.id))
+        persist()
+    }
+
+    /// Clears the whole selection so the user can start over.
+    func deselectAll() {
+        selectedIds = []
+        persist()
+    }
+
+    private func persist() {
         UserDefaults.standard.set(Array(selectedIds).sorted(), forKey: Self.storageKey)
     }
 

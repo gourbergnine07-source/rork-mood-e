@@ -22,6 +22,7 @@ struct MoodFlowView: View {
     @State private var showQuiz: Bool = false
     @State private var showDuo: Bool = false
     @State private var showPaywall: Bool = false
+    @State private var showStreamingFilter: Bool = false
 
     // Free-form mood input (STEP 1 alternative), analyzed by AI.
     // Collapsed behind a discreet text link so the grid stays prominent.
@@ -295,36 +296,15 @@ struct MoodFlowView: View {
         }
     }
 
-    /// Streaming filter selector: a compact menu in the top bar (zero extra
-    /// vertical space). Lets the user toggle "my platforms only" and pick
-    /// the services they subscribe to; results then include only movies
-    /// available on those platforms.
+    /// Streaming filter selector: a compact button in the top bar opening
+    /// a popover panel (StreamingFilterPanel). Unlike a system Menu, the
+    /// panel stays open across taps so the user can toggle several
+    /// platforms in sequence; it closes only via "Fatto" or tapping
+    /// outside. Results then include only movies on the chosen platforms.
     private var streamingFilterButton: some View {
         let store = StreamingServicesStore.shared
-        return Menu {
-            Toggle(isOn: Binding(
-                get: { store.filterEnabled },
-                set: { store.setFilterEnabled($0) }
-            )) {
-                Label(L("filter.streaming.only"), systemImage: "play.tv")
-            }
-
-            Section(L("services.title")) {
-                ForEach(StreamingServicesStore.allServices) { service in
-                    Toggle(isOn: Binding(
-                        get: { store.isSelected(service) },
-                        set: { _ in store.toggle(service) }
-                    )) {
-                        Text(service.name)
-                    }
-                }
-            }
-
-            if !store.hasSelection {
-                Section {
-                    Text(L("filter.streaming.hint"))
-                }
-            }
+        return Button {
+            showStreamingFilter = true
         } label: {
             Image(systemName: store.isFilterActive
                 ? "line.3.horizontal.decrease.circle.fill"
@@ -334,6 +314,9 @@ struct MoodFlowView: View {
                 .frame(width: 36, height: 36)
                 .background(store.isFilterActive ? Theme.primary : Theme.card, in: .circle)
                 .contentTransition(.symbolEffect(.replace))
+        }
+        .popover(isPresented: $showStreamingFilter, arrowEdge: .top) {
+            StreamingFilterPanel()
         }
         .sensoryFeedback(.selection, trigger: store.filterEnabled)
         .accessibilityLabel(L("filter.streaming.only"))
