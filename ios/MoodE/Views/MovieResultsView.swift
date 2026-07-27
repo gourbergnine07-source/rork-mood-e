@@ -14,6 +14,24 @@ struct MovieResultsView: View {
     @Environment(MovieLibrary.self) private var library
     @Environment(MoodDiary.self) private var diary
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
+    /// Regular width (iPad full screen / large split): two-column card grid
+    /// and capped content width so cards never stretch edge-to-edge.
+    private var isRegularWidth: Bool { horizontalSizeClass == .regular }
+
+    private var cardColumns: [GridItem] {
+        if isRegularWidth {
+            return [
+                GridItem(.flexible(), spacing: 16, alignment: .top),
+                GridItem(.flexible(), spacing: 16, alignment: .top)
+            ]
+        }
+        return [GridItem(.flexible(), alignment: .top)]
+    }
+
+    /// Max readable content width on iPad; unconstrained on iPhone.
+    private var contentMaxWidth: CGFloat { isRegularWidth ? 980 : .infinity }
 
     var body: some View {
         ZStack {
@@ -76,6 +94,8 @@ struct MovieResultsView: View {
             }
             .padding(.top, 12)
             .padding(.bottom, 32)
+            .frame(maxWidth: contentMaxWidth)
+            .frame(maxWidth: .infinity)
         }
         .scrollIndicators(.hidden)
     }
@@ -153,7 +173,7 @@ struct MovieResultsView: View {
                         .foregroundStyle(Theme.ink)
                         .padding(.horizontal, 24)
 
-                    LazyVStack(spacing: 14) {
+                    LazyVGrid(columns: cardColumns, spacing: isRegularWidth ? 16 : 14) {
                         ForEach(movies) { movie in
                             MovieCard(
                                 movie: movie,
@@ -173,6 +193,8 @@ struct MovieResultsView: View {
                 }
                 .padding(.top, 12)
                 .padding(.bottom, 32)
+                .frame(maxWidth: contentMaxWidth)
+                .frame(maxWidth: .infinity)
             }
             .scrollIndicators(.hidden)
             .onChange(of: viewModel.batchId) { _, _ in

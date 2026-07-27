@@ -58,7 +58,21 @@ struct CinemaMapDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var directionsTapCount = 0
 
+    /// On iPad the sheet uses page sizing for a much larger map canvas;
+    /// the info card is width-capped so it floats over the map instead of
+    /// stretching edge-to-edge.
+    private var isPad: Bool { UIDevice.current.userInterfaceIdiom == .pad }
+
     var body: some View {
+        if isPad {
+            sheetContent
+                .presentationSizing(.page)
+        } else {
+            sheetContent
+        }
+    }
+
+    private var sheetContent: some View {
         NavigationStack {
             Map(initialPosition: .region(region)) {
                 Marker(target.name, systemImage: "popcorn.fill", coordinate: target.coordinate)
@@ -160,6 +174,7 @@ struct CinemaMapDetailView: View {
         }
         .padding(16)
         .background(.thinMaterial, in: .rect(cornerRadius: 20))
+        .frame(maxWidth: 560)
         .padding(.horizontal, 16)
         .padding(.bottom, 10)
     }

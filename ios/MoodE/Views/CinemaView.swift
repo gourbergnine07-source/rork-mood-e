@@ -29,11 +29,34 @@ struct CinemaView: View {
     @State private var mapTarget: CinemaMapTarget?
     @Environment(\.openURL) private var openURL
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
-    private let columns = [
-        GridItem(.flexible(), spacing: 14),
-        GridItem(.flexible(), spacing: 14)
-    ]
+    /// Regular width (iPad full screen / large split view).
+    private var isRegularWidth: Bool { horizontalSizeClass == .regular }
+
+    /// Poster grid: 2 fixed columns on iPhone; adaptive 4–5 poster columns
+    /// on iPad so the extra width shows more movies instead of huge posters.
+    private var columns: [GridItem] {
+        if isRegularWidth {
+            return [GridItem(.adaptive(minimum: 185, maximum: 250), spacing: 16, alignment: .top)]
+        }
+        return [
+            GridItem(.flexible(), spacing: 14, alignment: .top),
+            GridItem(.flexible(), spacing: 14, alignment: .top)
+        ]
+    }
+
+    /// Cinema rows (favorites + nearby): single column on iPhone,
+    /// two side-by-side columns on iPad.
+    private var cinemaRowColumns: [GridItem] {
+        if isRegularWidth {
+            return [
+                GridItem(.flexible(), spacing: 12, alignment: .top),
+                GridItem(.flexible(), spacing: 12, alignment: .top)
+            ]
+        }
+        return [GridItem(.flexible(), alignment: .top)]
+    }
 
     var body: some View {
         NavigationStack {
@@ -626,7 +649,7 @@ struct CinemaView: View {
             if favorites.cinemas.isEmpty {
                 favoritesEmptyCard
             } else {
-                VStack(spacing: 10) {
+                LazyVGrid(columns: cinemaRowColumns, spacing: 10) {
                     ForEach(favorites.cinemas) { cinema in
                         FavoriteCinemaRow(
                             cinema: cinema,
@@ -723,7 +746,7 @@ struct CinemaView: View {
                 if filtered.isEmpty {
                     noSearchResultsCard
                 } else {
-                    VStack(spacing: 10) {
+                    LazyVGrid(columns: cinemaRowColumns, spacing: 10) {
                         ForEach(filtered) { cinema in
                             NearbyCinemaRow(
                                 cinema: cinema,
