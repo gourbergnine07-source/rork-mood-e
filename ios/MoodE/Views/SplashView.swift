@@ -18,7 +18,7 @@ struct SplashView: View {
             Theme.background.ignoresSafeArea()
 
             VStack(spacing: 22) {
-                Image("film_strip_heart_gold")
+                Image("app_icon_preview")
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(width: 132, height: 132)
