@@ -102,6 +102,7 @@
   "badges.title": "Mis logros",
   "badges.unlocked": "Desbloqueado",
   "badges.unlockedCount": "%d de %d desbloqueados",
+  "card.a11y.openDetail": "Abrir la ficha completa de la película",
   "card.availableNow": "Disponible ahora",
   "card.availableOn": "Disponible en",
   "card.save": "Guardar",

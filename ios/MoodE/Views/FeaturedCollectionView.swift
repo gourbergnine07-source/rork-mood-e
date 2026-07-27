@@ -118,14 +118,11 @@ struct FeaturedCollectionView: View {
 
                 LazyVStack(spacing: 14) {
                     ForEach(movies) { movie in
-                        NavigationLink(value: movie) {
-                            MovieCard(
-                                movie: movie,
-                                isLoadingTrailer: trailerPlayback.loadingMovieId == movie.id,
-                                onPlayTrailer: { trailerPlayback.play(movie) }
-                            )
-                        }
-                        .buttonStyle(PressableCardStyle())
+                        MovieCard(
+                            movie: movie,
+                            isLoadingTrailer: trailerPlayback.loadingMovieId == movie.id,
+                            onPlayTrailer: { trailerPlayback.play(movie) }
+                        )
                     }
                 }
                 .sensoryFeedback(.impact(weight: .medium), trigger: trailerPlayback.loadingMovieId)

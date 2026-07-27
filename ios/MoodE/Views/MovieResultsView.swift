@@ -155,14 +155,11 @@ struct MovieResultsView: View {
 
                     LazyVStack(spacing: 14) {
                         ForEach(movies) { movie in
-                            NavigationLink(value: movie) {
-                                MovieCard(
-                                    movie: movie,
-                                    isLoadingTrailer: trailerPlayback.loadingMovieId == movie.id,
-                                    onPlayTrailer: { trailerPlayback.play(movie) }
-                                )
-                            }
-                            .buttonStyle(PressableCardStyle())
+                            MovieCard(
+                                movie: movie,
+                                isLoadingTrailer: trailerPlayback.loadingMovieId == movie.id,
+                                onPlayTrailer: { trailerPlayback.play(movie) }
+                            )
                         }
                     }
                     .sensoryFeedback(.impact(weight: .medium), trigger: trailerPlayback.loadingMovieId)
@@ -321,6 +318,11 @@ struct TrailerSelection: Identifiable {
 }
 
 /// Card showing a single movie with poster, rating and overview.
+/// The poster + info area is a NavigationLink to the full detail page;
+/// the action buttons (save/seen/share/trailer) live OUTSIDE the link
+/// so their taps never conflict with navigation. Keeping the ShareLink
+/// out of the NavigationLink label is what makes the card tappable
+/// (a nested ShareLink used to swallow every tap on the card).
 struct MovieCard: View {
     let movie: TMDBMovie
     var isLoadingTrailer: Bool = false
@@ -332,6 +334,37 @@ struct MovieCard: View {
     private var isSeen: Bool { library.isSeen(movie.id) }
 
     var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            NavigationLink(value: movie) {
+                openableArea
+                    .contentShape(.rect)
+            }
+            .buttonStyle(PressableCardStyle())
+            .accessibilityHint(L("card.a11y.openDetail"))
+
+            quickActions
+
+            if let onPlayTrailer {
+                WatchTrailerButton(
+                    tint: Theme.rose,
+                    isLoading: isLoadingTrailer,
+                    action: onPlayTrailer
+                )
+            }
+        }
+        .padding(12)
+        .background(Theme.card, in: .rect(cornerRadius: 22))
+        .overlay(
+            RoundedRectangle(cornerRadius: 22)
+                .stroke(Theme.primary.opacity(0.10), lineWidth: 1)
+        )
+        .sensoryFeedback(.impact(weight: .medium), trigger: isInWatchlist)
+        .sensoryFeedback(.success, trigger: isSeen)
+    }
+
+    /// Poster, title, year, rating, genres and overview: tapping anywhere
+    /// here opens the movie detail page (with press-down feedback).
+    private var openableArea: some View {
         HStack(alignment: .top, spacing: 14) {
             poster
 
@@ -340,6 +373,7 @@ struct MovieCard: View {
                     .font(.headline)
                     .foregroundStyle(Theme.ink)
                     .lineLimit(2)
+                    .multilineTextAlignment(.leading)
 
                 HStack(spacing: 8) {
                     if let year = movie.releaseYear {
@@ -374,44 +408,28 @@ struct MovieCard: View {
                         .foregroundStyle(Theme.inkSoft)
                         .lineLimit(3)
                         .lineSpacing(2)
+                        .multilineTextAlignment(.leading)
                 }
 
                 ProviderStripView(movieId: movie.id)
                     .padding(.top, 2)
-
-                quickActions
-                    .padding(.top, 2)
-
-                if let onPlayTrailer {
-                    WatchTrailerButton(
-                        tint: Theme.rose,
-                        isLoading: isLoadingTrailer,
-                        action: onPlayTrailer
-                    )
-                    .padding(.top, 2)
-                }
             }
 
             Spacer(minLength: 0)
         }
-        .padding(12)
-        .background(Theme.card, in: .rect(cornerRadius: 22))
-        .overlay(
-            RoundedRectangle(cornerRadius: 22)
-                .stroke(Theme.primary.opacity(0.10), lineWidth: 1)
-        )
-        .sensoryFeedback(.impact(weight: .medium), trigger: isInWatchlist)
-        .sensoryFeedback(.success, trigger: isSeen)
     }
 
     /// Quick save / seen toggles usable directly from the results list.
+    /// Full card width: the two text chips share the row equally so their
+    /// labels ("Salva", "Già visto") are never truncated.
     private var quickActions: some View {
         HStack(spacing: 8) {
             QuickActionChip(
                 title: isInWatchlist ? L("card.saved") : L("card.save"),
                 icon: isInWatchlist ? "bookmark.fill" : "bookmark",
                 tint: Theme.primary,
-                isActive: isInWatchlist
+                isActive: isInWatchlist,
+                expands: true
             ) {
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
                     library.toggleWatchlist(movie)
@@ -422,7 +440,8 @@ struct MovieCard: View {
                 title: isSeen ? L("card.watched") : L("card.seen"),
                 icon: isSeen ? "checkmark.circle.fill" : "checkmark.circle",
                 tint: Theme.seenGreen,
-                isActive: isSeen
+                isActive: isSeen,
+                expands: true
             ) {
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
                     library.toggleSeen(movie)
@@ -506,11 +525,14 @@ struct MovieCard: View {
 }
 
 /// Compact toggle chip for quick library actions on a results card.
+/// With `expands` the chip stretches to share the row, so labels are
+/// always fully readable (scaling down slightly before ever truncating).
 struct QuickActionChip: View {
     let title: String
     let icon: String
     let tint: Color
     let isActive: Bool
+    var expands: Bool = false
     let action: () -> Void
 
     var body: some View {
@@ -522,10 +544,12 @@ struct QuickActionChip: View {
                 Text(title)
                     .font(.caption.weight(.semibold))
                     .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
             .foregroundStyle(isActive ? .white : tint)
             .padding(.horizontal, 11)
             .frame(height: 32)
+            .frame(maxWidth: expands ? .infinity : nil)
             .background(
                 isActive ? tint : tint.opacity(0.10),
                 in: .capsule

@@ -102,6 +102,7 @@
   "badges.title": "My milestones",
   "badges.unlocked": "Unlocked",
   "badges.unlockedCount": "%d of %d unlocked",
+  "card.a11y.openDetail": "Open the full movie page",
   "card.availableNow": "Available now",
   "card.availableOn": "Available on",
   "card.save": "Save",
