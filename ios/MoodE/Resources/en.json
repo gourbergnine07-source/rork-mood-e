@@ -272,6 +272,8 @@
   "era.noPreference.sub": "Surprise me with any era",
   "era.seventiesEighties": "'70s–'80s",
   "era.seventiesEighties.sub": "Great classics and cult movies",
+  "era.twentyTens": "2010–2020",
+  "era.twentyTens.sub": "The decade of streaming and modern blockbusters",
   "era.twoThousands": "2000s–2010s",
   "era.twoThousands.sub": "Modern, memorable stories",
   "error.badResponse": "TMDB returned an error (code %d). Try again shortly.",

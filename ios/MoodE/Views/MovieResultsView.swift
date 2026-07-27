@@ -264,7 +264,10 @@ struct MovieResultsView: View {
             HStack(spacing: 8) {
                 recapChip(emoji: selection.mood.emoji, text: selection.mood.title)
                 recapChip(emoji: selection.goal.emoji, text: selection.goal.title)
-                recapChip(emoji: selection.era.emoji, text: selection.era.title)
+                // One chip per chosen era (step 3 is multi-select).
+                ForEach(selection.eras) { era in
+                    recapChip(emoji: era.emoji, text: era.title)
+                }
 
                 if StreamingServicesStore.shared.isFilterActive {
                     streamingFilterChip

@@ -43,7 +43,8 @@ final class MovieResultsViewModel {
     private let maxPageFetches = 4
 
     private static func cacheKey(for selection: MoodSelection) -> String {
-        var key = "recommendations.v2.\(String(describing: selection.mood)).\(String(describing: selection.goal)).\(String(describing: selection.era))"
+        let eraKey = selection.eras.map(\.rawValue).sorted().joined(separator: "+")
+        var key = "recommendations.v2.\(String(describing: selection.mood)).\(String(describing: selection.goal)).\(eraKey)"
         // Pool generation: a biweekly renewal starts a fresh cache bucket,
         // so the rotated discover pages actually reach the screen.
         key += ".r\(PoolRotation.shared.currentOffset)"

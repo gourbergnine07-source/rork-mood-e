@@ -191,7 +191,7 @@ final class MoodDiary {
                 date: Date(),
                 moodRaw: selection.mood.rawValue,
                 goalRaw: selection.goal.rawValue,
-                eraRaw: selection.era.rawValue,
+                eraRaw: selection.eras.map(\.rawValue).joined(separator: "+"),
                 isQuickPick: selection.isQuickPick,
                 proposed: Array(proposed)
             )

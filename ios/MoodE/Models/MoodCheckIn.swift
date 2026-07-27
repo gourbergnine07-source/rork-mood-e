@@ -37,7 +37,10 @@ nonisolated struct MoodCheckIn: Codable, Identifiable {
 extension MoodCheckIn {
     var mood: Mood? { Mood(rawValue: moodRaw) }
     var goal: ViewingGoal? { ViewingGoal(rawValue: goalRaw) }
-    var era: MovieEra? { MovieEra(rawValue: eraRaw) }
+    /// Eras of the flow; multi-selections are stored as "a+b+c" in eraRaw
+    /// (single raw values from older check-ins keep decoding fine).
+    var eras: [MovieEra] { eraRaw.components(separatedBy: "+").compactMap(MovieEra.init) }
+    var era: MovieEra? { eras.first }
 }
 
 /// Snapshot shared with the home-screen widget via the App Group container.

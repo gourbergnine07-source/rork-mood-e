@@ -125,9 +125,9 @@ enum ViewingGoal: String, CaseIterable, Identifiable, Hashable {
     }
 }
 
-/// Preferred movie era, chosen in step 3.
+/// Preferred movie eras, chosen in step 3 (multi-selection).
 enum MovieEra: String, CaseIterable, Identifiable, Hashable {
-    case seventiesEighties, nineties, twoThousands, lastFiveYears, noPreference
+    case seventiesEighties, nineties, twoThousands, twentyTens, lastFiveYears, noPreference
 
     var id: String { rawValue }
 
@@ -139,6 +139,7 @@ enum MovieEra: String, CaseIterable, Identifiable, Hashable {
         case .seventiesEighties: return "📼"
         case .nineties: return "💿"
         case .twoThousands: return "📱"
+        case .twentyTens: return "📺"
         case .lastFiveYears: return "🍿"
         case .noPreference: return "🎬"
         }
@@ -150,6 +151,7 @@ enum MovieEra: String, CaseIterable, Identifiable, Hashable {
         case .seventiesEighties: return "recordingtape"
         case .nineties: return "opticaldisc"
         case .twoThousands: return "iphone"
+        case .twentyTens: return "play.tv"
         case .lastFiveYears: return "popcorn"
         case .noPreference: return "movieclapper"
         }
@@ -164,6 +166,7 @@ enum MovieEra: String, CaseIterable, Identifiable, Hashable {
         case .seventiesEighties: return Color(red: 0.71, green: 0.52, blue: 0.28)
         case .nineties: return Color(red: 0.57, green: 0.44, blue: 0.83)
         case .twoThousands: return Color(red: 0.36, green: 0.57, blue: 0.86)
+        case .twentyTens: return Color(red: 0.79, green: 0.36, blue: 0.62)
         case .lastFiveYears: return Color(red: 0.88, green: 0.43, blue: 0.28)
         case .noPreference: return Color(red: 0.29, green: 0.62, blue: 0.61)
         }
@@ -171,11 +174,26 @@ enum MovieEra: String, CaseIterable, Identifiable, Hashable {
 }
 
 /// The three choices made in the guided flow, passed to the results screen.
+/// Step 3 supports multiple eras: results include movies from EVERY chosen
+/// period (OR between date ranges). `noPreference` means no date filter.
 struct MoodSelection: Hashable {
     let mood: Mood
     let goal: ViewingGoal
-    let era: MovieEra
+    /// Eras in chronological order; never empty (falls back to noPreference).
+    let eras: [MovieEra]
     var isQuickPick: Bool = false
+
+    init(mood: Mood, goal: ViewingGoal, eras: [MovieEra], isQuickPick: Bool = false) {
+        self.mood = mood
+        self.goal = goal
+        self.eras = eras.isEmpty ? [.noPreference] : eras
+        self.isQuickPick = isQuickPick
+    }
+
+    /// Single-era convenience (quick pick, notifications, Siri, previews).
+    init(mood: Mood, goal: ViewingGoal, era: MovieEra, isQuickPick: Bool = false) {
+        self.init(mood: mood, goal: goal, eras: [era], isQuickPick: isQuickPick)
+    }
 }
 
 extension Mood {

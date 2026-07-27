@@ -272,6 +272,8 @@
   "era.noPreference.sub": "Sorpréndeme con cualquier época",
   "era.seventiesEighties": "Años 70–80",
   "era.seventiesEighties.sub": "Grandes clásicos y películas de culto",
+  "era.twentyTens": "Años 2010–2020",
+  "era.twentyTens.sub": "La década del streaming y los blockbusters modernos",
   "era.twoThousands": "Años 2000–2010",
   "era.twoThousands.sub": "Historias modernas y memorables",
   "error.badResponse": "TMDB respondió con un error (código %d). Vuelve a intentarlo en breve.",

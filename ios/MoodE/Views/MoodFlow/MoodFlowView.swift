@@ -15,7 +15,7 @@ struct MoodFlowView: View {
 
     @State private var selectedMood: Mood?
     @State private var selectedGoal: ViewingGoal?
-    @State private var selectedEra: MovieEra?
+    @State private var selectedEras: Set<MovieEra> = []
 
     @State private var resultSelection: MoodSelection?
     @State private var showSurprise: Bool = false
@@ -212,10 +212,10 @@ struct MoodFlowView: View {
                         icon: era.icon,
                         title: era.title,
                         subtitle: era.subtitle,
-                        isSelected: selectedEra == era,
+                        isSelected: selectedEras.contains(era),
                         tint: era.tint
                     ) {
-                        selectedEra = era
+                        toggleEra(era)
                     }
                 }
             }
@@ -427,7 +427,23 @@ struct MoodFlowView: View {
         switch step {
         case 0: return selectedMood != nil
         case 1: return selectedGoal != nil
-        default: return selectedEra != nil
+        default: return !selectedEras.isEmpty
+        }
+    }
+
+    /// Multi-selection with one rule: "no preference" is exclusive.
+    /// Picking it clears every specific era; picking a specific era
+    /// drops "no preference".
+    private func toggleEra(_ era: MovieEra) {
+        if era == .noPreference {
+            selectedEras = selectedEras.contains(.noPreference) ? [] : [.noPreference]
+        } else {
+            selectedEras.remove(.noPreference)
+            if selectedEras.contains(era) {
+                selectedEras.remove(era)
+            } else {
+                selectedEras.insert(era)
+            }
         }
     }
 
@@ -442,8 +458,10 @@ struct MoodFlowView: View {
         if step < 2 {
             isMovingForward = true
             withAnimation { step += 1 }
-        } else if let mood = selectedMood, let goal = selectedGoal, let era = selectedEra {
-            let selection = MoodSelection(mood: mood, goal: goal, era: era)
+        } else if let mood = selectedMood, let goal = selectedGoal, !selectedEras.isEmpty {
+            // Chronological order regardless of tap order.
+            let orderedEras = MovieEra.allCases.filter { selectedEras.contains($0) }
+            let selection = MoodSelection(mood: mood, goal: goal, eras: orderedEras)
             AnalyticsService.shared.log("flow_completed")
             // Interstitial al massimo 1 ogni 3 ricerche, poi si aprono i risultati.
             AdsManager.shared.showSearchInterstitialIfDue {

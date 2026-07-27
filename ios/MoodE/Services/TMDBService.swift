@@ -137,16 +137,61 @@ enum TMDBService {
             queryItems.append(URLQueryItem(name: "without_genres", value: String(TMDBGenre.horror)))
         }
 
-        let dateRange = Self.dateRange(for: selection.era)
-        if let gte = dateRange.gte {
-            queryItems.append(URLQueryItem(name: "primary_release_date.gte", value: gte))
-        }
-        if let lte = dateRange.lte {
-            queryItems.append(URLQueryItem(name: "primary_release_date.lte", value: lte))
+        let ranges = Self.dateRanges(for: selection.eras)
+
+        // Single (or no) era: one direct query, as before.
+        if ranges.count <= 1 {
+            if let range = ranges.first {
+                if let gte = range.gte {
+                    queryItems.append(URLQueryItem(name: "primary_release_date.gte", value: gte))
+                }
+                if let lte = range.lte {
+                    queryItems.append(URLQueryItem(name: "primary_release_date.lte", value: lte))
+                }
+            }
+            let response: TMDBMovieListResponse = try await request(path: "/discover/movie", queryItems: queryItems)
+            return await fillingMissingOverviews(response, path: "/discover/movie", queryItems: queryItems)
         }
 
-        let response: TMDBMovieListResponse = try await request(path: "/discover/movie", queryItems: queryItems)
-        return await fillingMissingOverviews(response, path: "/discover/movie", queryItems: queryItems)
+        // Multiple eras: TMDB discover has no OR between date ranges, so one
+        // query runs per selected era and results are interleaved (movie 1 of
+        // each era, then movie 2 of each…) so every period is represented.
+        var perEraResults: [[TMDBMovie]] = []
+        var maxTotalPages = 1
+        var responsePage = page
+        for range in ranges {
+            var items = queryItems
+            if let gte = range.gte {
+                items.append(URLQueryItem(name: "primary_release_date.gte", value: gte))
+            }
+            if let lte = range.lte {
+                items.append(URLQueryItem(name: "primary_release_date.lte", value: lte))
+            }
+            let response: TMDBMovieListResponse = try await request(path: "/discover/movie", queryItems: items)
+            let filled = await fillingMissingOverviews(response, path: "/discover/movie", queryItems: items)
+            perEraResults.append(filled.results)
+            maxTotalPages = max(maxTotalPages, filled.totalPages)
+            responsePage = filled.page
+        }
+
+        var combined: [TMDBMovie] = []
+        var seenIds = Set<Int>()
+        let longest = perEraResults.map(\.count).max() ?? 0
+        for index in 0..<longest {
+            for list in perEraResults where list.indices.contains(index) {
+                let movie = list[index]
+                if seenIds.insert(movie.id).inserted {
+                    combined.append(movie)
+                }
+            }
+        }
+
+        return TMDBMovieListResponse(
+            page: responsePage,
+            results: combined,
+            totalPages: maxTotalPages,
+            totalResults: combined.count
+        )
     }
 
     /// "Serata in Duo": movies crossing two mood × goal combinations.
@@ -663,6 +708,13 @@ enum TMDBService {
         return query
     }
 
+    /// One date interval per selected era. Empty when "no preference" is
+    /// among the choices (or nothing is chosen): no date filter applies.
+    private static func dateRanges(for eras: [MovieEra]) -> [(gte: String?, lte: String?)] {
+        guard !eras.isEmpty, !eras.contains(.noPreference) else { return [] }
+        return eras.map { dateRange(for: $0) }
+    }
+
     private static func dateRange(for era: MovieEra) -> (gte: String?, lte: String?) {
         switch era {
         case .seventiesEighties:
@@ -671,6 +723,8 @@ enum TMDBService {
             return ("1990-01-01", "1999-12-31")
         case .twoThousands:
             return ("2000-01-01", "2010-12-31")
+        case .twentyTens:
+            return ("2011-01-01", "2020-12-31")
         case .lastFiveYears:
             let calendar = Calendar.current
             let now = Date()
