@@ -8,6 +8,7 @@
 import SwiftUI
 import UserNotifications
 import AppIntents
+import FirebaseCore
 
 @main
 struct MoodEApp: App {
@@ -23,6 +24,8 @@ struct MoodEApp: App {
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
+        // Firebase (Analytics): required for the AdMob ↔ Firebase link (ARPU).
+        FirebaseApp.configure()
         UNUserNotificationCenter.current().delegate = NotificationDelegate.shared
         // Make the "what to watch" command discoverable by Siri right away.
         MoodEShortcuts.updateAppShortcutParameters()
