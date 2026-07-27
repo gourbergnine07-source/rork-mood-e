@@ -289,6 +289,9 @@ struct ChallengeDuoView: View {
             pairedRoleRaw = "host"
             pairedMonth = challenge.id
             AnalyticsService.shared.log("challenge_duo_created")
+            // Challenge codes also link the two people as "amici" for the
+            // friends-only Stato Mood visibility.
+            StatusService.shared.registerFriendCode(code)
             await refresh()
         } catch {
             errorText = L("chduo.error.generic")
@@ -306,6 +309,8 @@ struct ChallengeDuoView: View {
             pairedRoleRaw = "guest"
             pairedMonth = challenge.id
             AnalyticsService.shared.log("challenge_duo_joined")
+            // Joining links the two people as "amici" for Stato Mood.
+            StatusService.shared.registerFriendCode(joined.code)
             await refresh()
         } catch DuoError.notFound {
             errorText = L("chduo.error.notfound")

@@ -6,10 +6,22 @@
 import Foundation
 import Observation
 
+/// An anonymous friend linked via a Duo/Challenge code: only the
+/// nickname and the first-connection date are known, nothing else.
+nonisolated struct StatusFriend: Decodable, Identifiable {
+    let nickname: String
+    let createdAt: Double
+
+    var id: String { "\(nickname)-\(createdAt)" }
+    var date: Date { Date(timeIntervalSince1970: createdAt / 1000) }
+}
+
 /// Client for the ephemeral "Stato Mood" board.
 /// Fully anonymous like the advice community: reuses the same opaque
 /// device id and self-generated nickname, no account, no personal media
 /// (only TMDB posters chosen by the user), everything expires after 24h.
+/// Visibility is FRIENDS-ONLY: the feed contains just the statuses of
+/// people linked via a "Serata in Duo" or "Sfida un amico" code.
 @Observable
 final class StatusService {
     static let shared = StatusService()
@@ -138,6 +150,31 @@ final class StatusService {
         ])
     }
 
+    // MARK: - Friends
+
+    /// Registers a Duo/Challenge code on the server: when the other person
+    /// registers the same code, a mutual friendship is created and the two
+    /// start seeing each other's statuses. Fire-and-forget: a failure never
+    /// blocks the Duo/Challenge flow itself.
+    func registerFriendCode(_ code: String) {
+        let trimmed = code.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count >= 4 else { return }
+        Task {
+            let _: OkOnly? = try? await post("/status/friend/register", body: [
+                "deviceId": deviceId,
+                "nickname": nickname,
+                "code": trimmed
+            ])
+            AnalyticsService.shared.log("status_friend_code_registered")
+        }
+    }
+
+    /// Anonymous friends linked via codes (nickname + connection date only).
+    func loadFriends() async throws -> [StatusFriend] {
+        let payload: FriendsPayload = try await get("/status/friends?deviceId=\(deviceId)")
+        return payload.friends
+    }
+
     /// Hides a status or comment locally (personal choice, no server call).
     func hide(id: String) {
         hiddenIds.insert(id)
@@ -205,4 +242,5 @@ private nonisolated struct ReactPayload: Decodable {
     let reactionCounts: [String: Int]
 }
 private nonisolated struct OkOnly: Decodable { let ok: Bool }
+private nonisolated struct FriendsPayload: Decodable { let friends: [StatusFriend] }
 private nonisolated struct StatusErrorPayload: Decodable { let error: String; let code: String? }

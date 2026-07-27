@@ -124,6 +124,25 @@ export class MoodStatusBoard extends DurableObject<Env> {
         created_at INTEGER NOT NULL,
         PRIMARY KEY (target_type, target_id, device_id)
       );
+      -- Pending code registrations (Serata in Duo / Sfida un amico):
+      -- when two distinct devices register the same code, a mutual
+      -- friendship is created. Rows expire after 24h (nightly purge).
+      CREATE TABLE IF NOT EXISTS friend_codes (
+        code TEXT NOT NULL,
+        device_id TEXT NOT NULL,
+        nickname TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        PRIMARY KEY (code, device_id)
+      );
+      -- Bidirectional friendships between anonymous device ids.
+      -- Only nickname + first-connection date are stored, nothing else.
+      CREATE TABLE IF NOT EXISTS friends (
+        device_id TEXT NOT NULL,
+        friend_device_id TEXT NOT NULL,
+        friend_nickname TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        PRIMARY KEY (device_id, friend_device_id)
+      );
     `);
     // Migration: mood tag column added after the initial release.
     try {
@@ -165,6 +184,12 @@ export class MoodStatusBoard extends DurableObject<Env> {
       }
       if (method === "POST" && path === "/status/delete") {
         return this.deleteContent(await request.json());
+      }
+      if (method === "POST" && path === "/status/friend/register") {
+        return this.registerFriendCode(await request.json());
+      }
+      if (method === "GET" && path === "/status/friends") {
+        return this.listFriends(url);
       }
       return new Response("not found", { status: 404 });
     } catch (error) {
@@ -208,6 +233,8 @@ export class MoodStatusBoard extends DurableObject<Env> {
         now,
       );
       sql.exec("DELETE FROM statuses WHERE expires_at < ?", now);
+      // Pending friend-code registrations are only valid for 24h.
+      sql.exec("DELETE FROM friend_codes WHERE created_at < ?", now - STATUS_TTL_MS);
       const remaining = sql.exec<{ n: number }>("SELECT COUNT(*) AS n FROM statuses").one().n;
       console.log(`MoodStatusBoard maintenance done: ${remaining} active statuses`);
     } finally {
@@ -228,16 +255,91 @@ export class MoodStatusBoard extends DurableObject<Env> {
     return fresh;
   }
 
+  // MARK: Friends
+
+  /**
+   * Registers a Duo/Challenge code for a device. When another device has
+   * registered the same code (within 24h), a mutual friendship is created
+   * — from then on the two see each other's Stato Mood, WhatsApp-style.
+   * Stores only nickname + first-connection date, preserving anonymity.
+   */
+  private registerFriendCode(body: unknown): Response {
+    const { deviceId, nickname, code } = (body ?? {}) as Record<string, string>;
+    if (!deviceId || !nickname || !code) return bad("missing fields");
+    if (nickname.length > MAX_NICKNAME) return bad("nickname too long");
+    const cleanCode = code.trim().toUpperCase().slice(0, 16);
+    if (cleanCode.length < 4) return bad("invalid code");
+
+    const now = Date.now();
+    const sql = this.ctx.storage.sql;
+    sql.exec(
+      `INSERT INTO friend_codes (code, device_id, nickname, created_at) VALUES (?, ?, ?, ?)
+       ON CONFLICT (code, device_id) DO UPDATE SET nickname = excluded.nickname`,
+      cleanCode, deviceId, nickname, now,
+    );
+
+    // Link with everyone else who registered this code recently.
+    const others = sql.exec<{ device_id: string; nickname: string }>(
+      "SELECT device_id, nickname FROM friend_codes WHERE code = ? AND device_id != ? AND created_at > ?",
+      cleanCode, deviceId, now - STATUS_TTL_MS,
+    ).toArray();
+
+    for (const other of others) {
+      sql.exec(
+        `INSERT INTO friends (device_id, friend_device_id, friend_nickname, created_at) VALUES (?, ?, ?, ?)
+         ON CONFLICT (device_id, friend_device_id) DO UPDATE SET friend_nickname = excluded.friend_nickname`,
+        deviceId, other.device_id, other.nickname, now,
+      );
+      sql.exec(
+        `INSERT INTO friends (device_id, friend_device_id, friend_nickname, created_at) VALUES (?, ?, ?, ?)
+         ON CONFLICT (device_id, friend_device_id) DO UPDATE SET friend_nickname = excluded.friend_nickname`,
+        other.device_id, deviceId, nickname, now,
+      );
+    }
+
+    return Response.json({ ok: true, linked: others.length });
+  }
+
+  /** Anonymous friends of a device: nickname + first-connection date only. */
+  private listFriends(url: URL): Response {
+    const deviceId = url.searchParams.get("deviceId") ?? "";
+    if (!deviceId) return bad("missing deviceId");
+    const rows = this.ctx.storage.sql
+      .exec<{ friend_nickname: string; created_at: number }>(
+        "SELECT friend_nickname, created_at FROM friends WHERE device_id = ? ORDER BY created_at DESC",
+        deviceId,
+      )
+      .toArray();
+    return Response.json({
+      friends: rows.map((row) => ({ nickname: row.friend_nickname, createdAt: row.created_at })),
+    });
+  }
+
+  /** Device ids whose statuses are visible to the caller (their friends). */
+  private friendDeviceIds(deviceId: string): Set<string> {
+    return new Set(
+      this.ctx.storage.sql
+        .exec<{ friend_device_id: string }>("SELECT friend_device_id FROM friends WHERE device_id = ?", deviceId)
+        .toArray()
+        .map((row) => row.friend_device_id),
+    );
+  }
+
   // MARK: Feed
 
   /**
    * Active statuses grouped per anonymous author.
+   * FRIENDS-ONLY visibility (WhatsApp-style): besides their own statuses,
+   * callers only see statuses from devices they linked with via a
+   * Serata in Duo / Sfida un amico code. The advice board stays public —
+   * this restriction applies to Stato Mood only.
    * Personalized: includes seen flags, own reaction, and view counts for
    * the caller's own statuses only.
    */
   private feed(url: URL): Response {
     const deviceId = url.searchParams.get("deviceId") ?? "";
     const now = Date.now();
+    const friendIds = this.friendDeviceIds(deviceId);
 
     const rows = this.ctx.storage.sql.exec<StatusRow & { author_id: string }>(
       `SELECT s.*, a.author_id FROM statuses s
@@ -245,7 +347,7 @@ export class MoodStatusBoard extends DurableObject<Env> {
        WHERE s.hidden = 0 AND s.expires_at > ?
        ORDER BY s.created_at ASC`,
       now,
-    ).toArray();
+    ).toArray().filter((row) => row.device_id === deviceId || friendIds.has(row.device_id));
 
     const seenIds = new Set(
       this.ctx.storage.sql

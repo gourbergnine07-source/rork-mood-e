@@ -408,6 +408,9 @@ struct DuoNightView: View {
             do {
                 code = try await DuoSessionService.create()
                 AnalyticsService.shared.log("duo_session", meta: ["role": "host"])
+                // Duo codes also link the two people as "amici": from now on
+                // they see each other's Stato Mood (friends-only visibility).
+                StatusService.shared.registerFriendCode(code)
                 withAnimation { phase = .picking }
             } catch {
                 errorMessage = L("duo.error.generic")
@@ -425,6 +428,9 @@ struct DuoNightView: View {
                 code = row.code
                 partnerJoined = true
                 AnalyticsService.shared.log("duo_session", meta: ["role": "guest"])
+                // Joining a Duo code links the two people as "amici" for
+                // the friends-only Stato Mood visibility.
+                StatusService.shared.registerFriendCode(row.code)
                 withAnimation { phase = .picking }
             } catch DuoError.notFound {
                 errorMessage = L("duo.error.notfound")

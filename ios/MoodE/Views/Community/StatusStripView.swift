@@ -7,14 +7,17 @@ import SwiftUI
 
 /// Horizontal story-style strip of anonymous "Stato Mood" avatars,
 /// shown at the top of the community board. The first bubble is the
-/// user's own (tap to view or publish), the others are authors with an
-/// active status in the last 24 hours. A colored ring marks unseen
-/// statuses; a muted ring marks already-seen ones.
+/// user's own (tap to view or publish); the others are FRIENDS ONLY —
+/// people linked via a "Serata in Duo" or "Sfida un amico" code — with
+/// an active status in the last 24 hours (WhatsApp-style visibility,
+/// enforced server-side). A colored ring marks unseen statuses; a muted
+/// ring marks already-seen ones.
 struct StatusStripView: View {
     @State private var groups: [StatusGroup] = []
     @State private var isLoading: Bool = false
     @State private var hasLoaded: Bool = false
     @State private var showComposer: Bool = false
+    @State private var showFriends: Bool = false
     @State private var viewerTarget: StatusViewerTarget?
     @State private var moodFilter: Mood?
 
@@ -47,10 +50,30 @@ struct StatusStripView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(L("status.strip.title"))
-                .font(.subheadline.weight(.bold))
-                .foregroundStyle(Theme.ink)
-                .padding(.horizontal, 24)
+            HStack(spacing: 8) {
+                Text(L("status.strip.title"))
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(Theme.ink)
+
+                Spacer(minLength: 8)
+
+                Button {
+                    showFriends = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "person.2.fill")
+                            .font(.system(size: 10, weight: .semibold))
+                        Text(L("status.friends.title"))
+                            .font(.caption2.weight(.semibold))
+                    }
+                    .foregroundStyle(Theme.tabTrending)
+                    .padding(.horizontal, 10)
+                    .frame(height: 26)
+                    .background(Theme.tabTrending.opacity(0.12), in: .capsule)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 24)
 
             if !availableMoods.isEmpty {
                 moodFilterRow
@@ -78,6 +101,8 @@ struct StatusStripView: View {
                         }
                         if moodFilter != nil && otherGroups.isEmpty {
                             filterEmptyHint
+                        } else if moodFilter == nil && otherGroups.isEmpty {
+                            noFriendsHint
                         }
                     }
                 }
@@ -94,6 +119,9 @@ struct StatusStripView: View {
             StatusComposerView {
                 Task { await load() }
             }
+        }
+        .sheet(isPresented: $showFriends) {
+            CommunityFriendsView()
         }
         .fullScreenCover(item: $viewerTarget) { target in
             StatusViewerView(groups: target.groups, startGroupIndex: target.startIndex) {
@@ -169,6 +197,17 @@ struct StatusStripView: View {
             .font(.caption)
             .foregroundStyle(Theme.inkSoft)
             .frame(height: 62)
+    }
+
+    /// Friends-only visibility: with no linked friends (or none with an
+    /// active status), invite the user to the code-based features.
+    private var noFriendsHint: some View {
+        Text(L("status.strip.noFriends"))
+            .font(.caption)
+            .foregroundStyle(Theme.inkSoft)
+            .lineSpacing(2)
+            .frame(maxWidth: 240, minHeight: 62, alignment: .leading)
+            .multilineTextAlignment(.leading)
     }
 
     // MARK: - Bubbles
