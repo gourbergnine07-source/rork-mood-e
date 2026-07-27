@@ -142,6 +142,7 @@
   "chduo.you": "You",
   "cinema.a11y.directions": "Open directions to %@",
   "cinema.a11y.fav.add": "Save %@ to favorite cinemas",
+  "cinema.a11y.map": "Show %@ on the map",
   "cinema.a11y.fav.remove": "Remove %@ from favorite cinemas",
   "cinema.a11y.genre": "Filter by genre %@",
   "cinema.all": "All",

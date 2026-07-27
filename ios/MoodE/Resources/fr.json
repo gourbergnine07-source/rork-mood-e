@@ -142,6 +142,7 @@
   "chduo.you": "Vous",
   "cinema.a11y.directions": "Ouvrir l'itinéraire vers %@",
   "cinema.a11y.fav.add": "Enregistrer %@ dans les cinémas favoris",
+  "cinema.a11y.map": "Afficher %@ sur la carte",
   "cinema.a11y.fav.remove": "Retirer %@ des cinémas favoris",
   "cinema.a11y.genre": "Filtrer par genre %@",
   "cinema.all": "Tous",

@@ -25,6 +25,8 @@ struct CinemaView: View {
     @State private var userCity: String?
     @State private var selectedGenreId: Int?
     @State private var trailerPlayback = TrailerPlayback()
+    /// Cinema shown on the integrated in-app map (sheet).
+    @State private var mapTarget: CinemaMapTarget?
     @Environment(\.openURL) private var openURL
     @Environment(\.scenePhase) private var scenePhase
 
@@ -48,6 +50,9 @@ struct CinemaView: View {
                 MovieDetailView(movie: movie)
             }
             .trailerPlayer(trailerPlayback)
+            .sheet(item: $mapTarget) { target in
+                CinemaMapDetailView(target: target)
+            }
         }
         .tint(Theme.tabCinema)
         .onChange(of: locationService.authorizationStatus) { oldStatus, newStatus in
@@ -631,6 +636,12 @@ struct CinemaView: View {
                                 withAnimation(.spring(duration: 0.3)) {
                                     favorites.remove(id: cinema.id)
                                 }
+                            },
+                            onOpenMap: {
+                                mapTarget = CinemaMapTarget(
+                                    favorite: cinema,
+                                    currentLocation: locationService.lastLocation
+                                )
                             }
                         )
                     }
@@ -721,6 +732,9 @@ struct CinemaView: View {
                                     withAnimation(.spring(duration: 0.3)) {
                                         favorites.toggle(cinema)
                                     }
+                                },
+                                onOpenMap: {
+                                    mapTarget = CinemaMapTarget(cinema: cinema)
                                 }
                             )
                         }
@@ -874,20 +888,29 @@ struct GenreChip: View {
     }
 }
 
-/// Tappable row for a nearby cinema: opens Apple Maps with driving
-/// directions. The trailing star saves/removes it from "I miei cinema".
+/// Tappable row for a nearby cinema: opens the in-app map preview.
+/// "Indicazioni" remains a direct shortcut to the external Maps app;
+/// the trailing star saves/removes it from "I miei cinema".
 struct NearbyCinemaRow: View {
     let cinema: NearbyCinema
     var isFavorite: Bool = false
     var onToggleFavorite: (() -> Void)? = nil
+    /// Opens the integrated map sheet (falls back to external directions
+    /// when the venue has no coordinates).
+    var onOpenMap: (() -> Void)? = nil
 
     @State private var tapCount = 0
+    @State private var directionsTapCount = 0
 
     var body: some View {
         HStack(spacing: 6) {
             Button {
                 tapCount += 1
-                cinema.openDirectionsInMaps()
+                if let onOpenMap, cinema.latitude != nil {
+                    onOpenMap()
+                } else {
+                    cinema.openDirectionsInMaps()
+                }
             } label: {
                 HStack(spacing: 12) {
                     ZStack {
@@ -914,31 +937,41 @@ struct NearbyCinemaRow: View {
                     }
 
                     Spacer(minLength: 8)
-
-                    VStack(alignment: .trailing, spacing: 5) {
-                        if let distance = cinema.formattedDistance {
-                            Text(distance)
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(Theme.tabCinema)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 5)
-                                .background(Theme.tabCinema.opacity(0.12), in: .capsule)
-                        }
-
-                        HStack(spacing: 3) {
-                            Image(systemName: "arrow.triangle.turn.up.right.circle.fill")
-                                .font(.system(size: 11))
-                            Text(L("cinema.directions"))
-                                .font(.caption2.weight(.semibold))
-                        }
-                        .foregroundStyle(Theme.tabCinema.opacity(0.85))
-                    }
                 }
                 .contentShape(.rect)
             }
             .buttonStyle(PressableCardStyle())
             .sensoryFeedback(.impact(weight: .light), trigger: tapCount)
-            .accessibilityLabel(LF("cinema.a11y.directions", cinema.name))
+            .accessibilityLabel(LF("cinema.a11y.map", cinema.name))
+
+            VStack(alignment: .trailing, spacing: 5) {
+                if let distance = cinema.formattedDistance {
+                    Text(distance)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Theme.tabCinema)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Theme.tabCinema.opacity(0.12), in: .capsule)
+                }
+
+                // Direct shortcut: skips the in-app map, straight to Maps.
+                Button {
+                    directionsTapCount += 1
+                    cinema.openDirectionsInMaps()
+                } label: {
+                    HStack(spacing: 3) {
+                        Image(systemName: "arrow.triangle.turn.up.right.circle.fill")
+                            .font(.system(size: 11))
+                        Text(L("cinema.directions"))
+                            .font(.caption2.weight(.semibold))
+                    }
+                    .foregroundStyle(Theme.tabCinema.opacity(0.85))
+                    .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
+                .sensoryFeedback(.impact(weight: .light), trigger: directionsTapCount)
+                .accessibilityLabel(LF("cinema.a11y.directions", cinema.name))
+            }
 
             if let onToggleFavorite {
                 Button(action: onToggleFavorite) {
@@ -974,34 +1007,52 @@ struct FavoriteCinemaRow: View {
     let currentLocation: CLLocation?
     let onOpenShowtimes: () -> Void
     let onRemove: () -> Void
+    /// Opens the integrated map sheet for this saved cinema.
+    var onOpenMap: (() -> Void)? = nil
 
     @State private var tapCount = 0
+    @State private var mapTapCount = 0
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 12) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Theme.tabCinema.opacity(0.12))
-                        .frame(width: 44, height: 44)
-                    Image(systemName: "star.fill")
-                        .font(.system(size: 18))
-                        .foregroundStyle(Theme.tabCinema)
-                }
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(cinema.name)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Theme.ink)
-                        .lineLimit(1)
-
-                    if let address = cinema.address {
-                        Text(address)
-                            .font(.caption)
-                            .foregroundStyle(Theme.inkSoft)
-                            .lineLimit(1)
+                Button {
+                    mapTapCount += 1
+                    if let onOpenMap, cinema.latitude != nil {
+                        onOpenMap()
+                    } else {
+                        cinema.openDirectionsInMaps()
                     }
+                } label: {
+                    HStack(spacing: 12) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Theme.tabCinema.opacity(0.12))
+                                .frame(width: 44, height: 44)
+                            Image(systemName: "star.fill")
+                                .font(.system(size: 18))
+                                .foregroundStyle(Theme.tabCinema)
+                        }
+
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(cinema.name)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(Theme.ink)
+                                .lineLimit(1)
+
+                            if let address = cinema.address {
+                                Text(address)
+                                    .font(.caption)
+                                    .foregroundStyle(Theme.inkSoft)
+                                    .lineLimit(1)
+                            }
+                        }
+                    }
+                    .contentShape(.rect)
                 }
+                .buttonStyle(PressableCardStyle())
+                .sensoryFeedback(.impact(weight: .light), trigger: mapTapCount)
+                .accessibilityLabel(LF("cinema.a11y.map", cinema.name))
 
                 Spacer(minLength: 8)
 
