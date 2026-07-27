@@ -38,9 +38,9 @@ struct MovieResultsView: View {
         .navigationTitle(L("results.title"))
         .toolbarTitleDisplayMode(.inline)
         .tint(Theme.primary)
-        .navigationDestination(for: TMDBMovie.self) { movie in
-            MovieDetailView(movie: movie)
-        }
+        // NOTE: the TMDBMovie navigationDestination is registered at the
+        // stack root (MoodFlowView) — declaring it here, on a pushed view,
+        // silently breaks the card NavigationLinks.
         .task {
             await viewModel.load(selection: selection, excluding: library.watchedIds)
             // Diary check-in: records date, mood, goal and proposed movies locally.
@@ -360,6 +360,7 @@ struct MovieCard: View {
         .overlay(
             RoundedRectangle(cornerRadius: 22)
                 .stroke(Theme.primary.opacity(0.10), lineWidth: 1)
+                .allowsHitTesting(false)
         )
         .sensoryFeedback(.impact(weight: .medium), trigger: isInWatchlist)
         .sensoryFeedback(.success, trigger: isSeen)

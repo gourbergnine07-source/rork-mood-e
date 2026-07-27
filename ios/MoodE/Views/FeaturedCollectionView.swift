@@ -41,9 +41,9 @@ struct FeaturedCollectionView: View {
         .navigationTitle(collection.title)
         .toolbarTitleDisplayMode(.inline)
         .tint(Theme.primary)
-        .navigationDestination(for: TMDBMovie.self) { movie in
-            MovieDetailView(movie: movie)
-        }
+        // NOTE: the TMDBMovie navigationDestination is registered at the
+        // stack root (MoodFlowView) — declaring it here, on a pushed view,
+        // silently breaks the card NavigationLinks.
         .task {
             await load()
         }

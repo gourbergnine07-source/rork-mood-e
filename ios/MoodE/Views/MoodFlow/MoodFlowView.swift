@@ -70,6 +70,13 @@ struct MoodFlowView: View {
         .navigationDestination(for: FeaturedCollection.self) { collection in
             FeaturedCollectionView(collection: collection)
         }
+        // Registered HERE (stack root) and not inside the pushed screens:
+        // declaring it on a view that is itself pushed via
+        // navigationDestination(item:) fails silently and leaves every
+        // movie-card NavigationLink inert.
+        .navigationDestination(for: TMDBMovie.self) { movie in
+            MovieDetailView(movie: movie)
+        }
         .sheet(isPresented: $showSurprise) {
             SurpriseView()
         }
