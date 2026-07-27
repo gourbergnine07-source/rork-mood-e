@@ -11,6 +11,7 @@ import CoreLocation
 struct CinemaView: View {
     @State private var locationService = LocationService()
     @State private var viewModel = CinemaViewModel()
+    private var favorites: FavoriteCinemasStore { .shared }
     /// Persisted so "Non ora" is remembered across launches: the tab then
     /// always falls back to national now-playing results (device country, default IT).
     @AppStorage("cinema.skippedPermission") private var skippedPermission: Bool = false
@@ -244,6 +245,8 @@ struct CinemaView: View {
                 if !infoDismissed {
                     transparencyBanner
                 }
+
+                favoriteCinemasSection
 
                 regionHeader
 
@@ -597,6 +600,85 @@ struct CinemaView: View {
         .padding(.horizontal, 24)
     }
 
+    // MARK: - Favorite cinemas
+
+    /// "I miei cinema": venues the user saved, each linking to its REAL
+    /// programme (official website, or a prefilled web search when no site
+    /// is available). Deliberately separate from the TMDB now-playing list
+    /// below, which is a national/regional overview — TMDB has no data on
+    /// what a specific venue is actually screening.
+    private var favoriteCinemasSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: "star.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Theme.tabCinema)
+                Text(L("cinema.fav.title"))
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(Theme.ink)
+            }
+
+            if favorites.cinemas.isEmpty {
+                favoritesEmptyCard
+            } else {
+                VStack(spacing: 10) {
+                    ForEach(favorites.cinemas) { cinema in
+                        FavoriteCinemaRow(
+                            cinema: cinema,
+                            currentLocation: locationService.lastLocation,
+                            onOpenShowtimes: { openShowtimes(for: cinema) },
+                            onRemove: {
+                                withAnimation(.spring(duration: 0.3)) {
+                                    favorites.remove(id: cinema.id)
+                                }
+                            }
+                        )
+                    }
+                }
+                .animation(.spring(duration: 0.3), value: favorites.cinemas)
+
+                Text(L("cinema.fav.note"))
+                    .font(.caption2)
+                    .foregroundStyle(Theme.inkSoft.opacity(0.8))
+            }
+        }
+        .padding(.horizontal, 24)
+    }
+
+    /// Gentle empty state inviting the user to save a nearby cinema.
+    private var favoritesEmptyCard: some View {
+        HStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(Theme.tabCinema.opacity(0.12))
+                    .frame(width: 52, height: 52)
+                Image(systemName: "star")
+                    .font(.system(size: 22))
+                    .foregroundStyle(Theme.tabCinema)
+            }
+
+            Text(L("cinema.fav.empty"))
+                .font(.subheadline)
+                .foregroundStyle(Theme.inkSoft)
+                .lineSpacing(2)
+
+            Spacer(minLength: 0)
+        }
+        .padding(16)
+        .background(Theme.card, in: .rect(cornerRadius: 20))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(Theme.tabCinema.opacity(0.12), lineWidth: 1)
+        )
+    }
+
+    /// Opens the venue's REAL programme: official site or search fallback.
+    private func openShowtimes(for cinema: FavoriteCinema) {
+        guard let url = cinema.showtimesURL else { return }
+        AnalyticsService.shared.log("cinema_favorite_showtimes")
+        openURL(url)
+    }
+
     /// Nearby cinemas found via Apple Maps, with a note that showtimes are coming.
     private var nearbyCinemasSection: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -632,7 +714,15 @@ struct CinemaView: View {
                 } else {
                     VStack(spacing: 10) {
                         ForEach(filtered) { cinema in
-                            NearbyCinemaRow(cinema: cinema)
+                            NearbyCinemaRow(
+                                cinema: cinema,
+                                isFavorite: favorites.isFavorite(cinema.id),
+                                onToggleFavorite: {
+                                    withAnimation(.spring(duration: 0.3)) {
+                                        favorites.toggle(cinema)
+                                    }
+                                }
+                            )
                         }
                     }
                     .animation(.spring(duration: 0.3), value: filtered)
@@ -784,23 +874,117 @@ struct GenreChip: View {
     }
 }
 
-/// Tappable row for a nearby cinema: opens Apple Maps with driving directions.
+/// Tappable row for a nearby cinema: opens Apple Maps with driving
+/// directions. The trailing star saves/removes it from "I miei cinema".
 struct NearbyCinemaRow: View {
     let cinema: NearbyCinema
+    var isFavorite: Bool = false
+    var onToggleFavorite: (() -> Void)? = nil
 
     @State private var tapCount = 0
 
     var body: some View {
-        Button {
-            tapCount += 1
-            cinema.openDirectionsInMaps()
-        } label: {
+        HStack(spacing: 6) {
+            Button {
+                tapCount += 1
+                cinema.openDirectionsInMaps()
+            } label: {
+                HStack(spacing: 12) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Theme.tabCinema.opacity(0.12))
+                            .frame(width: 44, height: 44)
+                        Image(systemName: "popcorn.fill")
+                            .font(.system(size: 18))
+                            .foregroundStyle(Theme.tabCinema)
+                    }
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(cinema.name)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Theme.ink)
+                            .lineLimit(1)
+
+                        if let address = cinema.address {
+                            Text(address)
+                                .font(.caption)
+                                .foregroundStyle(Theme.inkSoft)
+                                .lineLimit(1)
+                        }
+                    }
+
+                    Spacer(minLength: 8)
+
+                    VStack(alignment: .trailing, spacing: 5) {
+                        if let distance = cinema.formattedDistance {
+                            Text(distance)
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(Theme.tabCinema)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
+                                .background(Theme.tabCinema.opacity(0.12), in: .capsule)
+                        }
+
+                        HStack(spacing: 3) {
+                            Image(systemName: "arrow.triangle.turn.up.right.circle.fill")
+                                .font(.system(size: 11))
+                            Text(L("cinema.directions"))
+                                .font(.caption2.weight(.semibold))
+                        }
+                        .foregroundStyle(Theme.tabCinema.opacity(0.85))
+                    }
+                }
+                .contentShape(.rect)
+            }
+            .buttonStyle(PressableCardStyle())
+            .sensoryFeedback(.impact(weight: .light), trigger: tapCount)
+            .accessibilityLabel(LF("cinema.a11y.directions", cinema.name))
+
+            if let onToggleFavorite {
+                Button(action: onToggleFavorite) {
+                    Image(systemName: isFavorite ? "star.fill" : "star")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(isFavorite ? Theme.tabCinema : Theme.inkSoft.opacity(0.45))
+                        .frame(width: 40, height: 48)
+                        .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
+                .sensoryFeedback(.impact(weight: .medium), trigger: isFavorite)
+                .accessibilityLabel(
+                    LF(isFavorite ? "cinema.a11y.fav.remove" : "cinema.a11y.fav.add", cinema.name)
+                )
+            }
+        }
+        .padding(.leading, 12)
+        .padding(.trailing, 6)
+        .padding(.vertical, 12)
+        .background(Theme.card, in: .rect(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Theme.tabCinema.opacity(0.10), lineWidth: 1)
+        )
+    }
+}
+
+/// Card for a saved cinema: live distance from the current position,
+/// Apple Maps directions, and a button opening the venue's real programme.
+/// Long-press to remove from favorites.
+struct FavoriteCinemaRow: View {
+    let cinema: FavoriteCinema
+    let currentLocation: CLLocation?
+    let onOpenShowtimes: () -> Void
+    let onRemove: () -> Void
+
+    @State private var tapCount = 0
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 12) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 12)
                         .fill(Theme.tabCinema.opacity(0.12))
                         .frame(width: 44, height: 44)
-                    Image(systemName: "popcorn.fill")
+                    Image(systemName: "star.fill")
                         .font(.system(size: 18))
                         .foregroundStyle(Theme.tabCinema)
                 }
@@ -822,7 +1006,7 @@ struct NearbyCinemaRow: View {
                 Spacer(minLength: 8)
 
                 VStack(alignment: .trailing, spacing: 5) {
-                    if let distance = cinema.formattedDistance {
+                    if let distance = cinema.formattedDistance(from: currentLocation) {
                         Text(distance)
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(Theme.tabCinema)
@@ -831,25 +1015,50 @@ struct NearbyCinemaRow: View {
                             .background(Theme.tabCinema.opacity(0.12), in: .capsule)
                     }
 
-                    HStack(spacing: 3) {
-                        Image(systemName: "arrow.triangle.turn.up.right.circle.fill")
-                            .font(.system(size: 11))
-                        Text(L("cinema.directions"))
-                            .font(.caption2.weight(.semibold))
+                    Button {
+                        tapCount += 1
+                        cinema.openDirectionsInMaps()
+                    } label: {
+                        HStack(spacing: 3) {
+                            Image(systemName: "arrow.triangle.turn.up.right.circle.fill")
+                                .font(.system(size: 11))
+                            Text(L("cinema.directions"))
+                                .font(.caption2.weight(.semibold))
+                        }
+                        .foregroundStyle(Theme.tabCinema.opacity(0.85))
+                        .contentShape(.rect)
                     }
-                    .foregroundStyle(Theme.tabCinema.opacity(0.85))
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(LF("cinema.a11y.directions", cinema.name))
                 }
             }
-            .padding(12)
-            .background(Theme.card, in: .rect(cornerRadius: 16))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(Theme.tabCinema.opacity(0.10), lineWidth: 1)
-            )
+
+            Button(action: onOpenShowtimes) {
+                HStack(spacing: 6) {
+                    Image(systemName: "calendar.badge.clock")
+                        .font(.system(size: 13, weight: .semibold))
+                    Text(L("cinema.fav.showtimes"))
+                        .font(.footnote.weight(.bold))
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 40)
+                .background(Theme.tabCinema, in: .rect(cornerRadius: 12))
+            }
+            .buttonStyle(PressableCardStyle())
         }
-        .buttonStyle(PressableCardStyle())
+        .padding(12)
+        .background(Theme.card, in: .rect(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Theme.tabCinema.opacity(0.10), lineWidth: 1)
+        )
+        .contextMenu {
+            Button(role: .destructive, action: onRemove) {
+                Label(L("cinema.fav.remove"), systemImage: "star.slash")
+            }
+        }
         .sensoryFeedback(.impact(weight: .light), trigger: tapCount)
-        .accessibilityLabel(LF("cinema.a11y.directions", cinema.name))
     }
 }
 

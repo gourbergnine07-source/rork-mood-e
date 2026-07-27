@@ -16,6 +16,10 @@ struct NearbyCinema: Identifiable, Hashable {
     let distanceMeters: Double?
     let latitude: Double?
     let longitude: Double?
+    /// Official website from Apple Maps, when the venue has one.
+    let website: URL?
+    /// Locality (city), used to prefill the showtimes web search fallback.
+    let city: String?
 
     /// Opens Apple Maps with driving directions to this cinema.
     func openDirectionsInMaps() {
@@ -31,11 +35,16 @@ struct NearbyCinema: Identifiable, Hashable {
     /// Distance formatted with the user's locale (e.g. "2,3 km" vs "2.3 km").
     var formattedDistance: String? {
         guard let distanceMeters else { return nil }
-        if distanceMeters < 1000 {
-            return "\(Int(distanceMeters)) m"
+        return Self.formatDistance(distanceMeters)
+    }
+
+    /// Shared locale-aware distance formatting (also used by favorites,
+    /// whose distance is recomputed live from the current position).
+    static func formatDistance(_ meters: Double) -> String {
+        if meters < 1000 {
+            return "\(Int(meters)) m"
         }
-        let km = distanceMeters / 1000
-        return String(format: "%.1f km", locale: LocalizationManager.shared.locale, km)
+        return String(format: "%.1f km", locale: LocalizationManager.shared.locale, meters / 1000)
     }
 }
 
@@ -153,7 +162,9 @@ final class CinemaViewModel {
                         address: address.isEmpty ? nil : address,
                         distanceMeters: distance,
                         latitude: itemLocation?.coordinate.latitude,
-                        longitude: itemLocation?.coordinate.longitude
+                        longitude: itemLocation?.coordinate.longitude,
+                        website: item.url,
+                        city: item.placemark.locality
                     )
                 }
                 .sorted { ($0.distanceMeters ?? .greatestFiniteMagnitude) < ($1.distanceMeters ?? .greatestFiniteMagnitude) }
