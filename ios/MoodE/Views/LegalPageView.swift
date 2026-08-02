@@ -11,11 +11,13 @@ import WebKit
 enum LegalPage: Hashable {
     case privacyPolicy
     case terms
+    case support
 
     var title: String {
         switch self {
         case .privacyPolicy: return L("legal.privacy")
         case .terms: return L("legal.terms")
+        case .support: return L("legal.support")
         }
     }
 
@@ -23,6 +25,7 @@ enum LegalPage: Hashable {
         switch self {
         case .privacyPolicy: return AppLinks.privacyPolicy
         case .terms: return AppLinks.terms
+        case .support: return AppLinks.support
         }
     }
 
@@ -31,6 +34,7 @@ enum LegalPage: Hashable {
         switch self {
         case .privacyPolicy: return "privacy-policy"
         case .terms: return "termini"
+        case .support: return "supporto"
         }
     }
 

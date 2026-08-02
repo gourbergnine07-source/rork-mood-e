@@ -18,11 +18,18 @@ enum AppLinks {
         gitHubUser != "tuo-username-github" && gitHubRepo != "nome-repo"
     }
 
+    /// Landing page gathering privacy, terms and support in one place.
+    static var website: URL {
+        URL(string: "https://\(gitHubUser).github.io/\(gitHubRepo)/")!
+    }
     static var privacyPolicy: URL {
         URL(string: "https://\(gitHubUser).github.io/\(gitHubRepo)/privacy-policy.html")!
     }
     static var terms: URL {
         URL(string: "https://\(gitHubUser).github.io/\(gitHubRepo)/termini.html")!
+    }
+    static var support: URL {
+        URL(string: "https://\(gitHubUser).github.io/\(gitHubRepo)/supporto.html")!
     }
     static var newIssue: URL {
         URL(string: "https://github.com/\(gitHubUser)/\(gitHubRepo)/issues/new")!
@@ -100,6 +107,9 @@ struct SettingsView: View {
             .toolbarTitleDisplayMode(.large)
             .navigationDestination(for: LegalPage.self) { page in
                 LegalPageView(page: page)
+            }
+            .navigationDestination(for: LegalRoute.self) { _ in
+                LegalView()
             }
             .navigationDestination(for: DiaryRoute.self) { route in
                 switch route {
@@ -1332,6 +1342,14 @@ struct SettingsView: View {
                     icon: "doc.text.fill",
                     iconColor: Theme.tabList,
                     title: L("settings.legal.terms")
+                )
+            }
+
+            NavigationLink(value: LegalRoute.hub) {
+                SettingsRow(
+                    icon: "checkmark.seal.fill",
+                    iconColor: Theme.tabSettings,
+                    title: L("settings.legal.hub")
                 )
             }
         } header: {
