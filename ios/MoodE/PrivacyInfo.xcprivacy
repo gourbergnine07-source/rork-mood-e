@@ -2,25 +2,33 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <!-- AdMob serves personalised ads when App Tracking Transparency is
-         granted, so the app does engage in tracking as Apple defines it.
-         Tracking domains are declared by the AdMob and Firebase SDKs in
-         their own bundled privacy manifests. -->
+    <!-- The app's own code performs no tracking and connects to no tracking
+         domain: it only presents the App Tracking Transparency prompt on
+         behalf of Google Mobile Ads. The AdMob and Firebase SDKs declare
+         their own tracking and tracking domains in the privacy manifests
+         bundled inside their frameworks, and the App Store aggregates all of
+         them into a single App Privacy report.
+
+         NSPrivacyTrackingDomains is intentionally absent rather than empty:
+         iOS makes network requests to any domain listed here fail when
+         tracking is not authorised, which would also kill the
+         non-personalised ("npa") ads the app deliberately keeps serving in
+         that case (see AdsManager.makeRequest()). -->
     <key>NSPrivacyTracking</key>
-    <true/>
-    <key>NSPrivacyTrackingDomains</key>
-    <array/>
+    <false/>
     <key>NSPrivacyCollectedDataTypes</key>
     <array>
         <!-- Advertising identifier used by Google AdMob and the AdMob/Firebase
-             link for revenue reporting. -->
+             link for revenue reporting. The IDFA is read and transmitted by
+             the Google SDKs, whose own manifests flag it as used for
+             tracking; this app's code never reads or sends it itself. -->
         <dict>
             <key>NSPrivacyCollectedDataType</key>
             <string>NSPrivacyCollectedDataTypeDeviceID</string>
             <key>NSPrivacyCollectedDataTypeLinked</key>
             <false/>
             <key>NSPrivacyCollectedDataTypeTracking</key>
-            <true/>
+            <false/>
             <key>NSPrivacyCollectedDataTypePurposes</key>
             <array>
                 <string>NSPrivacyCollectedDataTypePurposeThirdPartyAdvertising</string>
