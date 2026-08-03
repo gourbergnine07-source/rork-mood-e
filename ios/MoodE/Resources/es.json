@@ -169,6 +169,7 @@
   "cinema.perm.allow": "Permitir ubicación",
   "cinema.perm.msg": "Solo usamos tu ubicación para saber en qué país estás y mostrarte las películas actualmente en cines en tu zona. No la guardamos ni la compartimos con nadie.",
   "cinema.perm.notNow": "Ahora no",
+  "cinema.perm.restart": "Cierra y vuelve a abrir Mood-E: así la solicitud de ubicación aparecerá en español, el idioma que has elegido.",
   "cinema.perm.title": "Películas en cartelera cerca de ti",
   "cinema.search.noResults": "No se encontró ninguna película con este título en tu zona",
   "cinema.search.searching": "Buscando más estrenos recientes…",

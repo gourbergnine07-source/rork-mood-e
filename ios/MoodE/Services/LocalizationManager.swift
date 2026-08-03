@@ -125,8 +125,26 @@ final class LocalizationManager {
     /// Keeps system-provided text (permission prompts, StoreKit and share
     /// sheets) in the language chosen inside the app. Without this, iOS picks
     /// the device language and the prompts can differ from the app UI.
+    /// The new value only takes effect on the next launch, because the bundle
+    /// resolves its localization once at process start.
     private static func syncSystemLanguage(_ language: AppLanguage) {
         UserDefaults.standard.set([language.rawValue], forKey: "AppleLanguages")
+    }
+
+    /// Language iOS is actually using for system-rendered text in THIS launch
+    /// (permission alerts, StoreKit sheets), taken from the loaded bundle.
+    var systemTextLanguage: String {
+        let localization = Bundle.main.preferredLocalizations.first ?? "en"
+        return String(localization.prefix(2)).lowercased()
+    }
+
+    /// False while a system alert would appear in a different language than the
+    /// app UI — happens on the launch where the user picks a language that
+    /// differs from the device one. App Store guideline 4 requires permission
+    /// prompts to match the app's localization, so callers must postpone them
+    /// until this is true (i.e. from the next launch on).
+    var canShowSystemPrompts: Bool {
+        systemTextLanguage == language.rawValue
     }
 
     /// True once the user confirmed a language in the first-launch screen.

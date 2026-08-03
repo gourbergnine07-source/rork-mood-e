@@ -169,6 +169,7 @@
   "cinema.perm.allow": "Allow location",
   "cinema.perm.msg": "We only use your location to understand which country you're in and show you the movies currently playing in your area. We never store it or share it with anyone.",
   "cinema.perm.notNow": "Not now",
+  "cinema.perm.restart": "Close and reopen Mood-E: the location request will then appear in English, the language you selected.",
   "cinema.perm.title": "Movies in theatres near you",
   "cinema.search.noResults": "No movie found with this title in your area",
   "cinema.search.searching": "Searching more recent releases…",

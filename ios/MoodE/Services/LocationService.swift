@@ -31,8 +31,17 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
         authorizationStatus == .denied || authorizationStatus == .restricted
     }
 
+    /// True when the system alert would appear in the app's own language.
+    /// App Store guideline 4 requires permission prompts to match the app
+    /// localization, so callers should surface an in-app explanation instead
+    /// of prompting while this is false (see `canShowSystemPrompts`).
+    var canPrompt: Bool {
+        LocalizationManager.shared.canShowSystemPrompts
+    }
+
     /// Triggers the system when-in-use permission prompt.
     func requestPermission() {
+        guard canPrompt else { return }
         manager.requestWhenInUseAuthorization()
     }
 

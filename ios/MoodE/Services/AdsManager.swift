@@ -56,11 +56,22 @@ final class AdsManager: NSObject, FullScreenContentDelegate {
 
     /// Shows the system ATT prompt (first time only), then starts the SDK
     /// and preloads full-screen ads. Called after onboarding, before any ad.
+    ///
+    /// The prompt is skipped while iOS would render it in a language other
+    /// than the app UI (the launch where the user picks a language different
+    /// from the device one). App Store guideline 4 requires permission
+    /// requests to match the app's localization, so it is asked from the next
+    /// launch on; meanwhile ads are served as non-personalized.
     func requestTrackingAndStart() async {
         // Premium: nessuna pubblicità, l'SDK non viene nemmeno avviato.
         guard !PremiumStore.shared.isPremium else { return }
         guard !isStarted else { return }
-        _ = await ATTrackingManager.requestTrackingAuthorization()
+
+        if ATTrackingManager.trackingAuthorizationStatus == .notDetermined,
+           LocalizationManager.shared.canShowSystemPrompts {
+            _ = await ATTrackingManager.requestTrackingAuthorization()
+        }
+
         _ = await MobileAds.shared.start()
         isStarted = true
         preloadInterstitial()

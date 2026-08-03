@@ -169,6 +169,7 @@
   "cinema.perm.allow": "Autoriser la position",
   "cinema.perm.msg": "Nous utilisons ta position uniquement pour savoir dans quel pays tu te trouves et t'afficher les films actuellement au cinéma dans ta région. Nous ne la sauvegardons pas et ne la partageons avec personne.",
   "cinema.perm.notNow": "Pas maintenant",
+  "cinema.perm.restart": "Ferme et rouvre Mood-E : la demande de localisation apparaîtra alors en français, la langue que tu as choisie.",
   "cinema.perm.title": "Films à l'affiche près de chez toi",
   "cinema.search.noResults": "Aucun film trouvé avec ce titre dans ta zone",
   "cinema.search.searching": "Recherche d'autres sorties récentes…",

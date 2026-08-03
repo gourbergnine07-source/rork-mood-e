@@ -27,6 +27,9 @@ struct CinemaView: View {
     @State private var trailerPlayback = TrailerPlayback()
     /// Cinema shown on the integrated in-app map (sheet).
     @State private var mapTarget: CinemaMapTarget?
+    /// Shown when the system location alert would appear in a language other
+    /// than the one selected in the app (see `LocationService.canPrompt`).
+    @State private var showsRestartNote = false
     @Environment(\.openURL) private var openURL
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
@@ -182,8 +185,33 @@ struct CinemaView: View {
             }
 
             VStack(spacing: 12) {
+                if showsRestartNote {
+                    // The system alert would appear in the device language
+                    // instead of the one chosen in the app: ask for a restart
+                    // so the request text matches the app UI.
+                    HStack(spacing: 10) {
+                        Image(systemName: "arrow.clockwise.circle.fill")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(Theme.tabCinema)
+                        Text(L("cinema.perm.restart"))
+                            .font(.caption)
+                            .foregroundStyle(Theme.ink)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .padding(12)
+                    .background(Theme.card, in: .rect(cornerRadius: 14))
+                    .transition(.opacity.combined(with: .scale(scale: 0.96)))
+                }
+
                 Button {
-                    locationService.requestPermission()
+                    if locationService.canPrompt {
+                        locationService.requestPermission()
+                    } else {
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                            showsRestartNote = true
+                        }
+                    }
                 } label: {
                     Label(L("cinema.perm.allow"), systemImage: "location.fill")
                         .font(.headline)

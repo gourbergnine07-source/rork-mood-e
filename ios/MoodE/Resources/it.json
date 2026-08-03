@@ -169,6 +169,7 @@
   "cinema.perm.allow": "Consenti posizione",
   "cinema.perm.msg": "Usiamo la tua posizione solo per capire in quale paese ti trovi e mostrarti i film attualmente al cinema nella tua zona. Non la salviamo né la condividiamo con nessuno.",
   "cinema.perm.notNow": "Non ora",
+  "cinema.perm.restart": "Chiudi e riapri Mood-E: la richiesta di accesso alla posizione apparirà così in italiano, la lingua che hai scelto.",
   "cinema.perm.title": "Film in sala vicino a te",
   "cinema.search.noResults": "Nessun film trovato con questo titolo nella tua zona",
   "cinema.search.searching": "Cerco altri film in uscita…",
