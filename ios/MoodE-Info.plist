@@ -5,8 +5,16 @@
 	<!-- AdMob App ID reale di Mood-E. -->
 	<key>GADApplicationIdentifier</key>
 	<string>ca-app-pub-7245682186872516~9021400460</string>
+	<!-- Localized per language in {it,en,es,fr}.lproj/InfoPlist.strings. -->
 	<key>NSUserTrackingUsageDescription</key>
-	<string>Ti mostreremo annunci più pertinenti ai tuoi interessi.</string>
+	<string>We'll show you ads that are more relevant to your interests.</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>it</string>
+		<string>es</string>
+		<string>fr</string>
+	</array>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

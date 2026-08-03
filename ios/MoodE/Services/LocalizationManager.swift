@@ -115,10 +115,18 @@ final class LocalizationManager {
     var language: AppLanguage {
         didSet {
             UserDefaults.standard.set(language.rawValue, forKey: L10nStore.storageKey)
+            Self.syncSystemLanguage(language)
             if oldValue != language {
                 AnalyticsService.shared.log("language_selected", meta: ["lang": language.rawValue])
             }
         }
+    }
+
+    /// Keeps system-provided text (permission prompts, StoreKit and share
+    /// sheets) in the language chosen inside the app. Without this, iOS picks
+    /// the device language and the prompts can differ from the app UI.
+    private static func syncSystemLanguage(_ language: AppLanguage) {
+        UserDefaults.standard.set([language.rawValue], forKey: "AppleLanguages")
     }
 
     /// True once the user confirmed a language in the first-launch screen.
@@ -134,6 +142,7 @@ final class LocalizationManager {
             ?? AppLanguage(rawValue: L10nStore.detectedCode)
             ?? .english
         hasChosenLanguage = UserDefaults.standard.bool(forKey: Self.chosenKey)
+        Self.syncSystemLanguage(language)
     }
 
     func t(_ key: String) -> String {

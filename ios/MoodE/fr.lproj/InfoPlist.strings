@@ -1,0 +1,5 @@
+/* Permission prompts — French */
+"NSCameraUsageDescription" = "L'appareil photo sert uniquement à photographier l'affiche d'un film pour le reconnaître automatiquement.";
+"NSLocationWhenInUseUsageDescription" = "Nous utilisons votre position uniquement pour déterminer votre pays et vous montrer les films à l'affiche et les cinémas près de vous.";
+"NSUserTrackingUsageDescription" = "Nous vous montrerons des annonces plus pertinentes selon vos intérêts.";
+"NSPhotoLibraryUsageDescription" = "Choisissez la photo d'une affiche dans votre galerie pour reconnaître le film.";

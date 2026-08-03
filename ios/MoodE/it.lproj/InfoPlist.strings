@@ -1,0 +1,5 @@
+/* Permission prompts — Italian */
+"NSCameraUsageDescription" = "La fotocamera serve solo per fotografare la locandina di un film e riconoscerlo automaticamente.";
+"NSLocationWhenInUseUsageDescription" = "Usiamo la tua posizione solo per capire in quale paese ti trovi e mostrarti i film in sala e i cinema vicino a te.";
+"NSUserTrackingUsageDescription" = "Ti mostreremo annunci più pertinenti ai tuoi interessi.";
+"NSPhotoLibraryUsageDescription" = "Scegli la foto di una locandina dalla tua libreria per riconoscere il film.";

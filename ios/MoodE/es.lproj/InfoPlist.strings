@@ -1,0 +1,5 @@
+/* Permission prompts — Spanish */
+"NSCameraUsageDescription" = "La cámara solo se usa para fotografiar el cartel de una película y reconocerla automáticamente.";
+"NSLocationWhenInUseUsageDescription" = "Usamos tu ubicación solo para saber en qué país estás y mostrarte las películas en cartelera y los cines cercanos.";
+"NSUserTrackingUsageDescription" = "Te mostraremos anuncios más relevantes para tus intereses.";
+"NSPhotoLibraryUsageDescription" = "Elige la foto de un cartel de tu galería para reconocer la película.";

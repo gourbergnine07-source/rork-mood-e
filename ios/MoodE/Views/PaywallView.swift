@@ -39,12 +39,9 @@ struct PaywallView: View {
                 ScrollView {
                     VStack(spacing: 22) {
                         hero
+                        planCard
                         featureList
-                        Text(L("premium.terms"))
-                            .font(.caption2)
-                            .foregroundStyle(Theme.inkSoft.opacity(0.85))
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 8)
+                        legalBlock
                     }
                     .padding(.horizontal, 24)
                     .padding(.top, 10)
@@ -53,6 +50,9 @@ struct PaywallView: View {
                 .scrollIndicators(.hidden)
             }
             .safeAreaInset(edge: .bottom) { ctaBar }
+            .navigationDestination(for: LegalPage.self) { page in
+                LegalPageView(page: page)
+            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button {
@@ -122,6 +122,105 @@ struct PaywallView: View {
                 .foregroundStyle(Theme.inkSoft)
                 .multilineTextAlignment(.center)
         }
+    }
+
+    // MARK: - Plan details (App Store guideline 3.1.2)
+
+    /// Subscription title, duration and price shown before purchase, as
+    /// required for auto-renewable subscriptions.
+    private var planCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Text(L("premium.plan.header"))
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(Theme.amber)
+                    .textCase(.uppercase)
+                Spacer(minLength: 0)
+                Text(L("premium.plan.badge"))
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Theme.amber, in: .capsule)
+            }
+
+            Text(planTitle)
+                .font(.headline)
+                .foregroundStyle(Theme.ink)
+
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text(planPrice)
+                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                    .foregroundStyle(Theme.ink)
+                    .contentTransition(.numericText())
+                Text(L("premium.plan.perMonth"))
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(Theme.inkSoft)
+            }
+
+            HStack(spacing: 6) {
+                Image(systemName: "arrow.triangle.2.circlepath")
+                    .font(.system(size: 11, weight: .semibold))
+                Text(L("premium.plan.duration"))
+                    .font(.caption)
+            }
+            .foregroundStyle(Theme.inkSoft)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.card, in: .rect(cornerRadius: 18))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18)
+                .stroke(Theme.amber.opacity(0.35), lineWidth: 1)
+        )
+    }
+
+    private var planTitle: String {
+        store.monthlyPackage?.storeProduct.localizedTitle ?? L("premium.plan.title")
+    }
+
+    private var planPrice: String {
+        store.monthlyPackage?.storeProduct.localizedPriceString ?? "—"
+    }
+
+    // MARK: - Legal (guideline 3.1.2(c): functional EULA + privacy links)
+
+    private var legalBlock: some View {
+        VStack(spacing: 12) {
+            Text(L("premium.terms"))
+                .font(.caption2)
+                .foregroundStyle(Theme.inkSoft.opacity(0.85))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 8)
+
+            HStack(spacing: 10) {
+                legalLink(page: .terms, icon: "doc.text.fill", title: L("premium.legal.eula"))
+                legalLink(page: .privacyPolicy, icon: "hand.raised.fill", title: L("legal.privacy"))
+            }
+        }
+    }
+
+    private func legalLink(page: LegalPage, icon: String, title: String) -> some View {
+        NavigationLink(value: page) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 11, weight: .semibold))
+                Text(title)
+                    .font(.caption.weight(.semibold))
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+            }
+            .foregroundStyle(Theme.tabSettings)
+            .frame(maxWidth: .infinity)
+            .frame(minHeight: 44)
+            .padding(.horizontal, 10)
+            .background(Theme.card, in: .rect(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Theme.tabSettings.opacity(0.28), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Features
