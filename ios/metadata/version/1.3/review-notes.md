@@ -53,13 +53,21 @@ For completeness, the paywall also includes, as required: the plan name, the
 localized price, the billing period ("per month"), and working links to the
 Terms of Use (EULA) and the Privacy Policy.
 
-We have attached a screen recording showing all permission requests in English on
-an English-language device, plus the paywall details.
+All of this can be verified on a clean install with the device set to English:
+the tracking request appears right after onboarding, the location request in the
+Cinema tab, and the camera and photo library requests in the poster scan screen.
 
 Thank you for your time and for reviewing our app.
 
 Best regards,
 The Mood-E team
+
+### Optional closing line, only if you attach a screen recording
+
+Replace the paragraph above with:
+
+> We have also attached a screen recording showing all permission requests in
+> English on an English-language device, plus the paywall details.
 
 ## Screen recording — shot list
 
