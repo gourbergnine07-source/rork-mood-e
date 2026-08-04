@@ -55,11 +55,38 @@
       border-radius: 8px;
       font-size: 0.92rem;
     }
+  
+    .langbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 0 0 18px;
+    }
+    .langbar a {
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: #f5f0ea;
+      color: #5a4a40 !important;
+      text-decoration: none;
+      font-size: 0.82rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+    .langbar a[aria-current="true"] {
+      background: #e2704b;
+      color: #fff !important;
+    }
   </style>
 </head>
 <body>
   <main>
     <h1>Termini di utilizzo</h1>
+    <nav class="langbar" aria-label="Language">
+      <a href="termini.html" hreflang="it" aria-current="true">Italiano</a>
+      <a href="termini-en.html" hreflang="en">English</a>
+      <a href="termini-es.html" hreflang="es">Español</a>
+      <a href="termini-fr.html" hreflang="fr">Français</a>
+    </nav>
     <p class="updated">Ultimo aggiornamento: 22 luglio 2026</p>
 
     <p>Benvenuto in Mood-E ("l'app"). Utilizzando l'app accetti i presenti termini di utilizzo. Ti invitiamo a leggerli con attenzione.</p>

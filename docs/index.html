@@ -180,6 +180,51 @@
     }
     footer a { color: var(--ink-faint); }
 
+    .langbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      justify-content: center;
+      margin: 18px 0 0;
+    }
+    .langbar a {
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: var(--card);
+      color: var(--ink-soft) !important;
+      text-decoration: none;
+      font-size: 0.82rem;
+      font-weight: 600;
+      box-shadow: var(--shadow);
+    }
+    .langbar a[aria-current="true"] {
+      background: var(--accent);
+      color: #fff !important;
+    }
+
+    .langgrid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+      margin-top: 16px;
+    }
+    .langgrid div {
+      background: #faf6f2;
+      border-radius: 12px;
+      padding: 14px 16px;
+    }
+    .langgrid strong {
+      display: block;
+      font-size: 0.92rem;
+      color: var(--ink);
+      margin-bottom: 6px;
+    }
+    .langgrid a {
+      display: block;
+      font-size: 0.88rem;
+      padding: 2px 0;
+    }
+
     @media (max-width: 480px) {
       .hero h1 { font-size: 1.6rem; }
       section.card { padding: 22px 18px; }
@@ -198,6 +243,12 @@
         <a href="#privacy">Privacy</a>
         <a href="#termini">Termini</a>
         <a href="#supporto">Supporto</a>
+      </nav>
+      <nav class="langbar" aria-label="Language">
+        <a href="#lingue" aria-current="true">Italiano</a>
+        <a href="privacy-policy-en.html" hreflang="en">English</a>
+        <a href="privacy-policy-es.html" hreflang="es">Español</a>
+        <a href="privacy-policy-fr.html" hreflang="fr">Français</a>
       </nav>
     </header>
 
@@ -276,10 +327,41 @@
       </div>
     </section>
 
+    <section class="card" id="lingue">
+      <h2>🌍 Altre lingue / Other languages</h2>
+      <p class="updated">Privacy Policy, Terms of Use and Support are available in four languages</p>
+      <div class="langgrid">
+        <div>
+          <strong>Italiano</strong>
+          <a href="privacy-policy.html">Informativa sulla Privacy</a>
+          <a href="termini.html">Termini di utilizzo</a>
+          <a href="supporto.html">Supporto tecnico</a>
+        </div>
+        <div>
+          <strong>English</strong>
+          <a href="privacy-policy-en.html">Privacy Policy</a>
+          <a href="termini-en.html">Terms of Use</a>
+          <a href="supporto-en.html">Support</a>
+        </div>
+        <div>
+          <strong>Español</strong>
+          <a href="privacy-policy-es.html">Política de Privacidad</a>
+          <a href="termini-es.html">Términos de uso</a>
+          <a href="supporto-es.html">Soporte técnico</a>
+        </div>
+        <div>
+          <strong>Français</strong>
+          <a href="privacy-policy-fr.html">Politique de confidentialité</a>
+          <a href="termini-fr.html">Conditions d'utilisation</a>
+          <a href="supporto-fr.html">Assistance technique</a>
+        </div>
+      </div>
+    </section>
+
     <footer>
       Mood-E — Il film giusto per ogni mood.<br>
       Questo prodotto utilizza le API di TMDB ma non è approvato o certificato da TMDB.<br>
-      <a href="privacy-policy.html">Privacy</a> · <a href="termini.html">Termini</a> · <a href="#supporto">Supporto</a>
+      <a href="privacy-policy.html">Privacy</a> · <a href="termini.html">Termini</a> · <a href="#supporto">Supporto</a> · <a href="#lingue">Other languages</a>
     </footer>
 
   </div>

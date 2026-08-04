@@ -55,11 +55,38 @@
       border-radius: 8px;
       font-size: 0.92rem;
     }
+  
+    .langbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 0 0 18px;
+    }
+    .langbar a {
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: #f5f0ea;
+      color: #5a4a40 !important;
+      text-decoration: none;
+      font-size: 0.82rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+    .langbar a[aria-current="true"] {
+      background: #e2704b;
+      color: #fff !important;
+    }
   </style>
 </head>
 <body>
   <main>
     <h1>Informativa sulla Privacy</h1>
+    <nav class="langbar" aria-label="Language">
+      <a href="privacy-policy.html" hreflang="it" aria-current="true">Italiano</a>
+      <a href="privacy-policy-en.html" hreflang="en">English</a>
+      <a href="privacy-policy-es.html" hreflang="es">Español</a>
+      <a href="privacy-policy-fr.html" hreflang="fr">Français</a>
+    </nav>
     <p class="updated">Ultimo aggiornamento: 22 luglio 2026</p>
 
     <p>Mood-E ("l'app") è un'app per iOS che consiglia film in base al tuo stato d'animo. La tua privacy è importante per noi: questa pagina spiega in modo semplice quali dati vengono trattati dall'app e come.</p>

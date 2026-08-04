@@ -22,15 +22,19 @@ enum AppLinks {
     static var website: URL {
         URL(string: "https://\(gitHubUser).github.io/\(gitHubRepo)/")!
     }
-    static var privacyPolicy: URL {
-        URL(string: "https://\(gitHubUser).github.io/\(gitHubRepo)/privacy-policy.html")!
+
+    /// Published page in the language currently selected in the app.
+    /// Italian keeps the original file name, other languages use the
+    /// `-<code>` suffix (e.g. `termini-en.html`).
+    private static func page(_ base: String) -> URL {
+        let code = L10nStore.currentCode
+        let file = code == "it" ? "\(base).html" : "\(base)-\(code).html"
+        return URL(string: "https://\(gitHubUser).github.io/\(gitHubRepo)/\(file)")!
     }
-    static var terms: URL {
-        URL(string: "https://\(gitHubUser).github.io/\(gitHubRepo)/termini.html")!
-    }
-    static var support: URL {
-        URL(string: "https://\(gitHubUser).github.io/\(gitHubRepo)/supporto.html")!
-    }
+
+    static var privacyPolicy: URL { page("privacy-policy") }
+    static var terms: URL { page("termini") }
+    static var support: URL { page("supporto") }
     static var newIssue: URL {
         URL(string: "https://github.com/\(gitHubUser)/\(gitHubRepo)/issues/new")!
     }
