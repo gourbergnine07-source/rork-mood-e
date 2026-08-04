@@ -29,7 +29,7 @@ enum LegalPage: Hashable {
         }
     }
 
-    /// HTML file bundled with the app, shown until GitHub Pages is live.
+    /// Base name of the HTML file bundled with the app (Italian original).
     var bundledFileName: String {
         switch self {
         case .privacyPolicy: return "privacy-policy"
@@ -38,13 +38,22 @@ enum LegalPage: Hashable {
         }
     }
 
+    /// Bundled HTML in the language currently selected in the app
+    /// (e.g. `termini-en.html`), falling back to the Italian original.
     var bundledURL: URL? {
-        Bundle.main.url(forResource: bundledFileName, withExtension: "html")
+        let code = L10nStore.currentCode
+        if code != "it",
+           let localized = Bundle.main.url(forResource: "\(bundledFileName)-\(code)", withExtension: "html") {
+            return localized
+        }
+        return Bundle.main.url(forResource: bundledFileName, withExtension: "html")
     }
 
-    /// Remote page when configured, otherwise the local copy in the bundle.
+    /// The in-app document always renders the bundled copy: it matches the
+    /// language chosen in the app and works offline. The remote page (which
+    /// exists in Italian only) is just a fallback if the bundle is missing.
     var resolvedURL: URL? {
-        AppLinks.isRemoteConfigured ? remoteURL : bundledURL
+        bundledURL ?? (AppLinks.isRemoteConfigured ? remoteURL : nil)
     }
 }
 
@@ -55,12 +64,12 @@ struct LegalPageView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var loadState: WebPageLoadState = .loading
     @State private var reloadToken: Int = 0
-    /// True after the remote page failed (network error or HTTP 4xx/5xx):
-    /// the bundled copy is shown instead, so the user always sees the text.
-    @State private var useBundled = false
+    /// True after the bundled copy failed to render: the remote page is shown
+    /// instead, so the user always sees the text.
+    @State private var useRemote = false
 
     private var currentURL: URL? {
-        useBundled ? page.bundledURL : page.resolvedURL
+        useRemote ? page.remoteURL : page.resolvedURL
     }
 
     var body: some View {
@@ -69,7 +78,7 @@ struct LegalPageView: View {
 
             if let url = currentURL {
                 WebPageView(url: url, loadState: $loadState)
-                    .id("\(useBundled)-\(reloadToken)")
+                    .id("\(useRemote)-\(reloadToken)")
                     .opacity(loadState == .loaded ? 1 : 0)
             }
 
@@ -90,10 +99,10 @@ struct LegalPageView: View {
             }
         }
         .onChange(of: loadState) { _, newValue in
-            // Remote page unreachable or missing: fall back to the copy
-            // bundled with the app instead of showing an error page.
-            if newValue == .failed, !useBundled, page.bundledURL != nil {
-                useBundled = true
+            // Bundled copy unavailable: fall back to the page published online
+            // instead of showing an error screen.
+            if newValue == .failed, !useRemote, AppLinks.isRemoteConfigured {
+                useRemote = true
                 loadState = .loading
             }
         }
@@ -129,7 +138,7 @@ struct LegalPageView: View {
                 .foregroundStyle(Theme.inkSoft)
                 .multilineTextAlignment(.center)
             Button {
-                useBundled = false
+                useRemote = false
                 loadState = .loading
                 reloadToken += 1
             } label: {

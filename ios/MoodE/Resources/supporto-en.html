@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Support — Mood-E</title>
+  <meta name="description" content="Technical support and frequently asked questions about Mood-E, the app that recommends the right movie for your mood.">
+  <style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #dbedfb;
+      color: #3d2b23;
+      margin: 0;
+      padding: 24px 16px 48px;
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+    }
+    main {
+      max-width: 680px;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 32px 28px;
+      box-shadow: 0 2px 12px rgba(61, 43, 35, 0.08);
+    }
+    h1 {
+      font-size: 1.6rem;
+      margin-top: 0;
+      color: #e2704b;
+    }
+    h2 {
+      font-size: 1.15rem;
+      margin-top: 28px;
+      color: #3d2b23;
+      border-bottom: 2px solid #f5f0ea;
+      padding-bottom: 6px;
+    }
+    p, li { font-size: 0.98rem; color: #5a4a40; }
+    li { margin-bottom: 6px; }
+    a { color: #2e8587; }
+    .updated { font-size: 0.85rem; color: #7a6a5f; margin-bottom: 24px; }
+    .note {
+      background: #fdf3ec;
+      border-left: 4px solid #e2704b;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 0.92rem;
+      margin-top: 20px;
+    }
+    .btn {
+      display: inline-block;
+      margin: 14px 8px 0 0;
+      padding: 12px 22px;
+      border-radius: 999px;
+      background: #e2704b;
+      color: #fff !important;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+    .btn.ghost {
+      background: transparent;
+      color: #e2704b !important;
+      border: 2px solid #e2704b;
+    }
+    details { border-bottom: 1px solid #f0e8e0; padding: 12px 0; }
+    details:last-of-type { border-bottom: none; }
+    summary {
+      cursor: pointer;
+      font-weight: 600;
+      color: #3d2b23;
+      font-size: 0.98rem;
+      list-style: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    summary::-webkit-details-marker { display: none; }
+    summary::after { content: "+"; color: #e2704b; font-size: 1.3rem; line-height: 1; }
+    details[open] summary::after { content: "\2013"; }
+    details p { margin: 10px 0 2px; }
+    .links { font-size: 0.88rem; color: #7a6a5f; margin-top: 28px; text-align: center; }
+    @media (max-width: 480px) {
+      main { padding: 24px 18px; }
+      .btn { display: block; text-align: center; margin-right: 0; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Technical support</h1>
+    <p class="updated">We usually reply within 48 hours</p>
+
+    <p>Found a bug, a wrong recommendation, or want to suggest a new feature for Mood-E? Write to us: every report is read and helps us improve the app.</p>
+
+    <h2>Frequently asked questions</h2>
+
+    <details>
+      <summary>Is the app free?</summary>
+      <p>Yes. All the core features — mood-based recommendations, watchlist, mood diary and search — are free. The Premium subscription is optional: it removes ads and unlocks extra features.</p>
+    </details>
+
+    <details>
+      <summary>How do I cancel the Premium subscription?</summary>
+      <p>Open iPhone Settings → tap your name at the top → Subscriptions → Mood-E → Cancel subscription. Subscription management is handled by Apple and cannot be done from inside the app.</p>
+    </details>
+
+    <details>
+      <summary>I changed iPhone: will I get my watchlist back?</summary>
+      <p>Yes, if you used the optional sign-in with Apple or Google: your data is restored automatically the first time you sign in on the new device. Without an account, data stays only on the old iPhone.</p>
+    </details>
+
+    <details>
+      <summary>Why is a movie shown as unavailable on streaming?</summary>
+      <p>Availability comes from TMDB and changes constantly depending on your country and platform agreements. If you spot wrong information, let us know and we'll check.</p>
+    </details>
+
+    <details>
+      <summary>How do I delete my data?</summary>
+      <p>In the app's Settings you can clear your library and diary at any time. If you have an account, "Delete account" also permanently removes the data stored in the cloud.</p>
+    </details>
+
+    <details>
+      <summary>Poster scanning doesn't recognise the movie</summary>
+      <p>Make sure the poster is well lit, fully in frame and without reflections. Recognition can fail with very old or damaged posters: in that case, search by title instead.</p>
+    </details>
+
+    <details>
+      <summary>I'm not receiving notifications</summary>
+      <p>Check iPhone Settings → Notifications → Mood-E and make sure they are enabled. Inside the app, in Settings → Notifications, you can choose which reminders to receive.</p>
+    </details>
+
+    <h2>Contact us</h2>
+    <p>The fastest way is to open a report. Describe the problem in your own words: no technical knowledge needed.</p>
+
+    <a class="btn" href="https://github.com/gourbergnine07-source/rork-mood-e/issues/new">Report a problem</a>
+    <a class="btn ghost" href="https://github.com/gourbergnine07-source/rork-mood-e/issues">Open reports</a>
+
+    <div class="note">
+      <strong>Before writing</strong>, please include your iPhone model, iOS version and app version (shown at the bottom of the Settings screen): it lets us fix things much faster.
+    </div>
+
+    <p class="links">
+      <a href="privacy-policy-en.html">Privacy Policy</a> ·
+      <a href="termini-en.html">Terms of Use</a>
+    </p>
+  </main>
+</body>
+</html>
