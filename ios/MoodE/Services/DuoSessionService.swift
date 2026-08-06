@@ -43,9 +43,32 @@ enum DuoRole {
     case guest
 }
 
-enum DuoError: Error {
+/// Classified failure for duo/challenge cloud calls, so the UI can tell a
+/// real network problem from a server-side write rejection or a timeout
+/// instead of showing a generic "check your connection" message.
+enum DuoError: Error, Equatable {
     case notFound
+    case network
+    case timeout
+    case database
     case generic
+
+    /// Maps any thrown error to the closest `DuoError` bucket.
+    static func classify(_ error: Error) -> DuoError {
+        if let duo = error as? DuoError { return duo }
+        if let urlError = error as? URLError {
+            return urlError.code == .timedOut ? .timeout : .network
+        }
+        if error is PostgrestError { return .database }
+        return .generic
+    }
+
+    /// True when an insert failed only because the random 6-digit code
+    /// already exists (Postgres unique_violation) — safe to retry with a
+    /// brand-new code.
+    static func isCodeCollision(_ error: Error) -> Bool {
+        (error as? PostgrestError)?.code == "23505"
+    }
 }
 
 /// Guest-side join payload: flags the join and optionally shares a name.
@@ -59,12 +82,21 @@ private nonisolated struct DuoGuestJoinUpdate: Encodable, Sendable {
     }
 }
 
-/// Thin client for the anonymous duo sessions (Supabase, anon key only).
+/// Thin client for the anonymous duo sessions.
+///
+/// Duo codes live in their own dedicated table, fully independent from the
+/// synced profile/diary records (Rork account sync and iCloud/CloudKit):
+/// enabling sync never touches these rows, so a code write can never
+/// collide with a sync write.
 enum DuoSessionService {
     /// Creates a fresh session and returns its 6-digit code. `name` is the
     /// optional display name the host chose to share with the friend.
+    /// Retries with a new code only on a code collision, and silently
+    /// retries once on a transient network error before surfacing it.
     static func create(name: String? = nil) async throws -> String {
-        for _ in 0..<3 {
+        var didRetryTransient = false
+        var codeAttempts = 0
+        while codeAttempts < 3 {
             let code = String(format: "%06d", Int.random(in: 0...999_999))
             var payload = ["code": code]
             if let name, !name.isEmpty { payload["host_name"] = name }
@@ -75,7 +107,18 @@ enum DuoSessionService {
                     .execute()
                 return code
             } catch {
-                continue // code collision or transient error: retry
+                if DuoError.isCodeCollision(error) {
+                    codeAttempts += 1
+                    continue // rare 6-digit collision: try a new code
+                }
+                let classified = DuoError.classify(error)
+                if (classified == .network || classified == .timeout), !didRetryTransient {
+                    didRetryTransient = true
+                    try? await Task.sleep(for: .milliseconds(700))
+                    continue // one silent retry before showing the error
+                }
+                print("DuoSessionService: create failed (\(classified))")
+                throw classified
             }
         }
         throw DuoError.generic
@@ -83,11 +126,16 @@ enum DuoSessionService {
 
     /// Loads a session; throws `.notFound` for wrong or expired codes.
     static func fetch(code: String) async throws -> DuoSessionRow {
-        let rows: [DuoSessionRow] = try await SupabaseService.client
-            .from("duo_sessions")
-            .select()
-            .eq("code", value: code)
-            .execute().value
+        let rows: [DuoSessionRow]
+        do {
+            rows = try await SupabaseService.client
+                .from("duo_sessions")
+                .select()
+                .eq("code", value: code)
+                .execute().value
+        } catch {
+            throw DuoError.classify(error)
+        }
         guard let row = rows.first else { throw DuoError.notFound }
         return row
     }

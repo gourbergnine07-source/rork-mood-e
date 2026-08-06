@@ -54,14 +54,23 @@ private nonisolated struct ChallengeGuestJoinUpdate: Encodable, Sendable {
     }
 }
 
-/// Thin client for the shared monthly challenge (Supabase, anon key only).
+/// Thin client for the shared monthly challenge.
 /// Reuses `DuoRole` / `DuoError` from the duo-night sessions.
+///
+/// Challenge codes live in their own dedicated table, fully independent
+/// from the synced profile/diary records (Rork account sync and
+/// iCloud/CloudKit): enabling sync never touches these rows, so a code
+/// write can never collide with a sync write.
 enum ChallengeDuoService {
     /// Creates a fresh pairing for the given month and returns its code.
     /// `name` is the optional display name the host chose to share.
+    /// Retries with a new code only on a code collision, and silently
+    /// retries once on a transient network error before surfacing it.
     static func create(monthKey: String, name: String? = nil) async throws -> String {
         let shared = (name?.isEmpty == false) ? name : nil
-        for _ in 0..<3 {
+        var didRetryTransient = false
+        var codeAttempts = 0
+        while codeAttempts < 3 {
             let code = String(format: "%06d", Int.random(in: 0...999_999))
             do {
                 try await SupabaseService.client
@@ -70,7 +79,18 @@ enum ChallengeDuoService {
                     .execute()
                 return code
             } catch {
-                continue // code collision or transient error: retry
+                if DuoError.isCodeCollision(error) {
+                    codeAttempts += 1
+                    continue // rare 6-digit collision: try a new code
+                }
+                let classified = DuoError.classify(error)
+                if (classified == .network || classified == .timeout), !didRetryTransient {
+                    didRetryTransient = true
+                    try? await Task.sleep(for: .milliseconds(700))
+                    continue // one silent retry before showing the error
+                }
+                print("ChallengeDuoService: create failed (\(classified))")
+                throw classified
             }
         }
         throw DuoError.generic
@@ -78,11 +98,16 @@ enum ChallengeDuoService {
 
     /// Loads a pairing; throws `.notFound` for wrong or expired codes.
     static func fetch(code: String) async throws -> ChallengeDuoRow {
-        let rows: [ChallengeDuoRow] = try await SupabaseService.client
-            .from("challenge_duos")
-            .select()
-            .eq("code", value: code)
-            .execute().value
+        let rows: [ChallengeDuoRow]
+        do {
+            rows = try await SupabaseService.client
+                .from("challenge_duos")
+                .select()
+                .eq("code", value: code)
+                .execute().value
+        } catch {
+            throw DuoError.classify(error)
+        }
         guard let row = rows.first else { throw DuoError.notFound }
         return row
     }

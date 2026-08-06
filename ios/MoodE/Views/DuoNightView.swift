@@ -17,6 +17,14 @@ struct DuoNightView: View {
         case results([TMDBMovie])
     }
 
+    /// Which cloud action failed last, so the error alert can offer a
+    /// one-tap "Retry" that repeats exactly that action.
+    private enum FailedAction {
+        case create
+        case join
+        case submit
+    }
+
     @Environment(\.dismiss) private var dismiss
 
     @State private var phase: Phase = .landing
@@ -35,6 +43,7 @@ struct DuoNightView: View {
 
     @State private var isBusy: Bool = false
     @State private var errorMessage: String?
+    @State private var failedAction: FailedAction?
 
     private let moodColumns = [
         GridItem(.flexible(), spacing: 8),
@@ -87,6 +96,9 @@ struct DuoNightView: View {
         }
         .tint(Theme.primary)
         .alert(L("common.oops"), isPresented: errorBinding) {
+            if let failedAction {
+                Button(L("common.retry")) { retry(failedAction) }
+            }
             Button(L("common.ok"), role: .cancel) {}
         } message: {
             Text(errorMessage ?? L("duo.error.generic"))
@@ -439,10 +451,30 @@ struct DuoNightView: View {
         return true
     }
 
+    /// Maps a classified failure to a specific, actionable message.
+    private func message(for error: Error) -> String {
+        switch DuoError.classify(error) {
+        case .notFound: return L("duo.error.notfound")
+        case .network: return L("duo.error.network")
+        case .timeout: return L("duo.error.timeout")
+        case .database: return L("duo.error.database")
+        case .generic: return L("duo.error.generic")
+        }
+    }
+
+    private func retry(_ action: FailedAction) {
+        switch action {
+        case .create: createSession()
+        case .join: joinSession()
+        case .submit: submitChoice()
+        }
+    }
+
     private func createSession() {
         guard validateAndSaveShareName() else { return }
         role = .host
         isBusy = true
+        failedAction = nil
         Task {
             do {
                 code = try await DuoSessionService.create(name: sharedNameOrNil)
@@ -452,7 +484,8 @@ struct DuoNightView: View {
                 StatusService.shared.registerFriendCode(code)
                 withAnimation { phase = .picking }
             } catch {
-                errorMessage = L("duo.error.generic")
+                errorMessage = message(for: error)
+                failedAction = .create
             }
             isBusy = false
         }
@@ -462,6 +495,7 @@ struct DuoNightView: View {
         guard validateAndSaveShareName() else { return }
         role = .guest
         isBusy = true
+        failedAction = nil
         Task {
             do {
                 let row = try await DuoSessionService.join(code: joinCode, name: sharedNameOrNil)
@@ -473,10 +507,10 @@ struct DuoNightView: View {
                 // the friends-only Stato Mood visibility.
                 StatusService.shared.registerFriendCode(row.code)
                 withAnimation { phase = .picking }
-            } catch DuoError.notFound {
-                errorMessage = L("duo.error.notfound")
             } catch {
-                errorMessage = L("duo.error.generic")
+                errorMessage = message(for: error)
+                // A wrong code is not retryable as-is: no retry button.
+                failedAction = DuoError.classify(error) == .notFound ? nil : .join
             }
             isBusy = false
         }
@@ -485,12 +519,14 @@ struct DuoNightView: View {
     private func submitChoice() {
         guard let mood = selectedMood, let goal = selectedGoal else { return }
         isBusy = true
+        failedAction = nil
         Task {
             do {
                 try await DuoSessionService.submit(code: code, role: role, mood: mood, goal: goal)
                 withAnimation { phase = .waiting }
             } catch {
-                errorMessage = L("duo.error.generic")
+                errorMessage = message(for: error)
+                failedAction = .submit
             }
             isBusy = false
         }

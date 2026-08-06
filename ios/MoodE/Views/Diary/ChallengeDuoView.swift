@@ -20,10 +20,18 @@ struct ChallengeDuoView: View {
     @AppStorage("chduo.role") private var pairedRoleRaw: String = ""
     @AppStorage("chduo.month") private var pairedMonth: String = ""
 
+    /// Which cloud action failed last, so the error banner can offer a
+    /// one-tap "Retry" that repeats exactly that action.
+    private enum FailedAction {
+        case create
+        case join
+    }
+
     @State private var row: ChallengeDuoRow?
     @State private var joinCode: String = ""
     @State private var isWorking: Bool = false
     @State private var errorText: String?
+    @State private var failedAction: FailedAction?
     /// Optional display name shared with this friend; pre-filled with the
     /// profile name from Settings ("Nome per i tuoi amici").
     @State private var shareName: String = ProfileStore.shared.customName
@@ -161,9 +169,30 @@ struct ChallengeDuoView: View {
             }
 
             if let errorText {
-                Label(errorText, systemImage: "exclamationmark.triangle.fill")
-                    .font(.caption)
-                    .foregroundStyle(Theme.rose)
+                VStack(alignment: .leading, spacing: 8) {
+                    Label(errorText, systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption)
+                        .foregroundStyle(Theme.rose)
+
+                    if let action = failedAction {
+                        Button {
+                            Task {
+                                switch action {
+                                case .create: await createPairing()
+                                case .join: await joinPairing()
+                                }
+                            }
+                        } label: {
+                            Label(L("common.retry"), systemImage: "arrow.clockwise")
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 14)
+                                .frame(height: 32)
+                                .background(Theme.amber, in: .capsule)
+                        }
+                        .disabled(isWorking)
+                    }
+                }
             }
         }
     }
@@ -319,11 +348,23 @@ struct ChallengeDuoView: View {
         return true
     }
 
+    /// Maps a classified failure to a specific, actionable message.
+    private func errorMessage(for error: Error) -> String {
+        switch DuoError.classify(error) {
+        case .notFound: return L("chduo.error.notfound")
+        case .network: return L("duo.error.network")
+        case .timeout: return L("duo.error.timeout")
+        case .database: return L("duo.error.database")
+        case .generic: return L("chduo.error.generic")
+        }
+    }
+
     private func createPairing() async {
         guard !isWorking else { return }
         guard validateAndSaveShareName() else { return }
         isWorking = true
         errorText = nil
+        failedAction = nil
         do {
             let code = try await ChallengeDuoService.create(monthKey: challenge.id, name: sharedNameOrNil)
             pairedCode = code
@@ -335,7 +376,8 @@ struct ChallengeDuoView: View {
             StatusService.shared.registerFriendCode(code)
             await refresh()
         } catch {
-            errorText = L("chduo.error.generic")
+            errorText = errorMessage(for: error)
+            failedAction = .create
         }
         isWorking = false
     }
@@ -345,6 +387,7 @@ struct ChallengeDuoView: View {
         guard validateAndSaveShareName() else { return }
         isWorking = true
         errorText = nil
+        failedAction = nil
         do {
             let joined = try await ChallengeDuoService.join(code: joinCode, monthKey: challenge.id, name: sharedNameOrNil)
             pairedCode = joined.code
@@ -354,10 +397,10 @@ struct ChallengeDuoView: View {
             // Joining links the two people as "amici" for Stato Mood.
             StatusService.shared.registerFriendCode(joined.code)
             await refresh()
-        } catch DuoError.notFound {
-            errorText = L("chduo.error.notfound")
         } catch {
-            errorText = L("chduo.error.generic")
+            errorText = errorMessage(for: error)
+            // A wrong code is not retryable as-is: no retry button.
+            failedAction = DuoError.classify(error) == .notFound ? nil : .join
         }
         isWorking = false
     }
