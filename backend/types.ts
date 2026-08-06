@@ -48,7 +48,9 @@ export type Database = {
           created_at: string
           expires_at: string
           guest_joined: boolean
+          guest_name: string | null
           guest_progress: number
+          host_name: string | null
           host_progress: number
           month_key: string
         }
@@ -57,7 +59,9 @@ export type Database = {
           created_at?: string
           expires_at?: string
           guest_joined?: boolean
+          guest_name?: string | null
           guest_progress?: number
+          host_name?: string | null
           host_progress?: number
           month_key: string
         }
@@ -66,7 +70,9 @@ export type Database = {
           created_at?: string
           expires_at?: string
           guest_joined?: boolean
+          guest_name?: string | null
           guest_progress?: number
+          host_name?: string | null
           host_progress?: number
           month_key?: string
         }
@@ -127,8 +133,10 @@ export type Database = {
           guest_goal: string | null
           guest_joined: boolean
           guest_mood: string | null
+          guest_name: string | null
           host_goal: string | null
           host_mood: string | null
+          host_name: string | null
         }
         Insert: {
           code: string
@@ -137,8 +145,10 @@ export type Database = {
           guest_goal?: string | null
           guest_joined?: boolean
           guest_mood?: string | null
+          guest_name?: string | null
           host_goal?: string | null
           host_mood?: string | null
+          host_name?: string | null
         }
         Update: {
           code?: string
@@ -147,8 +157,10 @@ export type Database = {
           guest_goal?: string | null
           guest_joined?: boolean
           guest_mood?: string | null
+          guest_name?: string | null
           host_goal?: string | null
           host_mood?: string | null
+          host_name?: string | null
         }
         Relationships: []
       }

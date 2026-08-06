@@ -24,6 +24,9 @@ struct ChallengeDuoView: View {
     @State private var joinCode: String = ""
     @State private var isWorking: Bool = false
     @State private var errorText: String?
+    /// Optional display name shared with this friend; pre-filled with the
+    /// profile name from Settings ("Nome per i tuoi amici").
+    @State private var shareName: String = ProfileStore.shared.customName
 
     private var challenge: MonthlyChallenge { ChallengeCalendar.current() }
     private var isPaired: Bool { !pairedCode.isEmpty && pairedMonth == challenge.id }
@@ -106,6 +109,8 @@ struct ChallengeDuoView: View {
             Text(L("chduo.sub"))
                 .font(.subheadline)
                 .foregroundStyle(Theme.inkSoft)
+
+            DuoNameField(name: $shareName, tint: Theme.amber)
 
             Button {
                 Task { await createPairing() }
@@ -204,13 +209,13 @@ struct ChallengeDuoView: View {
                     .foregroundStyle(Theme.ink)
 
                 progressRow(
-                    label: L("chduo.you"),
+                    label: myLabel,
                     value: myProgress.value,
                     target: challenge.kind.target,
                     tint: Theme.primary
                 )
                 progressRow(
-                    label: L("chduo.friend"),
+                    label: friendLabel,
                     value: friendValue,
                     target: challenge.kind.target,
                     tint: Theme.rose
@@ -273,18 +278,54 @@ struct ChallengeDuoView: View {
         return role == .host ? row.guestProgress : row.hostProgress
     }
 
+    /// "Tu" plus the name I chose to share, so I know what the friend sees.
+    private var myLabel: String {
+        let name = ProfileStore.shared.customName
+        return name.isEmpty ? L("chduo.you") : LF("chduo.you.named", name)
+    }
+
+    /// The friend's shared name once known, otherwise the generic label.
+    private var friendLabel: String {
+        let name = role == .host ? row?.guestName : row?.hostName
+        if let name, !name.isEmpty { return name }
+        return L("chduo.friend")
+    }
+
     private var bothDone: Bool {
         myProgress.isComplete && friendValue >= challenge.kind.target
     }
 
     // MARK: - Actions
 
+    /// Trimmed shared name capped at the profile limit; empty = anonymous.
+    private var normalizedShareName: String {
+        String(shareName.trimmingCharacters(in: .whitespacesAndNewlines).prefix(ProfileStore.maxNameLength))
+    }
+
+    private var sharedNameOrNil: String? {
+        normalizedShareName.isEmpty ? nil : normalizedShareName
+    }
+
+    /// Validates the optional shared name and persists it to the same
+    /// profile field used in Settings, so it's reused automatically.
+    private func validateAndSaveShareName() -> Bool {
+        let name = normalizedShareName
+        guard !name.isEmpty else { return true }
+        guard ContentModeration.isClean(name) else {
+            errorText = L("duo.name.offensive")
+            return false
+        }
+        ProfileStore.shared.setName(name)
+        return true
+    }
+
     private func createPairing() async {
         guard !isWorking else { return }
+        guard validateAndSaveShareName() else { return }
         isWorking = true
         errorText = nil
         do {
-            let code = try await ChallengeDuoService.create(monthKey: challenge.id)
+            let code = try await ChallengeDuoService.create(monthKey: challenge.id, name: sharedNameOrNil)
             pairedCode = code
             pairedRoleRaw = "host"
             pairedMonth = challenge.id
@@ -301,10 +342,11 @@ struct ChallengeDuoView: View {
 
     private func joinPairing() async {
         guard !isWorking else { return }
+        guard validateAndSaveShareName() else { return }
         isWorking = true
         errorText = nil
         do {
-            let joined = try await ChallengeDuoService.join(code: joinCode, monthKey: challenge.id)
+            let joined = try await ChallengeDuoService.join(code: joinCode, monthKey: challenge.id, name: sharedNameOrNil)
             pairedCode = joined.code
             pairedRoleRaw = "guest"
             pairedMonth = challenge.id

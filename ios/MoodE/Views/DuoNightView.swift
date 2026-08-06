@@ -24,6 +24,11 @@ struct DuoNightView: View {
     @State private var code: String = ""
     @State private var joinCode: String = ""
     @State private var partnerJoined: Bool = false
+    /// Optional display name shared with this friend; pre-filled with the
+    /// profile name from Settings ("Nome per i tuoi amici").
+    @State private var shareName: String = ProfileStore.shared.customName
+    /// The name the other person chose to share, once known.
+    @State private var partnerName: String?
 
     @State private var selectedMood: Mood?
     @State private var selectedGoal: ViewingGoal?
@@ -112,6 +117,8 @@ struct DuoNightView: View {
                 .font(.subheadline)
                 .foregroundStyle(Theme.inkSoft)
                 .lineSpacing(4)
+
+            DuoNameField(name: $shareName)
 
             Button {
                 createSession()
@@ -308,11 +315,20 @@ struct DuoNightView: View {
 
             if role == .host {
                 Label(
-                    partnerJoined ? L("duo.partner.joined") : L("duo.partner.waiting"),
+                    partnerJoined
+                        ? (partnerName.map { LF("duo.partner.joined.named", $0) } ?? L("duo.partner.joined"))
+                        : L("duo.partner.waiting"),
                     systemImage: partnerJoined ? "person.2.fill" : "person.badge.clock"
                 )
                 .font(.caption2.weight(.semibold))
                 .foregroundStyle(partnerJoined ? Theme.seenGreen : Theme.inkSoft)
+            } else if let partnerName {
+                Label(
+                    LF("duo.partner.named", partnerName),
+                    systemImage: "person.2.fill"
+                )
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(Theme.seenGreen)
             }
         }
         .padding(14)
@@ -401,12 +417,35 @@ struct DuoNightView: View {
 
     // MARK: - Actions
 
+    /// Trimmed shared name capped at the profile limit; empty = anonymous.
+    private var normalizedShareName: String {
+        String(shareName.trimmingCharacters(in: .whitespacesAndNewlines).prefix(ProfileStore.maxNameLength))
+    }
+
+    private var sharedNameOrNil: String? {
+        normalizedShareName.isEmpty ? nil : normalizedShareName
+    }
+
+    /// Validates the optional shared name and persists it to the same
+    /// profile field used in Settings, so it's reused automatically.
+    private func validateAndSaveShareName() -> Bool {
+        let name = normalizedShareName
+        guard !name.isEmpty else { return true }
+        guard ContentModeration.isClean(name) else {
+            errorMessage = L("duo.name.offensive")
+            return false
+        }
+        ProfileStore.shared.setName(name)
+        return true
+    }
+
     private func createSession() {
+        guard validateAndSaveShareName() else { return }
         role = .host
         isBusy = true
         Task {
             do {
-                code = try await DuoSessionService.create()
+                code = try await DuoSessionService.create(name: sharedNameOrNil)
                 AnalyticsService.shared.log("duo_session", meta: ["role": "host"])
                 // Duo codes also link the two people as "amici": from now on
                 // they see each other's Stato Mood (friends-only visibility).
@@ -420,13 +459,15 @@ struct DuoNightView: View {
     }
 
     private func joinSession() {
+        guard validateAndSaveShareName() else { return }
         role = .guest
         isBusy = true
         Task {
             do {
-                let row = try await DuoSessionService.join(code: joinCode)
+                let row = try await DuoSessionService.join(code: joinCode, name: sharedNameOrNil)
                 code = row.code
                 partnerJoined = true
+                partnerName = row.hostName
                 AnalyticsService.shared.log("duo_session", meta: ["role": "guest"])
                 // Joining a Duo code links the two people as "amici" for
                 // the friends-only Stato Mood visibility.
@@ -462,6 +503,7 @@ struct DuoNightView: View {
             do {
                 let row = try await DuoSessionService.fetch(code: code)
                 partnerJoined = row.guestJoined || role == .guest
+                partnerName = role == .host ? row.guestName : row.hostName
                 if row.isReady,
                    let hostMood = row.hostMood.flatMap(Mood.init),
                    let hostGoal = row.hostGoal.flatMap(ViewingGoal.init),
