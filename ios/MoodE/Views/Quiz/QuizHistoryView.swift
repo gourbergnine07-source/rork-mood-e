@@ -12,6 +12,10 @@ struct QuizHistoryView: View {
     @Environment(QuizStore.self) private var quiz
 
     @State private var pendingRemoval: QuizResult?
+    /// Kept result being reopened. Presented as a sheet rather than pushed: this
+    /// screen is itself two levels deep, where a push to a locally declared
+    /// destination resolves to an empty screen.
+    @State private var openedResult: QuizResult?
 
     private var results: [QuizResult] {
         quiz.savedResults.filter(\.isRenderable)
@@ -62,13 +66,18 @@ struct QuizHistoryView: View {
         } message: {
             Text(L("quiz.remove.msg"))
         }
+        .sheet(item: $openedResult) { result in
+            QuizSavedResultSheet(result: result)
+        }
     }
 
     @ViewBuilder
     private func row(_ result: QuizResult) -> some View {
         if let definition = result.definition, let outcome = result.outcome {
             HStack(spacing: 10) {
-                NavigationLink(value: result) {
+                Button {
+                    openedResult = result
+                } label: {
                     HStack(spacing: 12) {
                         QuizEmblem(outcome: outcome, size: 46)
 
@@ -173,6 +182,34 @@ struct QuizSavedResultView: View {
         }
         .navigationTitle(result.definition?.title ?? L("quiz.hub.title"))
         .toolbarTitleDisplayMode(.inline)
+    }
+}
+
+/// Reopens a kept result in its own navigation stack, so the "rigioca" link on
+/// the result screen has a registered destination.
+struct QuizSavedResultSheet: View {
+    let result: QuizResult
+
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            QuizSavedResultView(result: result)
+                .quizNavigationDestinations()
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            dismiss()
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 20))
+                                .foregroundStyle(Theme.inkSoft)
+                        }
+                        .accessibilityLabel(L("common.close"))
+                    }
+                }
+        }
+        .tint(Theme.primary)
     }
 }
 

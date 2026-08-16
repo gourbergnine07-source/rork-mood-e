@@ -7,13 +7,15 @@ import SwiftUI
 
 /// Registers every destination the quiz screens can push.
 ///
-/// NOTE: this must be applied at the root of the enclosing NavigationStack, not
-/// on `QuizHubView` itself. A `navigationDestination` declared inside a view
-/// that was already pushed is not visible to the links it contains, so the taps
-/// resolve to an empty screen.
+/// NOTE: this must be applied at the ROOT of a NavigationStack. A
+/// `navigationDestination` declared inside a view that was itself pushed is not
+/// reliably visible to the links it contains, and the taps resolve to an empty
+/// screen. `QuizPlayerSheet` and `QuizSavedResultSheet` own the stacks where
+/// these are registered.
 extension View {
     func quizNavigationDestinations() -> some View {
         self
+            // Retake link on a result reopened from the collection.
             .navigationDestination(for: QuizDefinition.self) { definition in
                 QuizPlayerView(definition: definition)
             }
@@ -24,6 +26,10 @@ extension View {
             // that opens the regular results screen.
             .navigationDestination(for: MoodSelection.self) { selection in
                 MovieResultsView(selection: selection)
+            }
+            // ...whose cards then push a movie.
+            .navigationDestination(for: TMDBMovie.self) { movie in
+                MovieDetailView(movie: movie)
             }
     }
 }
@@ -39,6 +45,11 @@ struct QuizHubView: View {
 
     @Environment(\.dismiss) private var dismiss
 
+    /// Quiz being played. Presented as a sheet rather than pushed, so it opens
+    /// on the first tap both from Home and from the Impostazioni row (where the
+    /// hub is already a pushed screen).
+    @State private var playingQuiz: QuizDefinition?
+
     private var quizzes: [QuizDefinition] { QuizCatalog.all }
 
     var body: some View {
@@ -50,7 +61,9 @@ struct QuizHubView: View {
                     header
 
                     ForEach(quizzes) { definition in
-                        NavigationLink(value: definition) {
+                        Button {
+                            playingQuiz = definition
+                        } label: {
                             card(definition)
                         }
                         .buttonStyle(PressableCardStyle())
@@ -79,6 +92,9 @@ struct QuizHubView: View {
                     .accessibilityLabel(L("common.close"))
                 }
             }
+        }
+        .sheet(item: $playingQuiz) { definition in
+            QuizPlayerSheet(definition: definition)
         }
     }
 
@@ -229,7 +245,6 @@ struct QuizHubView: View {
 #Preview {
     NavigationStack {
         QuizHubView()
-            .quizNavigationDestinations()
     }
     .environment(QuizStore())
     .environment(PersonalizationStore())

@@ -49,7 +49,7 @@ struct DailyQuizCard: View {
             store.refresh(using: quiz)
         }
         .sheet(item: $playingQuiz) { definition in
-            DailyQuizPlayerSheet(definition: definition)
+            QuizPlayerSheet(definition: definition)
         }
         .sheet(isPresented: $showPaywall) {
             PaywallView()
@@ -229,37 +229,5 @@ struct DailyQuizCard: View {
             meta: ["quiz": suggestion.definition.id]
         )
         playingQuiz = suggestion.definition
-    }
-}
-
-/// Sheet that runs one quiz directly, registering the destinations its result
-/// screen can push (the "stasera" quiz ends on a ready-made suggestion, and
-/// every result offers a retake link).
-struct DailyQuizPlayerSheet: View {
-    let definition: QuizDefinition
-
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        NavigationStack {
-            QuizPlayerView(definition: definition)
-                .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button {
-                            dismiss()
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.system(size: 20))
-                                .foregroundStyle(Theme.inkSoft)
-                        }
-                        .accessibilityLabel(L("common.close"))
-                    }
-                }
-                .quizNavigationDestinations()
-                .navigationDestination(for: TMDBMovie.self) { movie in
-                    MovieDetailView(movie: movie)
-                }
-        }
-        .tint(Theme.primary)
     }
 }

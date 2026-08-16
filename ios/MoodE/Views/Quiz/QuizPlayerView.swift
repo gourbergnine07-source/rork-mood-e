@@ -251,6 +251,38 @@ struct QuizPlayerView: View {
     }
 }
 
+/// Runs one quiz inside its own navigation stack, presented as a sheet.
+///
+/// Every entry point (Home card, hub, collection) uses this instead of pushing
+/// onto the caller's stack: the sheet owns its stack, so the destinations the
+/// result screen needs are always registered at the root and a single tap opens
+/// the quiz, no matter how deep the caller already was.
+struct QuizPlayerSheet: View {
+    let definition: QuizDefinition
+
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            QuizPlayerView(definition: definition)
+                .quizNavigationDestinations()
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            dismiss()
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 20))
+                                .foregroundStyle(Theme.inkSoft)
+                        }
+                        .accessibilityLabel(L("common.close"))
+                    }
+                }
+        }
+        .tint(Theme.primary)
+    }
+}
+
 #Preview {
     NavigationStack {
         QuizPlayerView(definition: QuizCatalog.cinephile)

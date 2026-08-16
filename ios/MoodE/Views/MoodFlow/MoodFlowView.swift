@@ -81,10 +81,6 @@ struct MoodFlowView: View {
         .sheet(isPresented: $showQuiz) {
             NavigationStack {
                 QuizHubView(isPresentedAsSheet: true)
-                    .quizNavigationDestinations()
-                    .navigationDestination(for: TMDBMovie.self) { movie in
-                        MovieDetailView(movie: movie)
-                    }
             }
             .tint(Theme.primary)
         }
