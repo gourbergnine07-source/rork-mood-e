@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import StoreKit
 
 /// Results screen: shows TMDB movies matching the user's mood flow choices.
 struct MovieResultsView: View {
@@ -13,6 +14,7 @@ struct MovieResultsView: View {
     @State private var trailerPlayback = TrailerPlayback()
     @Environment(MovieLibrary.self) private var library
     @Environment(MoodDiary.self) private var diary
+    @Environment(\.requestReview) private var requestReview
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
@@ -64,6 +66,10 @@ struct MovieResultsView: View {
             // Diary check-in: records date, mood, goal and proposed movies locally.
             if case .loaded(let movies) = viewModel.state, !movies.isEmpty {
                 diary.record(selection: selection, proposed: movies)
+                maybeRequestReview()
+            } else {
+                // Empty result or failed request: a bad time to ask anything.
+                ReviewPrompter.noteNegativeMoment()
             }
         }
         .onChange(of: scenePhase) { _, newPhase in
@@ -157,6 +163,28 @@ struct MovieResultsView: View {
             }
         }
         .padding(.horizontal, 32)
+    }
+
+    /// Asks for an App Store rating after a successful search: the check-in
+    /// has just been recorded, so the streak is fresh. The introductory
+    /// "Primo passo" badge is excluded on purpose — it unlocks on day one,
+    /// long before the user can judge the app.
+    private func maybeRequestReview() {
+        let stats = diary.stats(watchedTotal: library.lifetimeWatchedCount)
+        let hasRealBadge = Badge.allCases.contains { badge in
+            badge != .primoPasso && badge.isUnlocked(stats)
+        }
+        let signals = ReviewPrompter.Signals(
+            streak: diary.streak,
+            lifetimeWatched: library.lifetimeWatchedCount,
+            hasUnlockedBadge: hasRealBadge
+        )
+        guard ReviewPrompter.shouldPrompt(signals) else { return }
+        Task {
+            // Let the results settle on screen before the system sheet.
+            try? await Task.sleep(for: .seconds(1.5))
+            requestReview()
+        }
     }
 
     // MARK: - Results

@@ -38,6 +38,11 @@ enum AppLinks {
     static var newIssue: URL {
         URL(string: "https://github.com/\(gitHubUser)/\(gitHubRepo)/issues/new")!
     }
+    /// App Store review composer. Used only by the manual "rate the app" row:
+    /// the native in-app prompt stays reserved for the automatic milestone.
+    static var appStoreReview: URL {
+        URL(string: "https://apps.apple.com/app/id6792271949?action=write-review")!
+    }
     static var issuesList: URL {
         URL(string: "https://github.com/\(gitHubUser)/\(gitHubRepo)/issues")!
     }
@@ -1334,6 +1339,22 @@ struct SettingsView: View {
                     icon: "questionmark.circle.fill",
                     iconColor: Theme.amber,
                     title: L("settings.support.faq")
+                )
+            }
+
+            // Opens the App Store review page directly. The native in-app
+            // popup is never forced from here: iOS reserves it for the
+            // automatic milestone, and tapping a button must always do
+            // something visible.
+            Button {
+                AnalyticsService.shared.log("review_manual_opened")
+                openURL(AppLinks.appStoreReview)
+            } label: {
+                SettingsRow(
+                    icon: "star.bubble.fill",
+                    iconColor: Theme.rose,
+                    title: L("settings.support.rate"),
+                    showsExternalBadge: true
                 )
             }
         } header: {

@@ -525,6 +525,8 @@ struct MoodFlowView: View {
             } catch {
                 print("MoodFlow: free-text analysis failed: \(error.localizedDescription)")
                 analysisFailed = true
+                // Right after an error the app stays quiet about ratings.
+                ReviewPrompter.noteNegativeMoment()
             }
             isAnalyzing = false
         }

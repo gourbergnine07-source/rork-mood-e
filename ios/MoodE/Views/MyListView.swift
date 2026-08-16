@@ -111,9 +111,10 @@ struct MyListView: View {
     }
 
     /// Asks for an App Store rating right after marking a movie as watched,
-    /// respecting ReviewPrompter's cooldown rules.
+    /// respecting ReviewPrompter's milestone rules.
     private func maybeRequestReview() {
-        guard ReviewPrompter.shouldPrompt(lifetimeWatched: library.lifetimeWatchedCount) else { return }
+        let signals = ReviewPrompter.Signals(lifetimeWatched: library.lifetimeWatchedCount)
+        guard ReviewPrompter.shouldPrompt(signals) else { return }
         Task {
             try? await Task.sleep(for: .seconds(1.5))
             requestReview()
@@ -136,6 +137,8 @@ struct MyListView: View {
                             withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
                                 library.removeEntry(entry.id)
                             }
+                            // Removing content is never a moment to ask for a rating.
+                            ReviewPrompter.noteNegativeMoment()
                         } : nil,
                         isLoadingTrailer: trailerPlayback.loadingMovieId == entry.id,
                         onPlayTrailer: { trailerPlayback.play(entry.asMovie) }

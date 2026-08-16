@@ -47,6 +47,9 @@ struct MoodEApp: App {
                 .environment(quiz)
                 .preferredColorScheme(theme.appearance.colorScheme)
                 .task {
+                    // Counts this launch as one day of use: feeds the
+                    // "used on 3 different days" rating milestone.
+                    ReviewPrompter.recordSession()
                     // Keep the interactive widget's mood list fresh even
                     // before the first check-in of the day.
                     diary.publishWidgetSnapshot()
@@ -70,6 +73,7 @@ struct MoodEApp: App {
                 }
                 .onChange(of: scenePhase) { _, newPhase in
                     guard newPhase == .active else { return }
+                    ReviewPrompter.recordSession()
                     Task {
                         await notifications.refreshAuthorizationStatus()
                         await NotificationHistory.shared.syncDelivered()

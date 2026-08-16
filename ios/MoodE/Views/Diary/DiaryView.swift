@@ -401,6 +401,8 @@ struct DiaryView: View {
             }
         }
         pendingDeletion = nil
+        // Deleting something is never a moment to ask for a rating.
+        ReviewPrompter.noteNegativeMoment()
     }
 
     // MARK: - Memories row

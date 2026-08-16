@@ -22,9 +22,15 @@ final class QuizStore {
     /// Results explicitly kept by the user, newest first.
     private(set) var savedResults: [QuizResult]
 
+    /// Last time each quiz was played, keyed by quiz id. Recorded on every
+    /// completion, whether or not the result is kept, so the daily suggestion
+    /// knows what the user has actually already seen.
+    private(set) var playDates: [String: Date]
+
     private static let profileKey = "quiz.profile"
     private static let dateKey = "quiz.date"
     private static let savedKey = "quiz.savedResults"
+    private static let playDatesKey = "quiz.playDates"
 
     private let defaults = UserDefaults.standard
 
@@ -38,6 +44,25 @@ final class QuizStore {
         } else {
             savedResults = []
         }
+        if let data = defaults.data(forKey: Self.playDatesKey),
+           let stored = try? JSONDecoder().decode([String: Date].self, from: data) {
+            playDates = stored
+        } else {
+            playDates = [:]
+        }
+        // Users coming from an older build have no play history: seed it from
+        // the results they kept, so the suggestion starts out informed.
+        if playDates.isEmpty, !savedResults.isEmpty {
+            for result in savedResults where playDates[result.quizId] == nil {
+                playDates[result.quizId] = result.date
+            }
+            persistPlayDates()
+        }
+    }
+
+    /// When the given quiz was last played, or nil if never.
+    func lastPlayed(quizId: String) -> Date? {
+        playDates[quizId]
     }
 
     // MARK: - Playing
@@ -45,6 +70,7 @@ final class QuizStore {
     /// Turns the collected answers into a result. The result is returned but
     /// NOT added to the collection: keeping it is an explicit user choice.
     func complete(_ definition: QuizDefinition, answers: [String: QuizOption]) -> QuizResult {
+        recordPlay(definition.id)
         switch definition.scoring {
         case .weighted:
             let winner = weightedWinner(definition, answers: answers)
@@ -83,6 +109,20 @@ final class QuizStore {
             (scores[lhs.id] ?? 0) < (scores[rhs.id] ?? 0)
         }
         return ranked?.id ?? definition.outcomes.first?.id ?? ""
+    }
+
+    private func recordPlay(_ quizId: String) {
+        playDates[quizId] = Date()
+        persistPlayDates()
+    }
+
+    private func persistPlayDates() {
+        do {
+            let data = try JSONEncoder().encode(playDates)
+            defaults.set(data, forKey: Self.playDatesKey)
+        } catch {
+            print("QuizStore: play history persist failed: \(error.localizedDescription)")
+        }
     }
 
     private func persistSpectatorProfile(_ outcomeId: String) {

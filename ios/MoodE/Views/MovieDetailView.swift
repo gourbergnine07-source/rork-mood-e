@@ -346,9 +346,10 @@ struct MovieDetailView: View {
     }
 
     /// Asks for an App Store rating at a satisfying moment (just marked a
-    /// movie as watched), respecting ReviewPrompter's cooldown rules.
+    /// movie as watched), respecting ReviewPrompter's milestone rules.
     private func maybeRequestReview() {
-        guard ReviewPrompter.shouldPrompt(lifetimeWatched: library.lifetimeWatchedCount) else { return }
+        let signals = ReviewPrompter.Signals(lifetimeWatched: library.lifetimeWatchedCount)
+        guard ReviewPrompter.shouldPrompt(signals) else { return }
         Task {
             try? await Task.sleep(for: .seconds(1.5))
             requestReview()
