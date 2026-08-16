@@ -21,10 +21,15 @@ nonisolated struct LibraryEntry: Codable, Identifiable, Hashable {
     var status: LibraryStatus
     var addedDate: Date
     var watchedDate: Date?
+    /// Mood → goal → era combination that led here, present only when the
+    /// movie was saved from the guided flow results screen. Optional, so
+    /// libraries stored by older versions keep decoding fine.
+    var discoveryPath: DiscoveryPath?
 
     enum CodingKeys: String, CodingKey {
         case id, title, status, addedDate, watchedDate
         case posterPath = "poster_path"
+        case discoveryPath = "discovery_path"
     }
 
     /// Poster URL (w500) for the saved movie.
@@ -76,6 +81,7 @@ final class MovieLibrary {
         entries = Self.loadEntries()
         autoRemoveWatchedAfterWeek = UserDefaults.standard.bool(forKey: Self.autoRemoveKey)
         pruneExpiredWatched()
+        DiscoveryPathStore.shared.hydrate(from: entries)
     }
 
     // MARK: - Derived lists
@@ -182,6 +188,16 @@ final class MovieLibrary {
         persist()
     }
 
+    /// Stores the discovery path on an existing entry, so it travels with
+    /// the iCloud backup. Movies not in the library are ignored: the path is
+    /// descriptive metadata, it never creates a saved movie by itself.
+    func attachDiscoveryPath(_ path: DiscoveryPath, to movieID: Int) {
+        guard let index = entries.firstIndex(where: { $0.id == movieID }) else { return }
+        guard entries[index].discoveryPath != path else { return }
+        entries[index].discoveryPath = path
+        persist()
+    }
+
     /// Manually removes an entry from the library (e.g. from the "Già visti" list).
     func removeEntry(_ entryID: Int) {
         let before = entries.count
@@ -207,7 +223,8 @@ final class MovieLibrary {
             posterPath: movie.posterPath,
             status: status,
             addedDate: Date(),
-            watchedDate: nil
+            watchedDate: nil,
+            discoveryPath: nil
         )
     }
 
@@ -227,6 +244,7 @@ final class MovieLibrary {
     /// Replaces the whole library with the cloud-merged copy (sync only).
     func replaceAll(_ merged: [LibraryEntry]) {
         entries = merged
+        DiscoveryPathStore.shared.hydrate(from: entries)
         persist()
     }
 

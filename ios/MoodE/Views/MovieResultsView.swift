@@ -178,7 +178,10 @@ struct MovieResultsView: View {
                             MovieCard(
                                 movie: movie,
                                 isLoadingTrailer: trailerPlayback.loadingMovieId == movie.id,
-                                onPlayTrailer: { trailerPlayback.play(movie) }
+                                onPlayTrailer: { trailerPlayback.play(movie) },
+                                // Saving from here also stores the mood → goal →
+                                // era combination that produced this pick.
+                                discoverySelection: selection
                             )
                         }
                     }
@@ -352,6 +355,10 @@ struct MovieCard: View {
     let movie: TMDBMovie
     var isLoadingTrailer: Bool = false
     var onPlayTrailer: (() -> Void)? = nil
+    /// Flow choices behind this recommendation. Set only by the results
+    /// screen: cards shown elsewhere (Tendenze, collections) leave it nil,
+    /// so no discovery path is ever recorded for them.
+    var discoverySelection: MoodSelection? = nil
 
     @Environment(MovieLibrary.self) private var library
 
@@ -460,6 +467,7 @@ struct MovieCard: View {
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
                     library.toggleWatchlist(movie)
                 }
+                recordDiscoveryPathIfNeeded()
             }
 
             QuickActionChip(
@@ -472,6 +480,7 @@ struct MovieCard: View {
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
                     library.toggleSeen(movie)
                 }
+                recordDiscoveryPathIfNeeded()
             }
 
             MovieShareButton(
@@ -480,6 +489,18 @@ struct MovieCard: View {
                 tint: Theme.primary
             )
         }
+    }
+
+    /// Remembers emotion, goal and era next to the saved movie. Runs only
+    /// when the movie actually ended up in the library (the chips are
+    /// toggles, so a second tap removes it) and never touches the
+    /// recommendation engine or the already-shown rotation.
+    private func recordDiscoveryPathIfNeeded() {
+        guard let discoverySelection,
+              library.entry(for: movie.id) != nil else { return }
+        let path = DiscoveryPath(selection: discoverySelection)
+        DiscoveryPathStore.shared.record(path, for: movie.id)
+        library.attachDiscoveryPath(path, to: movie.id)
     }
 
     private var poster: some View {

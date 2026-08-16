@@ -148,6 +148,10 @@ struct MovieDetailView: View {
 
                     actionButtons
 
+                    if let discoveryPath = DiscoveryPathStore.shared.path(for: movie.id) {
+                        DiscoveryPathView(path: discoveryPath, style: .panel)
+                    }
+
                     rentOrBuySection(detail)
 
                     if !detail.genres.isEmpty {

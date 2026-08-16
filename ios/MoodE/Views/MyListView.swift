@@ -167,7 +167,34 @@ struct LibraryEntryRow: View {
     @State private var justMarked: Bool = false
     @State private var justRemoved: Bool = false
 
+    /// Discovery path saved with the movie, when it came from the guided
+    /// flow. Movies added from search, Tendenze or the poster scanner have
+    /// none, and then no extra row is shown at all.
+    private var discoveryPath: DiscoveryPath? {
+        DiscoveryPathStore.shared.path(for: entry.id)
+    }
+
     var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            mainRow
+
+            if let discoveryPath {
+                DiscoveryPathView(
+                    path: discoveryPath,
+                    style: .expandable,
+                    tint: Theme.tabList
+                )
+            }
+        }
+        .padding(12)
+        .background(Theme.card, in: .rect(cornerRadius: 22))
+        .overlay(
+            RoundedRectangle(cornerRadius: 22)
+                .stroke(Theme.tabList.opacity(0.12), lineWidth: 1)
+        )
+    }
+
+    private var mainRow: some View {
         HStack(spacing: 12) {
             NavigationLink(value: entry.asMovie) {
                 HStack(alignment: .center, spacing: 14) {
@@ -214,12 +241,6 @@ struct LibraryEntryRow: View {
                 watchedBadge
             }
         }
-        .padding(12)
-        .background(Theme.card, in: .rect(cornerRadius: 22))
-        .overlay(
-            RoundedRectangle(cornerRadius: 22)
-                .stroke(Theme.tabList.opacity(0.12), lineWidth: 1)
-        )
     }
 
     /// Share text for a saved movie: title plus its TMDB page.

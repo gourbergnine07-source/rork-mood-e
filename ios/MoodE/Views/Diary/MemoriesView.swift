@@ -150,6 +150,14 @@ private struct MemoryRow: View {
                             }
                             .padding(.top, 2)
                         }
+
+                        // The emotional route that led to this movie, kept
+                        // next to the rating and the comment so the memory
+                        // tells the whole story: before and after watching.
+                        if let discoveryPath = DiscoveryPathStore.shared.path(for: memory.movieId) {
+                            DiscoveryPathView(path: discoveryPath)
+                                .padding(.top, 3)
+                        }
                     }
 
                     Spacer(minLength: 0)
