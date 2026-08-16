@@ -42,6 +42,30 @@ export type Database = {
         }
         Relationships: []
       }
+      app_release_config: {
+        Row: {
+          latest_version: string
+          minimum_required_version: string
+          notes: Json | null
+          platform: string
+          updated_at: string
+        }
+        Insert: {
+          latest_version?: string
+          minimum_required_version?: string
+          notes?: Json | null
+          platform: string
+          updated_at?: string
+        }
+        Update: {
+          latest_version?: string
+          minimum_required_version?: string
+          notes?: Json | null
+          platform?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       challenge_duos: {
         Row: {
           code: string

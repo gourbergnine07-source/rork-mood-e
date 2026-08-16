@@ -34,7 +34,8 @@ Mood-E è un'app iOS nativa che consiglia film in base a come ti senti. Scegli u
 
 ### Extra
 - **Widget** per la schermata Home (film del giorno, mood rapido)
-- **Localizzazione completa** in 🇮🇹 italiano, 🇬🇧 inglese, 🇪🇸 spagnolo e 🇫🇷 francese
+- **Localizzazione completa** in 🇮🇹 italiano, 🇬🇧 inglese, 🇪🇸 spagnolo, 🇫🇷 francese, 🇩🇪 tedesco e 🇵🇹 portoghese
+- **Avviso aggiornamento** pilotato da remoto, senza pubblicare una nuova build
 - **Deep link** `moode://` per widget e inviti
 
 ---
@@ -63,14 +64,52 @@ Mood-E è un'app iOS nativa che consiglia film in base a come ti senti. Scegli u
 │   │   ├── Models/       # Modelli dati
 │   │   ├── Services/     # TMDB, Supabase, RevenueCat, sync, analytics
 │   │   ├── Utilities/    # Helper ed estensioni
-│   │   └── Resources/    # Localizzazioni it/en/es/fr
+│   │   └── Resources/    # Localizzazioni it/en/es/fr/de/pt
 │   ├── MoodEWidget/      # Widget per la schermata Home
 │   └── metadata/         # Metadati App Store
 ├── functions/            # Cloudflare Workers (bacheca consigli, invite page)
 ├── backend/              # Tipi e schema Supabase
 ├── docs/                 # Privacy policy e termini
-└── screenshots/          # Screenshot App Store ×4 lingue
+└── screenshots/          # Screenshot App Store ×6 lingue
 ```
+
+---
+
+## Avviso di aggiornamento (configurazione remota)
+
+L'invito ad aggiornare non è scritto nel codice: l'app legge a ogni avvio la
+tabella Supabase `app_release_config` (sola lettura per i client). Cambiare
+quei valori è sufficiente per attivare o spegnere l'avviso — **nessuna nuova
+build, nessuna review**.
+
+| Campo | Significato |
+|-------|-------------|
+| `latest_version` | Versione live sull'App Store. Se l'installata è precedente → banner discreto in Home |
+| `minimum_required_version` | Versione minima funzionante. Se l'installata è precedente → schermata bloccante |
+| `notes` | Opzionale: `{"it": "...", "en": "..."}` sostituisce il testo del banner in quella lingua |
+
+Dopo la pubblicazione di una nuova versione, allinea il valore:
+
+```sql
+update public.app_release_config
+   set latest_version = '1.5', updated_at = now()
+ where platform = 'ios';
+```
+
+Per annullare l'avviso basta riportare `latest_version` alla versione
+precedente. Il blocco va usato solo per rotture tecniche reali (es. un'API
+dismessa), mai per annunciare nuove funzionalità:
+
+```sql
+update public.app_release_config
+   set minimum_required_version = '1.5', updated_at = now()
+ where platform = 'ios';
+```
+
+Garanzie di sicurezza: un `minimum_required_version` superiore a
+`latest_version` viene ridotto automaticamente (nessuno resta bloccato senza
+un aggiornamento da installare), i valori malformati vengono ignorati e il
+banner appare al massimo una volta al giorno.
 
 ---
 

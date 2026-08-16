@@ -18,6 +18,8 @@ struct RootView: View {
     @State private var phase: LaunchPhase = .splash
     @AppStorage("onboarding.completed") private var hasCompletedOnboarding: Bool = false
 
+    private var update: AppUpdateService { .shared }
+
     var body: some View {
         ZStack {
             switch phase {
@@ -62,7 +64,16 @@ struct RootView: View {
                         await AdsManager.shared.requestTrackingAndStart()
                     }
             }
+
+            // Mandatory update (remote `minimum_required_version`): covers
+            // every phase, including the splash, and can't be dismissed.
+            if update.isBlocking {
+                ForcedUpdateView()
+                    .transition(.opacity)
+                    .zIndex(10)
+            }
         }
+        .animation(.easeInOut(duration: 0.3), value: update.isBlocking)
     }
 }
 

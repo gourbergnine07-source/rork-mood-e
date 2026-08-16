@@ -64,6 +64,9 @@ struct MoodEApp: App {
                     await auth.checkAuth()
                     await CloudSyncService.shared.syncIfSignedIn()
                     await ICloudSyncService.shared.syncIfPremium()
+                    // Silently compares this build with the version declared
+                    // on the backend (no new build needed to change it).
+                    await AppUpdateService.shared.check()
                 }
                 .onChange(of: scenePhase) { _, newPhase in
                     guard newPhase == .active else { return }
@@ -82,6 +85,7 @@ struct MoodEApp: App {
                         )
                         await CloudSyncService.shared.syncIfSignedIn()
                         await ICloudSyncService.shared.syncIfPremium()
+                        await AppUpdateService.shared.check()
                         await AnalyticsService.shared.flush()
                     }
                 }

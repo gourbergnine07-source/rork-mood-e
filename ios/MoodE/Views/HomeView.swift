@@ -11,6 +11,7 @@ struct HomeView: View {
     @Environment(MoodDiary.self) private var diary
     private let history = NotificationHistory.shared
     private var premium: PremiumStore { .shared }
+    private var update: AppUpdateService { .shared }
 
     @State private var showPosterScan: Bool = false
     @State private var showScanPaywall: Bool = false
@@ -26,6 +27,15 @@ struct HomeView: View {
                 Theme.background.ignoresSafeArea()
                 MoodFlowView(path: $path)
             }
+            // Discreet update invite: pushes the flow down instead of
+            // covering it, and disappears as soon as it's dismissed.
+            .safeAreaInset(edge: .top) {
+                if update.isBannerVisible {
+                    UpdateBannerView()
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
+            }
+            .animation(.spring(response: 0.45, dampingFraction: 0.85), value: update.isBannerVisible)
             .navigationTitle("Mood-E")
             .toolbarTitleDisplayMode(.inline)
             .toolbar {
