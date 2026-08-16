@@ -1,0 +1,5 @@
+/* Permission prompts — Portuguese */
+"NSCameraUsageDescription" = "A câmara serve apenas para fotografar o cartaz de um filme e reconhecê-lo automaticamente.";
+"NSLocationWhenInUseUsageDescription" = "Usamos a tua localização apenas para saber em que país estás e mostrar-te os filmes em exibição e os cinemas perto de ti.";
+"NSUserTrackingUsageDescription" = "Vamos mostrar-te anúncios mais relevantes para os teus interesses.";
+"NSPhotoLibraryUsageDescription" = "Escolhe a fotografia de um cartaz da tua biblioteca para reconhecer o filme.";

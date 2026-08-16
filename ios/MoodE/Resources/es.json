@@ -1023,7 +1023,7 @@
   "settings.language": "Idioma",
   "settings.language.footer": "La interfaz y los datos de las películas (títulos, sinopsis, géneros) cambian inmediatamente al idioma seleccionado.",
   "settings.language.header": "Idioma",
-  "settings.legal.footer": "Esta app utiliza datos proporcionados por TMDB pero no está aprobada ni certificada por TMDB. Los documentos legales están disponibles actualmente en italiano.",
+  "settings.legal.footer": "Esta app utiliza datos proporcionados por TMDB pero no está aprobada ni certificada por TMDB. Los documentos legales están disponibles en italiano, inglés, español, francés, alemán y portugués.",
   "settings.legal.header": "Legal",
   "settings.legal.hub": "Legal y soporte",
   "settings.legal.terms": "Términos de uso",

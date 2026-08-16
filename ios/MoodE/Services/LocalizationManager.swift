@@ -13,6 +13,8 @@ enum AppLanguage: String, CaseIterable, Identifiable {
     case english = "en"
     case espanol = "es"
     case francais = "fr"
+    case deutsch = "de"
+    case portugues = "pt"
 
     var id: String { rawValue }
 
@@ -23,6 +25,8 @@ enum AppLanguage: String, CaseIterable, Identifiable {
         case .english: return "English"
         case .espanol: return "Español"
         case .francais: return "Français"
+        case .deutsch: return "Deutsch"
+        case .portugues: return "Português"
         }
     }
 
@@ -32,16 +36,35 @@ enum AppLanguage: String, CaseIterable, Identifiable {
         case .english: return "🇬🇧"
         case .espanol: return "🇪🇸"
         case .francais: return "🇫🇷"
+        case .deutsch: return "🇩🇪"
+        case .portugues: return "🇵🇹"
         }
     }
 
-    /// Value for the TMDB "language" query parameter.
+    /// Value for the TMDB "language" query parameter. Portuguese uses the
+    /// European variant; a separate pt-BR case can be added later if the
+    /// Brazilian market gets its own entry.
     var tmdbCode: String {
         switch self {
         case .italiano: return "it-IT"
         case .english: return "en-US"
         case .espanol: return "es-ES"
         case .francais: return "fr-FR"
+        case .deutsch: return "de-DE"
+        case .portugues: return "pt-PT"
+        }
+    }
+
+    /// Country used for release dates, cinema listings and streaming
+    /// availability when the device region is unknown.
+    var region: String {
+        switch self {
+        case .italiano: return "IT"
+        case .english: return "US"
+        case .espanol: return "ES"
+        case .francais: return "FR"
+        case .deutsch: return "DE"
+        case .portugues: return "PT"
         }
     }
 
@@ -52,18 +75,24 @@ enum AppLanguage: String, CaseIterable, Identifiable {
         case .english: return Locale(identifier: "en_US")
         case .espanol: return Locale(identifier: "es_ES")
         case .francais: return Locale(identifier: "fr_FR")
+        case .deutsch: return Locale(identifier: "de_DE")
+        case .portugues: return Locale(identifier: "pt_PT")
         }
     }
 }
 
-/// Thread-safe string tables loaded once from the bundled it/en/es/fr JSON files.
-/// Usable from nonisolated contexts (errors, cache, Codable helpers).
+/// Thread-safe string tables loaded once from the bundled JSON files, one per
+/// supported language. Usable from nonisolated contexts (errors, cache,
+/// Codable helpers).
 nonisolated enum L10nStore {
     static let storageKey = "app.language"
 
+    /// Language codes with a bundled string table; mirrors `AppLanguage`.
+    static let supportedCodes: [String] = ["it", "en", "es", "fr", "de", "pt"]
+
     private static let tables: [String: [String: String]] = {
         var result: [String: [String: String]] = [:]
-        for code in ["it", "en", "es", "fr"] {
+        for code in supportedCodes {
             guard let url = Bundle.main.url(forResource: code, withExtension: "json"),
                   let data = try? Data(contentsOf: url),
                   let dict = try? JSONDecoder().decode([String: String].self, from: data) else {
@@ -81,9 +110,15 @@ nonisolated enum L10nStore {
     }
 
     /// System language mapped to a supported one; English is the fallback.
+    /// Every Portuguese variant (pt-BR, pt-PT) maps to the single `pt` table.
     static var detectedCode: String {
         let preferred = Locale.preferredLanguages.first?.prefix(2).lowercased() ?? "en"
-        return ["it", "es", "fr", "en"].contains(preferred) ? String(preferred) : "en"
+        return supportedCodes.contains(String(preferred)) ? String(preferred) : "en"
+    }
+
+    /// Region matching the persisted language, used by nonisolated callers.
+    static var currentRegion: String {
+        AppLanguage(rawValue: currentCode)?.region ?? "US"
     }
 
     static var currentLocale: Locale {

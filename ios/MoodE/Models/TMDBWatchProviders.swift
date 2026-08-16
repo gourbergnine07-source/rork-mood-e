@@ -14,13 +14,7 @@ nonisolated struct TMDBWatchProviderResults: Codable, Hashable {
     /// then the app-language default, then US. Returns nil when nothing
     /// meaningful is available (the section is simply hidden).
     var bestRegion: TMDBWatchProviderRegion? {
-        let languageRegion: String
-        switch L10nStore.currentCode {
-        case "it": languageRegion = "IT"
-        case "es": languageRegion = "ES"
-        case "fr": languageRegion = "FR"
-        default: languageRegion = "US"
-        }
+        let languageRegion = L10nStore.currentRegion
 
         var candidates: [String] = []
         if let device = Locale.current.region?.identifier {

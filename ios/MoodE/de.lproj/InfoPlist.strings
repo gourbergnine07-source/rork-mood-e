@@ -1,0 +1,5 @@
+/* Permission prompts — German */
+"NSCameraUsageDescription" = "Die Kamera wird nur genutzt, um ein Filmposter zu fotografieren und den Film automatisch zu erkennen.";
+"NSLocationWhenInUseUsageDescription" = "Wir nutzen deinen Standort nur, um dein Land zu erkennen und dir die Filme im Kino sowie Kinos in deiner Nähe zu zeigen.";
+"NSUserTrackingUsageDescription" = "Wir zeigen dir Werbung, die besser zu deinen Interessen passt.";
+"NSPhotoLibraryUsageDescription" = "Wähle das Foto eines Posters aus deiner Galerie, um den Film zu erkennen.";

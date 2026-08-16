@@ -114,11 +114,13 @@ enum AffiliateLinks {
 
     /// Apple TV web storefront matching the app language.
     private static var storefront: String {
-        switch LocalizationManager.shared.language.rawValue {
-        case "it": return "it"
-        case "es": return "es"
-        case "fr": return "fr"
-        default: return "us"
+        switch LocalizationManager.shared.language {
+        case .italiano: return "it"
+        case .espanol: return "es"
+        case .francais: return "fr"
+        case .deutsch: return "de"
+        case .portugues: return "pt"
+        case .english: return "us"
         }
     }
 
@@ -126,11 +128,14 @@ enum AffiliateLinks {
     /// Note: Amazon Associates tags are per-marketplace; when the real
     /// tags arrive, map one tag per host here.
     private static var amazonHost: String {
-        switch LocalizationManager.shared.language.rawValue {
-        case "it": return "www.amazon.it"
-        case "es": return "www.amazon.es"
-        case "fr": return "www.amazon.fr"
-        default: return "www.amazon.com"
+        switch LocalizationManager.shared.language {
+        case .italiano: return "www.amazon.it"
+        case .espanol: return "www.amazon.es"
+        case .francais: return "www.amazon.fr"
+        case .deutsch: return "www.amazon.de"
+        // Amazon has no Portuguese marketplace: Portugal is served by amazon.es.
+        case .portugues: return "www.amazon.es"
+        case .english: return "www.amazon.com"
         }
     }
 

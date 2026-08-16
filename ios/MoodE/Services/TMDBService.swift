@@ -298,15 +298,17 @@ enum TMDBService {
         return await fillingMissingOverviews(response, path: path, queryItems: []).results
     }
 
-    /// Movies currently playing in theatres (region-aware).
-    static func nowPlayingMovies(region: String = "IT") async throws -> [TMDBMovie] {
+    /// Movies currently playing in theatres (region-aware). The default
+    /// follows the chosen language's country (IT, ES, FR, DE, PT, US).
+    static func nowPlayingMovies(region: String = L10nStore.currentRegion) async throws -> [TMDBMovie] {
         let queryItems = [URLQueryItem(name: "region", value: region)]
         let response: TMDBMovieListResponse = try await request(path: "/movie/now_playing", queryItems: queryItems)
         return await fillingMissingOverviews(response, path: "/movie/now_playing", queryItems: queryItems).results
     }
 
-    /// Upcoming cinema releases (region-aware), used for release-day notifications.
-    static func upcomingMovies(region: String = "IT") async throws -> [TMDBMovie] {
+    /// Upcoming cinema releases (region-aware), used for release-day
+    /// notifications. Same default country as `nowPlayingMovies`.
+    static func upcomingMovies(region: String = L10nStore.currentRegion) async throws -> [TMDBMovie] {
         let queryItems = [URLQueryItem(name: "region", value: region)]
         let response: TMDBMovieListResponse = try await request(path: "/movie/upcoming", queryItems: queryItems)
         return response.results
@@ -572,12 +574,7 @@ enum TMDBService {
         if let device = Locale.current.region?.identifier {
             return device
         }
-        switch LocalizationManager.shared.language.rawValue {
-        case "it": return "IT"
-        case "es": return "ES"
-        case "fr": return "FR"
-        default: return "US"
-        }
+        return LocalizationManager.shared.language.region
     }
 
     // MARK: - Selection → query mapping

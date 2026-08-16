@@ -284,6 +284,8 @@
 				it,
 				es,
 				fr,
+				de,
+				pt,
 				Base,
 			);
 			mainGroup = 105FC5712E9EAD3100EA8BCF;
