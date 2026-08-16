@@ -27,6 +27,19 @@ final class AdsManager: NSObject, FullScreenContentDelegate {
     private(set) var isStarted = false
     private(set) var isRewardedReady = false
 
+    /// In the simulator AdMob only ever fills banner slots with test
+    /// placeholders, badged with a "Test mode" label. Those badges were
+    /// ending up baked into App Store screenshots, so banners are not
+    /// mounted there. Device builds — including every App Store build —
+    /// are unaffected and keep serving real banners.
+    static var isBannerRenderingSuppressed: Bool {
+        #if targetEnvironment(simulator)
+        return true
+        #else
+        return false
+        #endif
+    }
+
     private var interstitial: InterstitialAd?
     private var rewarded: RewardedAd?
     private var pendingInterstitialCompletion: (() -> Void)?

@@ -18,44 +18,48 @@
     "it": {
       "Scelta emozione": "Il film giusto<br>per come ti senti",
       "Film consigliati": "15 film pensati<br>solo per te",
+      "Scansiona un poster": "Inquadra il poster,<br>scopri il film",
       "Dettaglio e trailer": "Guarda il trailer<br>senza uscire",
       "Tendenze": "Scopri cosa<br>guardano tutti",
       "La mia lista": "La tua lista<br>sempre con te"
     },
     "en": {
-      "Scelta emozione": "Feeling It?<br>We've Got The Movie",
-      "Film consigliati": "15 Picks,<br>Made For You",
-      "Dettaglio e trailer": "Watch The Trailer<br>Instantly",
-      "Tendenze": "See What's<br>Trending Now",
-      "La mia lista": "Your List,<br>No Account Needed"
+      "Scelta emozione": "Your mood,<br>your movie",
+      "Film consigliati": "15 picks,<br>made for you",
+      "Scansiona un poster": "Point at a poster,<br>know the film",
+      "Dettaglio e trailer": "Watch the trailer<br>right here",
+      "Tendenze": "See what's<br>trending now",
+      "La mia lista": "Your list,<br>no account"
     },
     "es": {
       "Scelta emozione": "¿Cómo te<br>sientes hoy?",
       "Film consigliati": "Tu peli ideal<br>en segundos",
-      "Dettaglio e trailer": "Tráiler al<br>instante",
+      "Scansiona un poster": "Apunta al cartel,<br>descubre la peli",
+      "Dettaglio e trailer": "Ve el tráiler<br>al instante",
       "Tendenze": "Lo que todos<br>están viendo",
       "La mia lista": "Tu lista,<br>sin cuenta"
     },
     "fr": {
-      "Scelta emozione": "Ton humeur<br>Ton film",
-      "Film consigliati": "15 films<br>Juste pour toi",
-      "Dettaglio e trailer": "La bande-annonce<br>Sans quitter l'appli",
-      "Tendenze": "Ce que tout<br>Le monde regarde",
-      "La mia lista": "Ta liste<br>Sans compte"
+      "Scelta emozione": "Ton humeur,<br>ton film",
+      "Film consigliati": "15 films<br>juste pour toi",
+      "Scansiona un poster": "Vise l'affiche,<br>trouve le film",
+      "Dettaglio e trailer": "La bande-annonce<br>tout de suite",
+      "Tendenze": "Ce que tout<br>le monde regarde",
+      "La mia lista": "Ta liste,<br>sans compte"
     },
     "de": {
       "Scelta emozione": "Der richtige Film<br>für dein Gefühl",
-      "Film consigliati": "15 Filme<br>nur für dich",
+      "Film consigliati": "Nur für dich:<br>15 Filme",
       "Scansiona un poster": "Plakat scannen,<br>Film gefunden",
-      "Dettaglio e trailer": "Trailer ansehen<br>ohne Umwege",
+      "Dettaglio e trailer": "Trailer direkt<br>in der App",
       "Tendenze": "Sieh, was alle<br>gerade schauen",
       "La mia lista": "Deine Liste,<br>ohne Konto"
     },
     "pt": {
       "Scelta emozione": "O filme certo<br>para o que sentes",
-      "Film consigliati": "15 filmes<br>só para ti",
+      "Film consigliati": "Só para ti:<br>15 filmes",
       "Scansiona un poster": "Aponta ao cartaz,<br>descobre o filme",
-      "Dettaglio e trailer": "Vê o trailer<br>sem sair da app",
+      "Dettaglio e trailer": "Trailer sem<br>sair da app",
       "Tendenze": "Vê o que<br>todos estão a ver",
       "La mia lista": "A tua lista,<br>sem conta"
     }

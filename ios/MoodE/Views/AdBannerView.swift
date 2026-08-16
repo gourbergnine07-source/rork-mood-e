@@ -16,7 +16,8 @@ struct AdBannerView: View {
 
     var body: some View {
         // Premium: nessun banner in tutta l'app.
-        if ads.isStarted, !PremiumStore.shared.isPremium {
+        // Simulatore: nessun banner, evita il badge "Test mode" negli screenshot.
+        if ads.isStarted, !PremiumStore.shared.isPremium, !AdsManager.isBannerRenderingSuppressed {
             let width = UIScreen.main.bounds.width
             let adSize = currentOrientationAnchoredAdaptiveBanner(width: width)
             BannerViewRepresentable(adSize: adSize)
