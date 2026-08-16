@@ -80,7 +80,7 @@ struct MoodFlowView: View {
         }
         .sheet(isPresented: $showQuiz) {
             NavigationStack {
-                SpectatorQuizView(isPresentedAsSheet: true)
+                QuizHubView(isPresentedAsSheet: true)
             }
             .tint(Theme.primary)
         }

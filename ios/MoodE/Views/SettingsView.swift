@@ -752,7 +752,7 @@ struct SettingsView: View {
 
             if premium.isPremium {
                 NavigationLink {
-                    SpectatorQuizView()
+                    QuizHubView()
                 } label: {
                     quizRowLabel
                 }
@@ -783,7 +783,7 @@ struct SettingsView: View {
 
     private var quizRowLabel: some View {
         HStack(spacing: 12) {
-            Text(quiz.profile?.emoji ?? "\u{1F3AD}")
+            Text("\u{1F3AD}")
                 .font(.system(size: 20))
                 .frame(width: 29, height: 29)
 
@@ -791,13 +791,19 @@ struct SettingsView: View {
                 Text(L("quiz.settings.row"))
                     .font(.body)
                     .foregroundStyle(Theme.ink)
-                Text(premium.isPremium
-                    ? (quiz.profile?.title ?? L("quiz.settings.sub.none"))
-                    : L("premium.locked"))
+                Text(quizRowSubtitle)
                     .font(.caption)
                     .foregroundStyle(Theme.inkSoft)
             }
         }
+    }
+
+    /// Kept-results count when there is one, otherwise an invitation: the row
+    /// now leads to every quiz, not just the spectator one.
+    private var quizRowSubtitle: String {
+        guard premium.isPremium else { return L("premium.locked") }
+        let kept = quiz.savedResults.count
+        return kept == 0 ? L("quiz.settings.sub.none") : LF("quiz.history.count", kept)
     }
 
     // MARK: - Servizi streaming

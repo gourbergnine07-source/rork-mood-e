@@ -221,23 +221,30 @@ struct MonthlyRecapShareCardView: View {
     }
 }
 
-/// Story-friendly card of the spectator-quiz result: profile emblem,
-/// title, description and the Mood-E brand. Fixed size for rendering.
+/// Story-friendly card of any quiz result: the quiz name, the outcome emblem,
+/// its title and description, plus the score for level-based quizzes.
+/// Fixed size for deterministic on-device rendering.
 struct QuizShareCardView: View {
-    let profile: SpectatorProfile
+    let quizTitle: String
+    let outcome: QuizOutcome
+    /// "13/18 punti", only for the level-based quiz.
+    var scoreText: String?
 
     private let cream = Color(red: 0.949, green: 0.918, blue: 0.890)
 
     var body: some View {
-        VStack(spacing: 18) {
+        VStack(spacing: 16) {
             Text("\u{1F3AC} Mood-E")
                 .font(.system(size: 15, weight: .heavy, design: .rounded))
                 .foregroundStyle(cream.opacity(0.9))
                 .kerning(1.5)
 
-            Text(L("quiz.title"))
+            Text(quizTitle)
                 .font(.system(size: 20, weight: .bold, design: .rounded))
                 .foregroundStyle(cream)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .minimumScaleFactor(0.8)
 
             ZStack {
                 Circle()
@@ -246,19 +253,29 @@ struct QuizShareCardView: View {
                 Circle()
                     .strokeBorder(.white.opacity(0.35), lineWidth: 2)
                     .frame(width: 168, height: 168)
-                Text(profile.emoji)
+                Text(outcome.emoji)
                     .font(.system(size: 80))
             }
-            .padding(.top, 8)
+            .padding(.top, 6)
 
-            Text(profile.title)
+            Text(outcome.title)
                 .font(.system(size: 30, weight: .black, design: .rounded))
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
                 .minimumScaleFactor(0.7)
 
-            Text(profile.detail)
+            if let scoreText {
+                Text(scoreText)
+                    .font(.system(size: 15, weight: .heavy, design: .rounded))
+                    .foregroundStyle(cream)
+                    .monospacedDigit()
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 6)
+                    .background(.white.opacity(0.18), in: .capsule)
+            }
+
+            Text(outcome.detail)
                 .font(.system(size: 15, weight: .medium, design: .rounded))
                 .foregroundStyle(cream.opacity(0.92))
                 .multilineTextAlignment(.center)
@@ -275,7 +292,7 @@ struct QuizShareCardView: View {
         .frame(width: 350, height: 600)
         .background(
             LinearGradient(
-                colors: profile.gradient,
+                colors: outcome.gradient,
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )

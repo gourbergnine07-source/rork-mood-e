@@ -6,12 +6,11 @@
 import SwiftUI
 
 /// "In evidenza" strip at the top of Home: a single ultra-thin row of small
-/// gradient icon buttons (one per active editorial collection, plus the
-/// spectator quiz). Each icon carries a tiny caption underneath; the full
+/// gradient icon buttons (one per active editorial collection, plus the quiz
+/// section). Each icon carries a tiny caption underneath; the full
 /// title/subtitle appears in a context menu on long press. Designed so the
 /// whole row is barely taller than a line of text and Home never scrolls.
 struct FeaturedStripView: View {
-    @Environment(QuizStore.self) private var quiz
     @Binding var showQuiz: Bool
     @Binding var showPaywall: Bool
     @Binding var quizBannerHidden: Bool
@@ -141,8 +140,8 @@ struct FeaturedStripView: View {
         }
     }
 
-    /// Spectator-quiz invitation as a small icon button, identical in shape
-    /// to the collection icons; the lock badge (→ paywall) is the only
+    /// Entry point to the quiz section as a small icon button, identical in
+    /// shape to the collection icons; the lock badge (→ paywall) is the only
     /// difference for Free users. Long press offers the hide action.
     private var quizCard: some View {
         Button {
@@ -184,7 +183,7 @@ struct FeaturedStripView: View {
                     }
                 }
 
-                Text(L("quiz.banner.title"))
+                Text(L("quiz.hub.title"))
                     .font(.system(size: FeaturedCardMetrics.captionSize, weight: .semibold))
                     .foregroundStyle(Theme.ink)
                     .lineLimit(2)
@@ -199,7 +198,7 @@ struct FeaturedStripView: View {
         .sensoryFeedback(.impact(weight: .light), trigger: showQuiz)
         // Long-press tooltip: full copy + hide action (replaces the old ✕).
         .contextMenu {
-            Section("\(L("quiz.banner.title")) — \(isPremium ? (quiz.profile == nil ? L("quiz.banner.sub") : L("quiz.banner.retake")) : L("premium.locked"))") {
+            Section("\(L("quiz.hub.title")) — \(quizMenuSubtitle)") {
                 Button {
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
                         quizBannerHidden = true
@@ -210,7 +209,11 @@ struct FeaturedStripView: View {
             }
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(L("quiz.banner.title")). \(isPremium ? (quiz.profile == nil ? L("quiz.banner.sub") : L("quiz.banner.retake")) : L("premium.locked"))")
+        .accessibilityLabel("\(L("quiz.hub.title")). \(quizMenuSubtitle)")
+    }
+
+    private var quizMenuSubtitle: String {
+        isPremium ? L("quiz.hub.subtitle") : L("premium.locked")
     }
 }
 
