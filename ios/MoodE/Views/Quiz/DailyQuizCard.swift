@@ -255,12 +255,7 @@ struct DailyQuizPlayerSheet: View {
                         .accessibilityLabel(L("common.close"))
                     }
                 }
-                .navigationDestination(for: QuizDefinition.self) { definition in
-                    QuizPlayerView(definition: definition)
-                }
-                .navigationDestination(for: MoodSelection.self) { selection in
-                    MovieResultsView(selection: selection)
-                }
+                .quizNavigationDestinations()
                 .navigationDestination(for: TMDBMovie.self) { movie in
                     MovieDetailView(movie: movie)
                 }

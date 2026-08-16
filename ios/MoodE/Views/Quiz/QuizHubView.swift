@@ -5,6 +5,29 @@
 
 import SwiftUI
 
+/// Registers every destination the quiz screens can push.
+///
+/// NOTE: this must be applied at the root of the enclosing NavigationStack, not
+/// on `QuizHubView` itself. A `navigationDestination` declared inside a view
+/// that was already pushed is not visible to the links it contains, so the taps
+/// resolve to an empty screen.
+extension View {
+    func quizNavigationDestinations() -> some View {
+        self
+            .navigationDestination(for: QuizDefinition.self) { definition in
+                QuizPlayerView(definition: definition)
+            }
+            .navigationDestination(for: QuizResult.self) { result in
+                QuizSavedResultView(result: result)
+            }
+            // "Che serata guardi stasera?" ends on a ready-made suggestion
+            // that opens the regular results screen.
+            .navigationDestination(for: MoodSelection.self) { selection in
+                MovieResultsView(selection: selection)
+            }
+    }
+}
+
 /// "Quiz": the list of every quiz available, plus the door to the collection of
 /// kept results. Reachable from the Home strip and from Impostazioni, and
 /// reserved to Premium subscribers like the rest of the quiz feature.
@@ -56,17 +79,6 @@ struct QuizHubView: View {
                     .accessibilityLabel(L("common.close"))
                 }
             }
-        }
-        .navigationDestination(for: QuizDefinition.self) { definition in
-            QuizPlayerView(definition: definition)
-        }
-        .navigationDestination(for: QuizResult.self) { result in
-            QuizSavedResultView(result: result)
-        }
-        // "Che serata guardi stasera?" ends on a ready-made suggestion that
-        // opens the regular results screen.
-        .navigationDestination(for: MoodSelection.self) { selection in
-            MovieResultsView(selection: selection)
         }
     }
 
@@ -217,6 +229,7 @@ struct QuizHubView: View {
 #Preview {
     NavigationStack {
         QuizHubView()
+            .quizNavigationDestinations()
     }
     .environment(QuizStore())
     .environment(PersonalizationStore())

@@ -134,6 +134,7 @@ struct SettingsView: View {
             .navigationDestination(for: ProfileRoute.self) { _ in
                 ProfileEditorView()
             }
+            .quizNavigationDestinations()
             .sheet(isPresented: $showAccountSheet) {
                 AccountSheetView()
             }
