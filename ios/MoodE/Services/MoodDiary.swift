@@ -204,6 +204,17 @@ final class MoodDiary {
         publishWidgetSnapshot()
     }
 
+    /// Removes one proposed movie from a check-in (the diary reference only:
+    /// the watchlist and the "Già visti" list are left untouched).
+    func removeProposed(movieId: Int, from checkInId: UUID) {
+        guard let index = checkIns.firstIndex(where: { $0.id == checkInId }) else { return }
+        let before = checkIns[index].proposed.count
+        checkIns[index].proposed.removeAll { $0.id == movieId }
+        guard checkIns[index].proposed.count != before else { return }
+        persist()
+        publishWidgetSnapshot()
+    }
+
     /// Sets, edits or clears (empty text → nil) the personal note of a check-in.
     func setNote(_ note: String, for id: UUID) {
         guard let index = checkIns.firstIndex(where: { $0.id == id }) else { return }

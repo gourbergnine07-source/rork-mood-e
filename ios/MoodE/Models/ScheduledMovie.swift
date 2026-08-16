@@ -18,6 +18,23 @@ nonisolated struct ScheduledMovie: Codable, Identifiable, Hashable {
         guard let posterPath else { return nil }
         return URL(string: "https://image.tmdb.org/t/p/w500\(posterPath)")
     }
+
+    /// Minimal movie used to open the shared detail screen (full data is
+    /// fetched there). Keeps the diary and the memories gallery on the very
+    /// same detail page, with no duplicated logic.
+    var asMovie: TMDBMovie {
+        TMDBMovie(
+            id: movieId,
+            title: title,
+            overview: "",
+            posterPath: posterPath,
+            backdropPath: nil,
+            releaseDate: nil,
+            voteAverage: 0,
+            voteCount: 0,
+            genreIds: genreIds
+        )
+    }
 }
 
 /// A watched planned movie turned into a personal memory:
@@ -38,6 +55,22 @@ nonisolated struct MovieMemory: Codable, Identifiable, Hashable {
     }
 
     var ratingEmoji: String { EmojiRating.emoji(for: rating) }
+
+    /// Minimal movie used to open the shared detail screen, so a memory
+    /// opens exactly the same page as any other movie in the app.
+    var asMovie: TMDBMovie {
+        TMDBMovie(
+            id: movieId,
+            title: title,
+            overview: "",
+            posterPath: posterPath,
+            backdropPath: nil,
+            releaseDate: nil,
+            voteAverage: 0,
+            voteCount: 0,
+            genreIds: genreIds
+        )
+    }
 }
 
 /// The 5-level emoji scale used instead of stars, in line with the

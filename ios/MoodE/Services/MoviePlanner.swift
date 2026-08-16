@@ -21,9 +21,14 @@ struct MonthlyRecap {
 final class MoviePlanner {
     private(set) var scheduled: [ScheduledMovie]
     private(set) var memories: [MovieMemory]
+    /// Diary references the user removed by hand ("movieId|yyyy-MM-dd").
+    /// They only hide the movie from that diary day: the general watchlist
+    /// and the "Già visti" list keep their own data untouched.
+    private(set) var hiddenDiaryRefs: Set<String>
 
     private static let scheduledKey = "planner.scheduled"
     private static let memoriesKey = "planner.memories"
+    private static let hiddenRefsKey = "planner.hiddenDiaryRefs"
     /// Minimum watched movies in a month to unlock the monthly recap.
     private static let monthlyRecapThreshold = 8
 
@@ -43,6 +48,7 @@ final class MoviePlanner {
         } else {
             memories = []
         }
+        hiddenDiaryRefs = Set(defaults.stringArray(forKey: Self.hiddenRefsKey) ?? [])
     }
 
     // MARK: - Queries
@@ -76,6 +82,36 @@ final class MoviePlanner {
     /// Memories newest first, for "I miei ricordi cinematografici".
     var sortedMemories: [MovieMemory] {
         memories.sorted { $0.watchedDate > $1.watchedDate }
+    }
+
+    /// Memories whose watch date falls on a given diary day, newest first.
+    func memories(on day: Date) -> [MovieMemory] {
+        let calendar = Calendar.current
+        return sortedMemories.filter { calendar.isDate($0.watchedDate, inSameDayAs: day) }
+    }
+
+    // MARK: - Hidden diary references
+
+    /// Stable key for a (movie, day) diary reference.
+    private static func refKey(movieId: Int, day: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+        return "\(movieId)|\(formatter.string(from: Calendar.current.startOfDay(for: day)))"
+    }
+
+    /// True when the user removed this movie from that specific diary day.
+    func isHiddenFromDiary(movieId: Int, on day: Date) -> Bool {
+        hiddenDiaryRefs.contains(Self.refKey(movieId: movieId, day: day))
+    }
+
+    /// Hides a movie from one diary day without touching the watchlist,
+    /// the "Già visti" list or any other day.
+    func hideFromDiary(movieId: Int, on day: Date) {
+        let key = Self.refKey(movieId: movieId, day: day)
+        guard !hiddenDiaryRefs.contains(key) else { return }
+        hiddenDiaryRefs.insert(key)
+        defaults.set(Array(hiddenDiaryRefs), forKey: Self.hiddenRefsKey)
     }
 
     // MARK: - Scheduling

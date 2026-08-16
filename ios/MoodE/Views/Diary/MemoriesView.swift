@@ -13,6 +13,7 @@ struct MemoriesView: View {
 
     @State private var sharePayload: ShareCardPayload?
     @State private var renderingId: UUID?
+    @State private var pendingDeletion: MovieMemory?
 
     var body: some View {
         ZStack {
@@ -26,15 +27,13 @@ struct MemoriesView: View {
                         ForEach(planner.sortedMemories) { memory in
                             MemoryRow(
                                 memory: memory,
-                                isRendering: renderingId == memory.id
-                            ) {
-                                share(memory)
-                            }
+                                isRendering: renderingId == memory.id,
+                                onShare: { share(memory) },
+                                onDelete: { pendingDeletion = memory }
+                            )
                             .contextMenu {
                                 Button(role: .destructive) {
-                                    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                                        planner.removeMemory(memory.id)
-                                    }
+                                    pendingDeletion = memory
                                 } label: {
                                     Label(L("common.delete"), systemImage: "trash")
                                 }
@@ -51,6 +50,26 @@ struct MemoriesView: View {
         .toolbarTitleDisplayMode(.inline)
         .sheet(item: $sharePayload) { payload in
             ShareCardSheet(payload: payload)
+        }
+        .alert(
+            L("diary.movie.remove.title"),
+            isPresented: Binding(
+                get: { pendingDeletion != nil },
+                set: { isPresented in
+                    if !isPresented { pendingDeletion = nil }
+                }
+            ),
+            presenting: pendingDeletion
+        ) { memory in
+            Button(L("common.cancel"), role: .cancel) { pendingDeletion = nil }
+            Button(L("diary.movie.remove.confirm"), role: .destructive) {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                    planner.removeMemory(memory.id)
+                }
+                pendingDeletion = nil
+            }
+        } message: { _ in
+            Text(L("diary.movie.remove.msg"))
         }
     }
 
@@ -94,40 +113,53 @@ private struct MemoryRow: View {
     let memory: MovieMemory
     let isRendering: Bool
     let onShare: () -> Void
+    let onDelete: () -> Void
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            poster
+        HStack(alignment: .top, spacing: 6) {
+            NavigationLink(value: memory.asMovie) {
+                HStack(alignment: .top, spacing: 12) {
+                    poster
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(memory.title)
-                    .font(.subheadline.weight(.bold))
-                    .foregroundStyle(Theme.ink)
-                    .lineLimit(2)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(memory.title)
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(Theme.ink)
+                            .underline(true, color: Theme.primary.opacity(0.4))
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
 
-                HStack(spacing: 6) {
-                    Text(memory.ratingEmoji)
-                        .font(.system(size: 17))
-                    Text(dateString)
-                        .font(.caption)
-                        .foregroundStyle(Theme.inkSoft)
-                }
+                        HStack(spacing: 6) {
+                            Text(memory.ratingEmoji)
+                                .font(.system(size: 17))
+                            Text(dateString)
+                                .font(.caption)
+                                .foregroundStyle(Theme.inkSoft)
+                        }
 
-                if let comment = memory.comment {
-                    HStack(alignment: .top, spacing: 6) {
-                        RoundedRectangle(cornerRadius: 2)
-                            .fill(Theme.rose.opacity(0.5))
-                            .frame(width: 3)
-                        Text(comment)
-                            .font(.footnote.italic())
-                            .foregroundStyle(Theme.ink.opacity(0.85))
-                            .lineLimit(3)
+                        if let comment = memory.comment {
+                            HStack(alignment: .top, spacing: 6) {
+                                RoundedRectangle(cornerRadius: 2)
+                                    .fill(Theme.rose.opacity(0.5))
+                                    .frame(width: 3)
+                                Text(comment)
+                                    .font(.footnote.italic())
+                                    .foregroundStyle(Theme.ink.opacity(0.85))
+                                    .lineLimit(3)
+                                    .multilineTextAlignment(.leading)
+                            }
+                            .padding(.top, 2)
+                        }
                     }
-                    .padding(.top, 2)
-                }
-            }
 
-            Spacer(minLength: 4)
+                    Spacer(minLength: 0)
+                }
+                .contentShape(.rect)
+            }
+            .buttonStyle(DiaryLinkButtonStyle(accent: Theme.primary))
+            .accessibilityHint(L("diary.movie.open"))
+
+            DiaryMovieMenu(onDelete: onDelete)
 
             Button(action: onShare) {
                 Group {

@@ -16,6 +16,22 @@ nonisolated struct ProposedMovie: Codable, Hashable, Identifiable {
         guard let posterPath else { return nil }
         return URL(string: "https://image.tmdb.org/t/p/w200\(posterPath)")
     }
+
+    /// Minimal movie used to open the shared detail screen from the diary
+    /// (the full record is fetched by the detail view itself).
+    var asMovie: TMDBMovie {
+        TMDBMovie(
+            id: id,
+            title: title,
+            overview: "",
+            posterPath: posterPath,
+            backdropPath: nil,
+            releaseDate: nil,
+            voteAverage: 0,
+            voteCount: 0,
+            genreIds: genreIds
+        )
+    }
 }
 
 /// One completed mood flow (full or quick pick), recorded in the local diary.

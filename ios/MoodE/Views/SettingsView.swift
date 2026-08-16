@@ -123,6 +123,9 @@ struct SettingsView: View {
                 case .friends: FriendsView()
                 }
             }
+            .navigationDestination(for: TMDBMovie.self) { movie in
+                MovieDetailView(movie: movie)
+            }
             .navigationDestination(for: ProfileRoute.self) { _ in
                 ProfileEditorView()
             }

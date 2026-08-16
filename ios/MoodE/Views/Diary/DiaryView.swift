@@ -21,6 +21,7 @@ struct DiaryView: View {
     @State private var showScheduleSheet: Bool = false
     @State private var watchedTarget: ScheduledMovie?
     @State private var moveTarget: ScheduledMovie?
+    @State private var pendingDeletion: DiaryDeletion?
 
     /// Opens the diary on a specific day (defaults to today) — used by the
     /// "Un anno fa oggi" card to jump straight to that memory.
@@ -106,6 +107,26 @@ struct DiaryView: View {
         .sheet(item: $moveTarget) { plan in
             MoveScheduleSheet(scheduled: plan)
         }
+        .alert(
+            L("diary.movie.remove.title"),
+            isPresented: deletionAlertBinding,
+            presenting: pendingDeletion
+        ) { target in
+            Button(L("common.cancel"), role: .cancel) { pendingDeletion = nil }
+            Button(L("diary.movie.remove.confirm"), role: .destructive) { delete(target) }
+        } message: { _ in
+            Text(L("diary.movie.remove.msg"))
+        }
+    }
+
+    /// Drives the single confirmation alert shared by every delete action.
+    private var deletionAlertBinding: Binding<Bool> {
+        Binding(
+            get: { pendingDeletion != nil },
+            set: { isPresented in
+                if !isPresented { pendingDeletion = nil }
+            }
+        )
     }
 
     // MARK: - Calendar
@@ -198,10 +219,7 @@ struct DiaryView: View {
 
     private var dayDetail: some View {
         let checkIns = diary.checkIns(on: selectedDay)
-        let watchedThatDay = library.watched.filter {
-            guard let date = $0.watchedDate else { return false }
-            return Calendar.current.isDate(date, inSameDayAs: selectedDay)
-        }
+        let watchedThatDay = watchedItems(on: selectedDay)
 
         return VStack(alignment: .leading, spacing: 12) {
             Text(dayDetailTitle)
@@ -221,7 +239,7 @@ struct DiaryView: View {
                     isPending: planner.hasPendingSchedule(on: selectedDay),
                     onWatched: { watchedTarget = plan },
                     onMove: { moveTarget = plan },
-                    onRemove: { removePlan(plan) }
+                    onRemove: { pendingDeletion = .plan(plan) }
                 )
             } else {
                 Button {
@@ -247,9 +265,13 @@ struct DiaryView: View {
             }
 
             ForEach(checkIns) { checkIn in
-                DiaryCheckInRow(checkIn: checkIn) {
-                    noteTarget = checkIn
-                }
+                DiaryCheckInRow(
+                    checkIn: checkIn,
+                    onEditNote: { noteTarget = checkIn },
+                    onRemoveProposed: { movie in
+                        pendingDeletion = .proposed(checkInId: checkIn.id, movie: movie)
+                    }
+                )
             }
 
             if !watchedThatDay.isEmpty {
@@ -257,12 +279,17 @@ struct DiaryView: View {
                     Label(L("diary.day.watched"), systemImage: "checkmark.circle.fill")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(Theme.seenGreen)
-                    ForEach(watchedThatDay) { entry in
-                        Text("• \(entry.title)")
-                            .font(.footnote)
-                            .foregroundStyle(Theme.ink)
+                    ForEach(watchedThatDay) { item in
+                        DiaryMovieRow(
+                            movie: item.movie,
+                            role: .watched,
+                            badge: item.ratingEmoji
+                        ) {
+                            pendingDeletion = .watched(item)
+                        }
                     }
                 }
+                .padding(.top, 2)
             }
         }
         .padding(16)
@@ -324,6 +351,56 @@ struct DiaryView: View {
             planner.removeSchedule(plan.id)
         }
         notifications.syncMovieNightReminders(planner.scheduled)
+    }
+
+    // MARK: - Watched movies of the day
+
+    /// Every movie watched on `day`, merging the saved memories (which keep
+    /// the planned day even when marked as watched later) with the general
+    /// "Già visti" list, minus the references the user removed by hand.
+    /// A movie marked as watched therefore stays in its day forever.
+    private func watchedItems(on day: Date) -> [DiaryWatchedItem] {
+        let calendar = Calendar.current
+        let dayMemories = planner.memories(on: day)
+        var items: [DiaryWatchedItem] = dayMemories.map {
+            DiaryWatchedItem(
+                movie: $0.asMovie,
+                memoryId: $0.id,
+                ratingEmoji: $0.ratingEmoji,
+                day: day
+            )
+        }
+
+        let covered = Set(dayMemories.map(\.movieId))
+        for entry in library.watched {
+            guard let date = entry.watchedDate,
+                  calendar.isDate(date, inSameDayAs: day),
+                  !covered.contains(entry.id) else { continue }
+            items.append(
+                DiaryWatchedItem(movie: entry.asMovie, memoryId: nil, ratingEmoji: nil, day: day)
+            )
+        }
+
+        return items.filter { !planner.isHiddenFromDiary(movieId: $0.movie.id, on: day) }
+    }
+
+    /// Applies a confirmed deletion. It only ever removes the reference from
+    /// that diary day: watchlist entries are never touched.
+    private func delete(_ target: DiaryDeletion) {
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+            switch target {
+            case .plan(let plan):
+                removePlan(plan)
+            case .proposed(let checkInId, let movie):
+                diary.removeProposed(movieId: movie.id, from: checkInId)
+            case .watched(let item):
+                if let memoryId = item.memoryId {
+                    planner.removeMemory(memoryId)
+                }
+                planner.hideFromDiary(movieId: item.movie.id, on: item.day)
+            }
+        }
+        pendingDeletion = nil
     }
 
     // MARK: - Memories row
@@ -505,6 +582,36 @@ struct DiaryView: View {
     }
 }
 
+/// A movie watched on a given diary day, coming either from a saved memory
+/// (with its emoji rating) or from the general "Già visti" list. Both open
+/// the very same movie detail page.
+struct DiaryWatchedItem: Identifiable, Hashable {
+    let movie: TMDBMovie
+    let memoryId: UUID?
+    let ratingEmoji: String?
+    let day: Date
+
+    var id: Int { movie.id }
+}
+
+/// A diary reference waiting for the user's delete confirmation.
+enum DiaryDeletion: Identifiable {
+    case plan(ScheduledMovie)
+    case proposed(checkInId: UUID, movie: ProposedMovie)
+    case watched(DiaryWatchedItem)
+
+    var id: String {
+        switch self {
+        case .plan(let plan):
+            return "plan-\(plan.id.uuidString)"
+        case .proposed(let checkInId, let movie):
+            return "proposed-\(checkInId.uuidString)-\(movie.id)"
+        case .watched(let item):
+            return "watched-\(item.movie.id)"
+        }
+    }
+}
+
 /// Navigation destinations reachable from the diary.
 enum DiaryRoute: Hashable {
     case badges
@@ -608,13 +715,32 @@ private struct ScheduledMovieCard: View {
                 .background(Theme.amber.opacity(0.12), in: .rect(cornerRadius: 9))
             }
 
-            HStack(spacing: 10) {
-                poster
-                Text(plan.title)
-                    .font(.footnote.weight(.bold))
-                    .foregroundStyle(Theme.ink)
-                    .lineLimit(3)
-                Spacer()
+            HStack(alignment: .top, spacing: 4) {
+                NavigationLink(value: plan.asMovie) {
+                    HStack(spacing: 10) {
+                        poster
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(plan.title)
+                                .font(.footnote.weight(.bold))
+                                .foregroundStyle(Theme.ink)
+                                .underline(true, color: Theme.rose.opacity(0.45))
+                                .lineLimit(3)
+                                .multilineTextAlignment(.leading)
+                            HStack(spacing: 3) {
+                                Text(L("diary.movie.open"))
+                                    .font(.caption2.weight(.semibold))
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 8, weight: .bold))
+                            }
+                            .foregroundStyle(Theme.rose)
+                        }
+                        Spacer(minLength: 0)
+                    }
+                    .contentShape(.rect)
+                }
+                .buttonStyle(DiaryLinkButtonStyle(accent: Theme.rose))
+
+                DiaryMovieMenu(onDelete: onRemove)
             }
 
             Button(action: onWatched) {
@@ -698,6 +824,7 @@ private struct ScheduledMovieCard: View {
 private struct DiaryCheckInRow: View {
     let checkIn: MoodCheckIn
     let onEditNote: () -> Void
+    let onRemoveProposed: (ProposedMovie) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -729,10 +856,18 @@ private struct DiaryCheckInRow: View {
             }
 
             if !checkIn.proposed.isEmpty {
-                Text(LF("diary.proposedList", checkIn.proposed.prefix(3).map(\.title).joined(separator: ", ")))
-                    .font(.caption)
-                    .foregroundStyle(Theme.inkSoft)
-                    .lineLimit(2)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(L("diary.proposed.header"))
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(Theme.inkSoft)
+                        .padding(.leading, 6)
+                    ForEach(checkIn.proposed) { movie in
+                        DiaryMovieRow(movie: movie.asMovie, role: .proposed) {
+                            onRemoveProposed(movie)
+                        }
+                    }
+                }
+                .padding(.top, 2)
             }
 
             if let note = checkIn.note {
