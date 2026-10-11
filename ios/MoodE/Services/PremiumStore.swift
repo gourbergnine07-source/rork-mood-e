@@ -60,7 +60,21 @@ final class PremiumStore {
 
     /// The monthly plan shown on the paywall.
     var monthlyPackage: Package? {
-        offerings?.current?.monthly ?? offerings?.current?.availablePackages.first
+        offerings?.current?.monthly
+            ?? offerings?.current?.availablePackages.first(where: { $0.packageType == .monthly })
+    }
+
+    /// The annual plan (second paywall option). Nil while the RevenueCat
+    /// offering doesn't include it yet — the paywall then falls back to
+    /// the monthly-only layout.
+    var annualPackage: Package? {
+        offerings?.current?.annual
+            ?? offerings?.current?.availablePackages.first(where: { $0.packageType == .annual })
+    }
+
+    /// True when at least one plan loaded from RevenueCat.
+    var hasPlans: Bool {
+        monthlyPackage != nil || annualPackage != nil
     }
 
     private func listenForUpdates() async {
@@ -79,16 +93,16 @@ final class PremiumStore {
     }
 
     func fetchOfferings() async {
-        guard monthlyPackage == nil, !isLoading else { return }
+        guard !isLoading else { return }
         isLoading = true
         offeringsFailed = false
         do {
             offerings = try await Purchases.shared.offerings()
-            if monthlyPackage == nil {
+            if !hasPlans {
                 // Fetch succeeded but no plan came back (e.g. product not
                 // yet purchasable on this storefront) — keep it retryable.
                 offeringsFailed = true
-                print("PremiumStore: offerings loaded but no monthly package")
+                print("PremiumStore: offerings loaded but no subscription package")
             }
         } catch {
             offeringsFailed = true
@@ -97,8 +111,9 @@ final class PremiumStore {
         isLoading = false
     }
 
-    func purchase() async {
-        guard let package = monthlyPackage, !isPurchasing else { return }
+    /// Purchases the given package; defaults to the monthly plan.
+    func purchase(_ package: Package? = nil) async {
+        guard let package = package ?? monthlyPackage, !isPurchasing else { return }
         isPurchasing = true
         do {
             let result = try await Purchases.shared.purchase(package: package)

@@ -6,12 +6,21 @@
 import SwiftUI
 import RevenueCat
 
-/// Mood-E Premium paywall: monthly plan, the full feature list and the
-/// mandatory restore-purchases action. Reachable only from explicit taps
-/// (settings row or a locked feature) — never during the mood flow.
+/// Mood-E Premium paywall: monthly and annual plans, the full feature list
+/// and the mandatory restore-purchases action. Reachable only from explicit
+/// taps (settings row or a locked feature) — never during the mood flow.
 struct PaywallView: View {
     @Environment(\.dismiss) private var dismiss
     private var store: PremiumStore { .shared }
+
+    /// Which plan the CTA purchases. Annual is preselected as the
+    /// recommended option whenever the offering includes it.
+    private enum PlanPeriod {
+        case monthly
+        case annual
+    }
+
+    @State private var selectedPeriod: PlanPeriod = .annual
 
     private struct Feature: Identifiable {
         let id: String
@@ -39,7 +48,7 @@ struct PaywallView: View {
                 ScrollView {
                     VStack(spacing: 22) {
                         hero
-                        planCard
+                        planCards
                         featureList
                         legalBlock
                     }
@@ -85,7 +94,7 @@ struct PaywallView: View {
                 // fail transiently before StoreKit warms up.
                 for attempt in 0..<3 {
                     await store.fetchOfferings()
-                    if store.monthlyPackage != nil { return }
+                    if store.hasPlans { return }
                     try? await Task.sleep(for: .seconds(Double(attempt + 1) * 2))
                 }
             }
@@ -126,61 +135,140 @@ struct PaywallView: View {
 
     // MARK: - Plan details (App Store guideline 3.1.2)
 
-    /// Subscription title, duration and price shown before purchase, as
-    /// required for auto-renewable subscriptions.
-    private var planCard: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 8) {
-                Text(L("premium.plan.header"))
-                    .font(.caption2.weight(.bold))
-                    .foregroundStyle(Theme.amber)
-                    .textCase(.uppercase)
-                Spacer(minLength: 0)
-                Text(L("premium.plan.badge"))
-                    .font(.caption2.weight(.bold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(Theme.amber, in: .capsule)
+    /// Title, duration and price shown before purchase, as required for
+    /// auto-renewable subscriptions. Two selectable cards; the annual one
+    /// carries the savings badge. Prices always come from StoreKit — never
+    /// hardcoded — so ASC price changes reflect automatically.
+    private var planCards: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(L("premium.plan.header"))
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(Theme.amber)
+                .textCase(.uppercase)
+
+            if let annual = store.annualPackage {
+                planCard(
+                    for: annual,
+                    period: .annual,
+                    badge: L("premium.plan.badge.annual"),
+                    highlight: bestValueText
+                )
             }
 
-            Text(planTitle)
-                .font(.headline)
-                .foregroundStyle(Theme.ink)
-
-            HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text(planPrice)
-                    .font(.system(size: 26, weight: .bold, design: .rounded))
-                    .foregroundStyle(Theme.ink)
-                    .contentTransition(.numericText())
-                Text(L("premium.plan.perMonth"))
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(Theme.inkSoft)
+            if let monthly = store.monthlyPackage {
+                planCard(
+                    for: monthly,
+                    period: .monthly,
+                    badge: L("premium.plan.badge"),
+                    highlight: nil
+                )
             }
-
-            HStack(spacing: 6) {
-                Image(systemName: "arrow.triangle.2.circlepath")
-                    .font(.system(size: 11, weight: .semibold))
-                Text(L("premium.plan.duration"))
-                    .font(.caption)
-            }
-            .foregroundStyle(Theme.inkSoft)
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.card, in: .rect(cornerRadius: 18))
-        .overlay(
-            RoundedRectangle(cornerRadius: 18)
-                .stroke(Theme.amber.opacity(0.35), lineWidth: 1)
-        )
     }
 
-    private var planTitle: String {
-        store.monthlyPackage?.storeProduct.localizedTitle ?? L("premium.plan.title")
+    /// Falls back to monthly when the offering has no annual package yet.
+    private var effectivePeriod: PlanPeriod {
+        store.annualPackage == nil ? .monthly : selectedPeriod
     }
 
-    private var planPrice: String {
-        store.monthlyPackage?.storeProduct.localizedPriceString ?? "—"
+    /// The package the CTA will purchase.
+    private var selectedPackage: Package? {
+        effectivePeriod == .annual ? store.annualPackage : store.monthlyPackage
+    }
+
+    /// "Best value · Save 50%", with the percentage computed live from the
+    /// two StoreKit prices (1 − annual / (monthly × 12)).
+    private var bestValueText: String? {
+        guard store.monthlyPackage != nil else { return nil }
+        guard let savings = savingsPercent else { return L("premium.plan.best") }
+        return "\(L("premium.plan.best")) · \(LF("premium.plan.save", savings))"
+    }
+
+    private var savingsPercent: Int? {
+        guard let monthly = store.monthlyPackage?.storeProduct.price,
+              let annual = store.annualPackage?.storeProduct.price else { return nil }
+        let monthlyDouble = NSDecimalNumber(decimal: monthly).doubleValue
+        let annualDouble = NSDecimalNumber(decimal: annual).doubleValue
+        let fullYear = monthlyDouble * 12
+        guard fullYear > 0, annualDouble < fullYear else { return nil }
+        return Int(((1 - annualDouble / fullYear) * 100).rounded())
+    }
+
+    private func planCard(
+        for package: Package,
+        period: PlanPeriod,
+        badge: String,
+        highlight: String?
+    ) -> some View {
+        let isSelected = effectivePeriod == period
+        let product = package.storeProduct
+        return Button {
+            withAnimation(.snappy) { selectedPeriod = period }
+        } label: {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 6) {
+                    Text(badge)
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(Theme.inkSoft)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Theme.inkSoft.opacity(0.1), in: .capsule)
+
+                    if let highlight {
+                        Text(highlight)
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(Theme.amber, in: .capsule)
+                    }
+
+                    Spacer(minLength: 0)
+
+                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                        .font(.system(size: 22))
+                        .foregroundStyle(isSelected ? Theme.amber : Theme.inkSoft.opacity(0.4))
+                }
+
+                Text(product.localizedTitle)
+                    .font(.headline)
+                    .foregroundStyle(Theme.ink)
+
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    Text(product.localizedPriceString)
+                        .font(.system(size: 26, weight: .bold, design: .rounded))
+                        .foregroundStyle(Theme.ink)
+                        .contentTransition(.numericText())
+                    Text(period == .annual ? L("premium.plan.perYear") : L("premium.plan.perMonth"))
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(Theme.inkSoft)
+                }
+
+                if period == .annual, let perMonth = product.localizedPricePerMonth {
+                    Text(LF("premium.plan.perMonthEquiv", perMonth))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Theme.seenGreen)
+                }
+
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                        .font(.system(size: 11, weight: .semibold))
+                    Text(period == .annual ? L("premium.plan.duration.annual") : L("premium.plan.duration"))
+                        .font(.caption)
+                }
+                .foregroundStyle(Theme.inkSoft)
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Theme.card, in: .rect(cornerRadius: 18))
+            .overlay(
+                RoundedRectangle(cornerRadius: 18)
+                    .stroke(isSelected ? Theme.amber : Theme.amber.opacity(0.2), lineWidth: isSelected ? 2 : 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
 
     // MARK: - Legal (guideline 3.1.2(c): functional EULA + privacy links)
@@ -260,7 +348,7 @@ struct PaywallView: View {
 
     private var ctaBar: some View {
         VStack(spacing: 8) {
-            if store.monthlyPackage == nil && store.offeringsFailed && !store.isLoading {
+            if !store.hasPlans && store.offeringsFailed && !store.isLoading {
                 // Distinct alert card so the plan-loading error can't be
                 // mistaken for the feature cards scrolling underneath
                 // (e.g. the iCloud sync one).
@@ -296,7 +384,7 @@ struct PaywallView: View {
             }
 
             Button {
-                Task { await store.purchase() }
+                Task { await store.purchase(selectedPackage) }
             } label: {
                 HStack(spacing: 8) {
                     if store.isPurchasing {
@@ -321,8 +409,9 @@ struct PaywallView: View {
                     in: .rect(cornerRadius: 16)
                 )
             }
-            .disabled(store.isPurchasing || store.monthlyPackage == nil)
+            .disabled(store.isPurchasing || selectedPackage == nil)
             .sensoryFeedback(.impact(weight: .medium), trigger: store.isPurchasing)
+            .sensoryFeedback(.selection, trigger: effectivePeriod)
 
             Button {
                 Task { await store.restore() }
@@ -341,8 +430,10 @@ struct PaywallView: View {
     }
 
     private var ctaTitle: String {
-        if let price = store.monthlyPackage?.storeProduct.localizedPriceString {
-            return LF("premium.cta", price)
+        if let price = selectedPackage?.storeProduct.localizedPriceString {
+            return effectivePeriod == .annual
+                ? LF("premium.cta.annual", price)
+                : LF("premium.cta", price)
         }
         if store.offeringsFailed && !store.isLoading {
             return L("premium.cta.unavailable")
