@@ -13,6 +13,8 @@ struct HomeView: View {
     private var premium: PremiumStore { .shared }
     private var update: AppUpdateService { .shared }
 
+    private var paywallCoordinator: PaywallCoordinator { .shared }
+
     @State private var showPosterScan: Bool = false
     @State private var showScanPaywall: Bool = false
     /// Explicit path so every destination is registered once, at the stack
@@ -30,9 +32,18 @@ struct HomeView: View {
             // Discreet update invite: pushes the flow down instead of
             // covering it, and disappears as soon as it's dismissed.
             .safeAreaInset(edge: .top) {
-                if update.isBannerVisible {
-                    UpdateBannerView()
-                        .transition(.move(edge: .top).combined(with: .opacity))
+                VStack(spacing: 8) {
+                    if update.isBannerVisible {
+                        UpdateBannerView()
+                            .transition(.move(edge: .top).combined(with: .opacity))
+                    }
+                    // One-time trial invite, the day after first use — only
+                    // when the user can actually claim the free trial.
+                    if paywallCoordinator.shouldShowDayAfterBanner,
+                       PremiumStore.shared.trialOffer != nil {
+                        TrialBannerView()
+                            .transition(.move(edge: .top).combined(with: .opacity))
+                    }
                 }
             }
             .animation(.spring(response: 0.45, dampingFraction: 0.85), value: update.isBannerVisible)

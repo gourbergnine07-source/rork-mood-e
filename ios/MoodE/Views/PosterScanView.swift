@@ -23,6 +23,11 @@ struct PosterScanView: View {
     @State private var hasSearched = false
     @State private var showTutorial = false
     @AppStorage("posterScanTutorialSeen") private var tutorialSeen = false
+    /// Explicit opt-in for sending the photo to the third-party AI service
+    /// (Google Gemini). Without consent nothing is ever transmitted and the
+    /// scanner closes.
+    @AppStorage("posterScanAIConsent") private var hasAIConsent = false
+    @State private var showAIConsent = false
 
     private enum Phase: Equatable {
         case pick
@@ -58,6 +63,10 @@ struct PosterScanView: View {
                         tutorialSeen = true
                         withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
                             showTutorial = false
+                        }
+                        // First-run sequence: tutorial, then the AI consent.
+                        if !hasAIConsent {
+                            showAIConsent = true
                         }
                     }
                     .transition(.opacity.combined(with: .scale(scale: 0.94)))
@@ -102,7 +111,21 @@ struct PosterScanView: View {
         .onAppear {
             if !tutorialSeen {
                 showTutorial = true
+            } else if !hasAIConsent {
+                showAIConsent = true
             }
+        }
+        .alert(L("scan.consent.title"), isPresented: $showAIConsent) {
+            Button(L("scan.consent.ok")) {
+                hasAIConsent = true
+                AnalyticsService.shared.log("poster_scan_consent_granted")
+            }
+            Button(L("common.cancel"), role: .cancel) {
+                // No consent → no photo is ever sent; leave the scanner.
+                dismiss()
+            }
+        } message: {
+            Text(L("scan.consent.msg"))
         }
         .fullScreenCover(isPresented: $showCamera) {
             CameraPicker { image in

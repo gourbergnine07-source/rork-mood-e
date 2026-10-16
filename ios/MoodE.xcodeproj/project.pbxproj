@@ -13,6 +13,7 @@
 		XX9C95C56E30A20CBB73BFXX /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = XX45BC89C3FA1ACE191456XX /* FirebaseCore */; };
 		XXCB0C833A4E7DDE353CE0XX /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = XX17F496E7391AF4178246XX /* Supabase */; };
 		XXD63457E41125E77BACFDXX /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = XX8F6E1A701EA04CDCEA3DXX /* RevenueCat */; };
+		XXE4266AC4E579DCA6CBF3XX /* GoogleUserMessagingPlatform in Frameworks */ = {isa = PBXBuildFile; productRef = XX726C91EBDA70D356992EXX /* UserMessagingPlatform */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -106,6 +107,7 @@
 				XXD63457E41125E77BACFDXX /* RevenueCat in Frameworks */,
 				XX9C95C56E30A20CBB73BFXX /* FirebaseCore in Frameworks */,
 				XX8330BE129F827E6C09FFXX /* FirebaseAnalytics in Frameworks */,
+				XXE4266AC4E579DCA6CBF3XX /* GoogleUserMessagingPlatform in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -182,6 +184,7 @@
 				XX8F6E1A701EA04CDCEA3DXX /* RevenueCat */,
 				XX45BC89C3FA1ACE191456XX /* FirebaseCore */,
 				XX0254D3868D294A799C36XX /* FirebaseAnalytics */,
+				XX726C91EBDA70D356992EXX /* GoogleUserMessagingPlatform */,
 			);
 			productName = MoodE;
 			productReference = 105FC57A2E9EAD3100EA8BCF /* MoodE.app */;
@@ -305,6 +308,7 @@
 				XXA26CCC1C14E04A80BED3XX /* XCRemoteSwiftPackageReference "supabase-swift" */,
 				XX56D7F10BAEE1D3529BF9XX /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
 				XX14CD308252DEBD227779XX /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				XX7195640014C3F7D46C83XX /* XCRemoteSwiftPackageReference "swift-package-manager-google-user-messaging-platform" */,
 			);
 		};
 /* End PBXProject section */
@@ -519,7 +523,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = MoodE/MoodE.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 23;
+				CURRENT_PROJECT_VERSION = 24;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -539,7 +543,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.5;
+				MARKETING_VERSION = 1.6;
 				PRODUCT_BUNDLE_IDENTIFIER = app.rork.d9jknb2uwvfyntp4w88dj;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -560,7 +564,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = MoodE/MoodE.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 23;
+				CURRENT_PROJECT_VERSION = 24;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -580,7 +584,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.5;
+				MARKETING_VERSION = 1.6;
 				PRODUCT_BUNDLE_IDENTIFIER = app.rork.d9jknb2uwvfyntp4w88dj;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -598,11 +602,11 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 23;
+				CURRENT_PROJECT_VERSION = 24;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
-				MARKETING_VERSION = 1.5;
+				MARKETING_VERSION = 1.6;
 				PRODUCT_BUNDLE_IDENTIFIER = app.rork.d9jknb2uwvfyntp4w88dj.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -620,11 +624,11 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 23;
+				CURRENT_PROJECT_VERSION = 24;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
-				MARKETING_VERSION = 1.5;
+				MARKETING_VERSION = 1.6;
 				PRODUCT_BUNDLE_IDENTIFIER = app.rork.d9jknb2uwvfyntp4w88dj.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -641,10 +645,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 23;
+				CURRENT_PROJECT_VERSION = 24;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.5;
+				MARKETING_VERSION = 1.6;
 				PRODUCT_BUNDLE_IDENTIFIER = app.rork.d9jknb2uwvfyntp4w88dj.uitests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -661,10 +665,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 23;
+				CURRENT_PROJECT_VERSION = 24;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.5;
+				MARKETING_VERSION = 1.6;
 				PRODUCT_BUNDLE_IDENTIFIER = app.rork.d9jknb2uwvfyntp4w88dj.uitests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -693,8 +697,8 @@
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 23;
-				MARKETING_VERSION = 1.5;
+				CURRENT_PROJECT_VERSION = 24;
+				MARKETING_VERSION = 1.6;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
 				INFOPLIST_KEY_CFBundleDisplayName = "$(PRODUCT_NAME)";
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -717,8 +721,8 @@
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 23;
-				MARKETING_VERSION = 1.5;
+				CURRENT_PROJECT_VERSION = 24;
+				MARKETING_VERSION = 1.6;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
 				INFOPLIST_KEY_CFBundleDisplayName = "$(PRODUCT_NAME)";
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -792,6 +796,14 @@
 				minimumVersion = 5.0.0;
 			};
 		};
+		XX7195640014C3F7D46C83XX /* XCRemoteSwiftPackageReference "swift-package-manager-google-user-messaging-platform" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/googleads/swift-package-manager-google-user-messaging-platform.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.1.0;
+			};
+		};
 		XX8F321EBFA973C6F11275XX /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/googleads/swift-package-manager-google-mobile-ads.git";
@@ -830,6 +842,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = XX8F321EBFA973C6F11275XX /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */;
 			productName = GoogleMobileAds;
+		};
+		XX726C91EBDA70D356992EXX /* GoogleUserMessagingPlatform */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = XX7195640014C3F7D46C83XX /* XCRemoteSwiftPackageReference "swift-package-manager-google-user-messaging-platform" */;
+			productName = GoogleUserMessagingPlatform;
 		};
 		XX8F6E1A701EA04CDCEA3DXX /* RevenueCat */ = {
 			isa = XCSwiftPackageProductDependency;

@@ -6,6 +6,17 @@
 import Foundation
 import Observation
 import RevenueCat
+import UserNotifications
+
+/// Free-trial offer on the annual plan, read from StoreKit — never
+/// hardcoded. Nil when the plan has no intro offer or the user is not
+/// eligible (trial already used): the paywall then shows regular pricing.
+struct TrialOfferInfo {
+    /// Localized duration, e.g. "7 giorni" — built from the store's period.
+    let durationText: String
+    /// Localized annual price that starts after the trial.
+    let annualPriceString: String
+}
 
 /// Central subscription state (RevenueCat). Premium is tied to the Apple ID
 /// via In-App Purchase — no Mood-E account needed. The active flag is also
@@ -28,6 +39,11 @@ final class PremiumStore {
     var errorMessage: String?
     /// One-shot feedback after "Ripristina acquisti".
     var restoreMessage: String?
+    /// Annual-plan free trial, when the user can claim it.
+    private(set) var trialOffer: TrialOfferInfo?
+
+    private static let trialActiveKey = "premium.trialActive"
+    private static let trialReminderId = "trial_end_reminder"
 
     private init() {
         isPremium = UserDefaults.standard.bool(forKey: Self.cacheKey)
@@ -103,12 +119,48 @@ final class PremiumStore {
                 // yet purchasable on this storefront) — keep it retryable.
                 offeringsFailed = true
                 print("PremiumStore: offerings loaded but no subscription package")
+            } else {
+                await refreshTrialOffer()
             }
         } catch {
             offeringsFailed = true
             print("PremiumStore: offerings failed: \(error.localizedDescription)")
         }
         isLoading = false
+    }
+
+    /// Reads the annual plan's free trial from StoreKit (duration and the
+    /// price that follows) and checks whether this user may claim it.
+    /// Apple allows one intro offer per subscription group: users who
+    /// already used it see regular pricing instead.
+    private func refreshTrialOffer() async {
+        guard let annual = annualPackage,
+              let intro = annual.storeProduct.introductoryDiscount,
+              intro.paymentMode == .freeTrial else {
+            trialOffer = nil
+            return
+        }
+        let eligibilities = await Purchases.shared.checkTrialOrIntroDiscountEligibility(
+            productIdentifiers: [annual.storeProduct.productIdentifier])
+        guard eligibilities[annual.storeProduct.productIdentifier]?.status == .eligible else {
+            trialOffer = nil
+            return
+        }
+        trialOffer = TrialOfferInfo(
+            durationText: Self.trialDurationText(intro),
+            annualPriceString: annual.storeProduct.localizedPriceString
+        )
+    }
+
+    private static func trialDurationText(_ discount: StoreProductDiscount) -> String {
+        let period = discount.subscriptionPeriod
+        switch period.unit {
+        case .day: return LF("premium.trial.unit.day", period.value)
+        case .week: return LF("premium.trial.unit.week", period.value)
+        case .month: return LF("premium.trial.unit.month", period.value)
+        case .year: return LF("premium.trial.unit.year", period.value)
+        default: return LF("premium.trial.unit.day", period.value)
+        }
     }
 
     /// Purchases the given package; defaults to the monthly plan.
@@ -119,7 +171,11 @@ final class PremiumStore {
             let result = try await Purchases.shared.purchase(package: package)
             if !result.userCancelled {
                 apply(result.customerInfo)
-                AnalyticsService.shared.log("premium_purchased")
+                // RevenueCat applies the intro offer automatically when the
+                // user is eligible — the transaction decides the wording.
+                let startedWithTrial = result.customerInfo.entitlements["premium"]?.periodType == .trial
+                AnalyticsService.shared.log(startedWithTrial ? "trial_started" : "premium_purchased")
+                PaywallCoordinator.shared.markConverted()
             }
         } catch ErrorCode.purchaseCancelledError {
             // User closed the sheet — not an error.
@@ -147,8 +203,63 @@ final class PremiumStore {
     }
 
     private func apply(_ info: CustomerInfo) {
-        let active = info.entitlements["premium"]?.isActive == true
+        let entitlement = info.entitlements["premium"]
+        let active = entitlement?.isActive == true
+        let wasActive = isPremium
         isPremium = active
         UserDefaults.standard.set(active, forKey: Self.cacheKey)
+
+        if active, entitlement?.periodType == .trial {
+            // Trial running: full Premium (ads off everywhere, features on)
+            // and an honest reminder the day before it ends.
+            UserDefaults.standard.set(true, forKey: Self.trialActiveKey)
+            scheduleTrialEndReminder(expirationDate: entitlement?.expirationDate)
+        } else {
+            if active {
+                // Renewed at the regular price after a trial: conversion.
+                if UserDefaults.standard.bool(forKey: Self.trialActiveKey) {
+                    UserDefaults.standard.set(false, forKey: Self.trialActiveKey)
+                    AnalyticsService.shared.log("trial_converted")
+                }
+                cancelTrialEndReminder()
+            } else if wasActive || UserDefaults.standard.bool(forKey: Self.trialActiveKey) {
+                // Trial cancelled or subscription expired: back to free.
+                // Watchlist, diary and every other datum are untouched.
+                if UserDefaults.standard.bool(forKey: Self.trialActiveKey) {
+                    UserDefaults.standard.set(false, forKey: Self.trialActiveKey)
+                    AnalyticsService.shared.log("trial_cancelled")
+                }
+                cancelTrialEndReminder()
+            }
+        }
+    }
+
+    /// Local notification on the second-to-last day of the trial: honest
+    /// wording, no pressure. Only fires if notifications are authorized.
+    private func scheduleTrialEndReminder(expirationDate: Date?) {
+        guard let expiration = expirationDate else { return }
+        guard let fireDay = Calendar.current.date(byAdding: .day, value: -1, to: expiration) else { return }
+
+        var components = Calendar.current.dateComponents([.year, .month, .day], from: fireDay)
+        components.hour = 10
+
+        let content = UNMutableNotificationContent()
+        content.title = L("trial.reminder.title")
+        content.body = L("trial.reminder.body")
+        content.sound = .default
+
+        let request = UNNotificationRequest(
+            identifier: Self.trialReminderId,
+            content: content,
+            trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+        )
+        let center = UNUserNotificationCenter.current()
+        center.removePendingNotificationRequests(withIdentifiers: [Self.trialReminderId])
+        Task { try? await center.add(request) }
+    }
+
+    private func cancelTrialEndReminder() {
+        UNUserNotificationCenter.current()
+            .removePendingNotificationRequests(withIdentifiers: [Self.trialReminderId])
     }
 }

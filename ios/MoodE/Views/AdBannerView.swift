@@ -10,7 +10,7 @@ import GoogleMobileAds
 /// Anchored adaptive AdMob banner. Meant to be mounted with
 /// `.safeAreaInset(edge: .bottom)` so it reserves its own space and can
 /// never overlap interactive content above it. Renders nothing until the
-/// SDK has started (i.e. after the ATT prompt).
+/// SDK has started (i.e. after the consent flow and the ATT prompt).
 struct AdBannerView: View {
     private var ads: AdsManager { AdsManager.shared }
 
@@ -34,9 +34,27 @@ private struct BannerViewRepresentable: UIViewRepresentable {
     func makeUIView(context: Context) -> BannerView {
         let banner = BannerView(adSize: adSize)
         banner.adUnitID = AdsManager.AdUnit.banner
+        banner.delegate = context.coordinator
         banner.load(AdsManager.shared.makeRequest())
+        AnalyticsService.shared.log("ad_request", meta: ["format": "banner"])
         return banner
     }
 
     func updateUIView(_ uiView: BannerView, context: Context) {}
+
+    func makeCoordinator() -> BannerEvents { BannerEvents() }
+
+    /// Anonymous impression/click funnel for the AdMob reports.
+    final class BannerEvents: NSObject, BannerViewDelegate {
+        func bannerViewDidReceiveAd(_ bannerView: BannerView) {}
+        func bannerView(_ bannerView: BannerView, didFailToReceiveAdWithError error: Error) {}
+        func bannerViewDidRecordImpression(_ bannerView: BannerView) {
+            AnalyticsService.shared.log("ad_impression", meta: ["format": "banner"])
+        }
+        func bannerViewDidRecordClick(_ bannerView: BannerView) {
+            AnalyticsService.shared.log("ad_click", meta: ["format": "banner"])
+        }
+        func bannerViewWillPresentScreen(_ bannerView: BannerView) {}
+        func bannerViewDidDismissScreen(_ bannerView: BannerView) {}
+    }
 }

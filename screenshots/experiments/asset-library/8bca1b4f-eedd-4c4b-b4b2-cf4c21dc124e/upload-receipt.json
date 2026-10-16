@@ -1,0 +1,20 @@
+{
+  "appId": "6792271949",
+  "appPath": "ios",
+  "libraryId": "6792271949",
+  "file": "screenshots/experiments/search/search_creative_3840x2560.png",
+  "status": "ready",
+  "exitCode": 0,
+  "receipt": {
+    "imageId": "ff000019-4d9d-884d-8009-c5f4ec0f4ac7",
+    "libraryId": "6792271949",
+    "fileName": "search_creative_3840x2560.png",
+    "fileSize": 5251432,
+    "uploaded": true,
+    "ready": true,
+    "state": "PREPARE_FOR_SUBMISSION",
+    "specId": "d2ffa3b7-6c55-5cdf-8512-229d92791333",
+    "width": 3840,
+    "height": 2560
+  }
+}

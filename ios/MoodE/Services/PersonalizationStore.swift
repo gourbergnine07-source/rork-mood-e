@@ -96,12 +96,15 @@ final class PersonalizationStore {
 
     func isUnlocked(_ icon: AppIconOption) -> Bool {
         // Premium sblocca subito tutto; la via gratuita (streak/traguardi) resta.
-        icon == .classic || PremiumStore.shared.isPremium || unlockedIcons.contains(icon.rawValue)
+        // Il trial rewarded 24h apre tutto come una subscription temporanea.
+        icon == .classic || PremiumStore.shared.isPremium || ThemeTrial.shared.isActive
+            || unlockedIcons.contains(icon.rawValue)
     }
 
     func isUnlocked(_ palette: AccentPalette) -> Bool {
         !Self.lockedPalettes.contains(palette)
             || PremiumStore.shared.isPremium
+            || ThemeTrial.shared.isActive
             || unlockedPalettes.contains(palette.rawValue)
     }
 

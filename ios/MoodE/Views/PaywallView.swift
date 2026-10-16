@@ -13,6 +13,10 @@ struct PaywallView: View {
     @Environment(\.dismiss) private var dismiss
     private var store: PremiumStore { .shared }
 
+    /// Where the paywall was opened from — sent with the analytics events
+    /// and used by PaywallCoordinator's throttling rules.
+    var origin: PaywallCoordinator.Origin = .lockedFeature
+
     /// Which plan the CTA purchases. Annual is preselected as the
     /// recommended option whenever the offering includes it.
     private enum PlanPeriod {
@@ -20,6 +24,9 @@ struct PaywallView: View {
         case annual
     }
 
+    /// Path for the legal pages: lets onDisappear tell a real dismissal
+    /// (paywall closed) apart from just opening Terms/Privacy.
+    @State private var legalPath = NavigationPath()
     @State private var selectedPeriod: PlanPeriod = .annual
 
     private struct Feature: Identifiable {
@@ -41,7 +48,7 @@ struct PaywallView: View {
     ]
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $legalPath) {
             ZStack {
                 Theme.background.ignoresSafeArea()
 
@@ -98,6 +105,14 @@ struct PaywallView: View {
                     try? await Task.sleep(for: .seconds(Double(attempt + 1) * 2))
                 }
             }
+            .onAppear { PaywallCoordinator.shared.noteShown(origin: origin) }
+            .onDisappear {
+                // Opening Terms/Privacy pushes a legal page: only a close
+                // with an empty stack counts as "user dismissed the paywall".
+                if legalPath.isEmpty {
+                    PaywallCoordinator.shared.noteDismissed(origin: origin)
+                }
+            }
         }
     }
 
@@ -150,7 +165,8 @@ struct PaywallView: View {
                 planCard(
                     for: annual,
                     period: .annual,
-                    badge: L("premium.plan.badge.annual"),
+                    badge: store.trialOffer.map { LF("premium.trial.badge", $0.durationText) }
+                        ?? L("premium.plan.badge.annual"),
                     highlight: bestValueText
                 )
             }
@@ -202,7 +218,15 @@ struct PaywallView: View {
     ) -> some View {
         let isSelected = effectivePeriod == period
         let product = package.storeProduct
+        // Free trial: show what comes after it instead of the monthly
+        // equivalent — both prices always come from the store.
+        let thenPrice = period == .annual
+            ? store.trialOffer.map { LF("premium.trial.thenPrice", $0.annualPriceString) }
+            : nil
         return Button {
+            AnalyticsService.shared.log("paywall_plan_tapped", meta: [
+                "plan": period == .annual ? "annual" : "monthly"
+            ])
             withAnimation(.snappy) { selectedPeriod = period }
         } label: {
             VStack(alignment: .leading, spacing: 8) {
@@ -245,7 +269,11 @@ struct PaywallView: View {
                         .foregroundStyle(Theme.inkSoft)
                 }
 
-                if period == .annual, let perMonth = product.localizedPricePerMonth {
+                if period == .annual, let thenPrice {
+                    Text(thenPrice)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Theme.seenGreen)
+                } else if period == .annual, let perMonth = product.localizedPricePerMonth {
                     Text(LF("premium.plan.perMonthEquiv", perMonth))
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(Theme.seenGreen)
@@ -275,6 +303,13 @@ struct PaywallView: View {
 
     private var legalBlock: some View {
         VStack(spacing: 12) {
+            if let offer = store.trialOffer {
+                Text(LF("premium.trial.legal", offer.durationText, offer.annualPriceString))
+                    .font(.caption2)
+                    .foregroundStyle(Theme.inkSoft.opacity(0.85))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 8)
+            }
             Text(L("premium.terms"))
                 .font(.caption2)
                 .foregroundStyle(Theme.inkSoft.opacity(0.85))
@@ -430,6 +465,9 @@ struct PaywallView: View {
     }
 
     private var ctaTitle: String {
+        if store.trialOffer != nil, effectivePeriod == .annual {
+            return L("premium.cta.trial")
+        }
         if let price = selectedPackage?.storeProduct.localizedPriceString {
             return effectivePeriod == .annual
                 ? LF("premium.cta.annual", price)

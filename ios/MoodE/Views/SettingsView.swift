@@ -71,6 +71,7 @@ struct SettingsView: View {
     @State private var showDeleteAccountConfirm = false
     @State private var showDeleteAccountFinalConfirm = false
     @State private var isDeletingAccount = false
+    @State private var showTrialSuccess = false
     @State private var showDeleteAccountError = false
     @State private var showPaywall = false
     private var cloudSync: CloudSyncService { CloudSyncService.shared }
@@ -548,6 +549,29 @@ struct SettingsView: View {
 
     private var adsSection: some View {
         Section {
+            if themeTrial.isActive {
+                HStack(spacing: 12) {
+                    SettingsRow(
+                        icon: "gift.fill",
+                        iconColor: Theme.amber,
+                        title: L("ads.trial.row")
+                    )
+                }
+            } else if AdsManager.shared.canShowRewarded {
+                Button {
+                    AdsManager.shared.showRewarded {
+                        themeTrial.activateFor24Hours()
+                        showTrialSuccess = true
+                    }
+                } label: {
+                    SettingsRow(
+                        icon: "gift.fill",
+                        iconColor: Theme.amber,
+                        title: L("ads.trial.row")
+                    )
+                }
+            }
+
             Button {
                 openSystemSettings()
             } label: {
@@ -559,6 +583,8 @@ struct SettingsView: View {
                 )
             }
 
+            PremiumUpsellRow()
+                .listRowInsets(EdgeInsets())
         } header: {
             Text(L("settings.ads.header"))
         } footer: {
@@ -567,7 +593,14 @@ struct SettingsView: View {
                 .foregroundStyle(Theme.inkSoft)
         }
         .listRowBackground(Theme.card)
+        .alert(L("ads.trial.success"), isPresented: $showTrialSuccess) {
+            Button(L("common.ok"), role: .cancel) {}
+        } message: {
+            Text(themeTrial.expiresLabel ?? L("ads.trial.row"))
+        }
     }
+
+    private var themeTrial: ThemeTrial { .shared }
 
     // MARK: - Info app
 

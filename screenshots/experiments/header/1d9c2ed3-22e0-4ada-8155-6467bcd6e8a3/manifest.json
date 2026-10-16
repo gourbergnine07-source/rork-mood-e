@@ -1,0 +1,15 @@
+{
+  "status": "draft",
+  "file": "screenshots/experiments/header/1d9c2ed3-22e0-4ada-8155-6467bcd6e8a3/header.png",
+  "specId": "c8f4e2b1-7a3d-5c9e-8b6f-2d1a0e9c8b7a",
+  "placementType": "PRODUCT_PAGE_HEADER_ASSET",
+  "source": {
+    "file": "ios/MoodE/Assets.xcassets/film_heart_gold.imageset/film_heart_gold.png",
+    "width": 1536,
+    "height": 1024
+  },
+  "width": 5244,
+  "height": 2950,
+  "hasAlpha": false,
+  "fit": "cover"
+}

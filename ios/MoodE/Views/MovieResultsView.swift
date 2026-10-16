@@ -12,6 +12,13 @@ struct MovieResultsView: View {
 
     @State private var viewModel = MovieResultsViewModel()
     @State private var trailerPlayback = TrailerPlayback()
+    /// Confirmation toast shown right after a rewarded video has been
+    /// watched in full and the extra picks were unlocked.
+    @State private var showBonusCelebration: Bool = false
+    /// Automatic paywall after the value moment (third pick seen).
+    @State private var showAutoPaywall: Bool = false
+    /// Recommendations that appeared on screen in this results view.
+    @State private var seenRecommendations: Int = 0
     @Environment(MovieLibrary.self) private var library
     @Environment(MoodDiary.self) private var diary
     @Environment(\.requestReview) private var requestReview
@@ -54,6 +61,24 @@ struct MovieResultsView: View {
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             AdBannerView()
+        }
+        .overlay(alignment: .top) {
+            if showBonusCelebration {
+                BonusUnlockedToast()
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .padding(.top, 8)
+            }
+        }
+        .animation(.spring(response: 0.45, dampingFraction: 0.8), value: showBonusCelebration)
+        .sensoryFeedback(.success, trigger: showBonusCelebration)
+        .onChange(of: showBonusCelebration) { _, shown in
+            guard shown else { return }
+            Task {
+                try? await Task.sleep(for: .seconds(3.5))
+                withAnimation(.easeOut(duration: 0.3)) {
+                    showBonusCelebration = false
+                }
+            }
         }
         .navigationTitle(L("results.title"))
         .toolbarTitleDisplayMode(.inline)
@@ -187,7 +212,20 @@ struct MovieResultsView: View {
         }
     }
 
-    // MARK: - Results
+    /// One row of the results grid: a movie card or a native ad slot.
+enum ResultsItem: Identifiable {
+    case movie(TMDBMovie)
+    case ad(slot: Int)
+
+    var id: String {
+        switch self {
+        case .movie(let movie): return "movie-\(movie.id)"
+        case .ad(let slot): return "ad-\(slot)"
+        }
+    }
+}
+
+// MARK: - Results
 
     private func resultsList(_ movies: [TMDBMovie]) -> some View {
         ScrollViewReader { proxy in
@@ -202,25 +240,50 @@ struct MovieResultsView: View {
                         .padding(.horizontal, 24)
 
                     LazyVGrid(columns: cardColumns, spacing: isRegularWidth ? 16 : 14) {
-                        ForEach(movies) { movie in
-                            MovieCard(
-                                movie: movie,
-                                isLoadingTrailer: trailerPlayback.loadingMovieId == movie.id,
-                                onPlayTrailer: { trailerPlayback.play(movie) },
-                                // Saving from here also stores the mood → goal →
-                                // era combination that produced this pick.
-                                discoverySelection: selection
-                            )
+                        ForEach(interleavedItems(movies)) { item in
+                            switch item {
+                            case .movie(let movie):
+                                MovieCard(
+                                    movie: movie,
+                                    isLoadingTrailer: trailerPlayback.loadingMovieId == movie.id,
+                                    onPlayTrailer: { trailerPlayback.play(movie) },
+                                    // Saving from here also stores the mood → goal →
+                                    // era combination that produced this pick.
+                                    discoverySelection: selection
+                                )
+                                .onAppear {
+                                    // Value moment: the paywall is only offered
+                                    // after the user has seen three picks.
+                                    seenRecommendations += 1
+                                    if seenRecommendations == 3,
+                                       PaywallCoordinator.shared.requestAutoShow(origin: .thirdRecommendation) {
+                                        showAutoPaywall = true
+                                    }
+                                }
+                            case .ad(let slot):
+                                NativeAdCardView()
+                                    .id("ad-\(slot)-\(viewModel.batchId)")
+                            }
                         }
                     }
                     .sensoryFeedback(.impact(weight: .medium), trigger: trailerPlayback.loadingMovieId)
                     .padding(.horizontal, 24)
 
-                    if PremiumStore.shared.isPremium || AdsManager.shared.isRewardedReady || viewModel.isLoadingBonus {
+                    if PremiumStore.shared.isPremium || AdsManager.shared.rewardedRemainingToday > 0 || viewModel.isLoadingBonus {
                         rewardedButton
+                    } else {
+                        // Daily bonus cap reached: the quiet Premium invite
+                        // takes the button's place.
+                        PremiumUpsellRow(messageKey: "results.upsell")
+                            .padding(.top, 10)
                     }
 
                     newBatchButton
+
+                    if !PremiumStore.shared.isPremium {
+                        PremiumUpsellRow()
+                            .padding(.top, 10)
+                    }
                 }
                 .padding(.top, 12)
                 .padding(.bottom, 32)
@@ -228,12 +291,32 @@ struct MovieResultsView: View {
                 .frame(maxWidth: .infinity)
             }
             .scrollIndicators(.hidden)
+            .sheet(isPresented: $showAutoPaywall) {
+                PaywallView(origin: .thirdRecommendation)
+            }
             .onChange(of: viewModel.batchId) { _, _ in
                 withAnimation(.spring(response: 0.5, dampingFraction: 0.9)) {
                     proxy.scrollTo("top", anchor: .top)
                 }
             }
         }
+    }
+
+    /// Interleaves native ads with movie cards: at most 2 per screen,
+    /// one every 5 cards, never as the first card. Premium never sees any.
+    private func interleavedItems(_ movies: [TMDBMovie]) -> [ResultsItem] {
+        var items: [ResultsItem] = []
+        var shown = 0
+        var adSlots = 0
+        for movie in movies {
+            shown += 1
+            items.append(.movie(movie))
+            if shown % 5 == 0, adSlots < 2, AdsManager.shared.isStarted {
+                adSlots += 1
+                items.append(.ad(slot: adSlots))
+            }
+        }
+        return items
     }
 
     /// Rewarded ad: watching a short video unlocks 5 extra picks
@@ -247,6 +330,8 @@ struct MovieResultsView: View {
                 }
             } else {
                 AdsManager.shared.showRewarded {
+                    // Ricompensa assegnata solo dopo il video guardato per intero.
+                    showBonusCelebration = true
                     Task {
                         await viewModel.loadBonusMovies(selection: selection, excluding: library.watchedIds)
                     }
@@ -265,6 +350,14 @@ struct MovieResultsView: View {
                     .font(.subheadline.weight(.semibold))
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
+                if !PremiumStore.shared.isPremium, AdsManager.shared.canShowRewarded {
+                    Text(LF("results.rewarded.remaining", AdsManager.shared.rewardedRemainingToday, AdsManager.shared.rewardedMaxPerDay))
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(Theme.amber)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Theme.amber.opacity(0.15), in: .capsule)
+                }
             }
             .foregroundStyle(Theme.amber)
             .frame(maxWidth: .infinity)

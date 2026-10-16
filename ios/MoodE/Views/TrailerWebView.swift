@@ -84,6 +84,10 @@ struct TrailerPlayerSheet: View {
         }
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
+        .onDisappear {
+            // Pubblicità: nessun interstitial subito dopo un trailer.
+            AdsManager.shared.noteTrailerEnded()
+        }
     }
 
     private var header: some View {
