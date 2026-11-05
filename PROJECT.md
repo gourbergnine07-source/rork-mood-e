@@ -6,8 +6,14 @@
 - Leggi tutto questo file prima di ogni compito. Per i social leggi anche `SOCIAL.md`.
 - Un compito alla volta. Prima di modificare, elenca i file che cambierai.
 - Se qualcosa non è chiaro, **chiedi**. Non indovinare.
-- Non toccare codice che funziona fuori dal compito richiesto. Non cancellare funzioni esistenti.
+- **Solo il compito richiesto.** Tocca e modifica solo i file necessari a questo compito. Tutto ciò che non riguarda il compito non si tocca né si modifica senza il mio consenso esplicito, anche se sembra un miglioramento. Se noti un problema fuori dal compito, segnalalo e chiedi prima di fare qualsiasi cosa.
+- Niente build, invii in revisione o modifiche su App Store Connect / Google Play Console senza il mio consenso.
+- Non cancellare funzioni esistenti.
+- Mai inventare rotte, variabili d'ambiente, tabelle, componenti, API o librerie che non esistono nel progetto: in caso di dubbio controlla il codice esistente.
+- Quando lavori sulla logica, lascia intatta l'interfaccia, salvo richiesta esplicita. Mantieni struttura dei file e nomi esistenti; codice modulare (interfaccia, servizi e logica separati).
 - Niente nuove librerie o servizi senza approvazione.
+- Rete: gestisci sempre errori e offline con un messaggio visibile all'utente.
+- Commenti solo sulle parti non banali (acquisti in-app, SDK esterni, calcoli complessi).
 - Mantieni sempre le 6 lingue allineate (it, en, es, fr, de, pt): ogni nuovo testo va in tutti i file di `Resources/*.json`.
 - Prima di proporre una funzione, controlla che non esista già nel codice.
 - Alla fine: aggiorna **Stato attuale**, **Decisioni** e **Changelog** qui sotto, e dimmi come testare la modifica.

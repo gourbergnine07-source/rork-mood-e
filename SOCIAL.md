@@ -6,6 +6,7 @@
 - Promuovi **solo** funzioni presenti in «Funzioni verificate» qui sotto. Se una funzione nuova non è nell'elenco, controllala nel codice prima di usarla.
 - **Mai** frasi, numeri o promesse inventate. Se qualcosa non è verificato, segnalalo prima.
 - Prima di ogni proposta: analizza tendenze del momento e cosa mostrano i concorrenti, poi proponi il post.
+- Struttura dei post e dei video: Hook (primi 3 secondi) → storia/problema reale → cosa mostrare o registrare con precisione → invito all'azione.
 - I post si preparano **il giorno prima** e si inviano verso le **20:00** per l'approvazione. Si programmano solo dopo il «sì».
 - Video **senza voce**: tutto il messaggio va nelle scritte a schermo. Sotto ogni copione in inglese, la traduzione italiana.
 - Da altri creator si copia solo il **formato/l'idea**, mai voce, musica, immagini o testi.
