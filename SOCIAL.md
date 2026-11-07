@@ -42,9 +42,11 @@
 
 ## Formati che funzionano / preferiti
 - Reel in motion graphics: punti numerati «1 · 2 · 3», testo animato in un riquadro, finale «Tell me in the comments» + «Save this video and follow».
+- Video «curiosità» (approvati 07/11/2026): riquadro «DID YOU KNOW?», curiosità vera su film/emozioni collegata a come funziona Mood-E (fonti affidabili, limiti detti), sottotitoli parola per parola, schermate dell'app, finale con logo; sempre due versioni: senza voce e con voce IA (Piper, voce LibriTTS CC BY 4.0 — credito in didascalia, segno IA su TikTok; mai voci con licenza non commerciale). Metodo e regole nel doc «Mood-E · Promo video e Metricool».
 - Video che mostrano il **flusso completo** dell'app (scartato il formato breve «in 3 passi»: non mostra abbastanza dettagli).
 
 ## Idee già usate (non ripetere)
+- Curiosità 1 (approvata 07/11/2026, da programmare) — «Why do sad movies make us feel better?»: studio Ohio State 2012 (361 studenti, Atonement), chi pensa ai propri cari si sente più felice; versioni senza voce e con voce IA, musica «Home» di Tanner Helland
 - 01/12/2026 — Video promo 19 s «Another night scrolling… and nothing to watch?» (emozione → film → scansiona il poster → logo), musica «Daybreak» di Tanner Helland; programmato alle 18:00 su TikTok, Instagram Reel, Facebook Reel e YouTube Short
 - 02/12/2026 — Promo 19 s «Everyone's watching something new… but is it for you?» (Trending → trailer → scegli per umore → lista), musica «Find You» di Tanner Helland; 18:00 su tutti e 4
 - 03/12/2026 — Promo 19 s «Bad day? Don't scroll for an hour.» (12 emozioni → obiettivo laugh/cry/relax → già visto non torna), musica «A Memory Away» di Tanner Helland; 18:00 su tutti e 4
@@ -53,5 +55,6 @@
 - gg/mm — post — visualizzazioni / like / download
 
 ## Changelog
+- 07/11/2026 — Approvato il formato «curiosità» (senza voce e con voce IA) e la curiosità 1 sui film tristi; creato il doc «Mood-E · Promo video e Metricool».
 - 07/11/2026 — Promo del 01/12 montato con OpenMontage (musica «Daybreak», CC BY 4.0) e programmato su Metricool dopo il «sì» di Rodrigue; testo corretto perché la scansione del poster è Premium. Aggiunta la regola sulla musica da GitHub con credito in didascalia.
 - 07/11/2026 — Creati e programmati i promo del 02/12 (trending) e 03/12 (bad day), stesso stile del promo del 01/12, dopo il «Programma» di Rodrigue.
