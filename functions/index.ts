@@ -1,8 +1,10 @@
 export { AdviceBoard } from "./advice-board";
 export { MoodStatusBoard } from "./mood-status";
+export { AIUsageCounter } from "./ai-usage";
 import { inviteHtml } from "./invite-page";
+import { handleAI, type AIEnv } from "./ai";
 
-type Env = { DO: Fetcher };
+type Env = AIEnv;
 
 const CORS: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
@@ -150,6 +152,14 @@ export default {
       return new Response(inviteHtml(code, lang), {
         headers: { "Content-Type": "text/html; charset=utf-8" },
       });
+    }
+
+    if (url.pathname === "/ai/mood") {
+      return handleAI(request, env, "mood", CORS);
+    }
+
+    if (url.pathname === "/ai/poster") {
+      return handleAI(request, env, "poster", CORS);
     }
 
     if (url.pathname.startsWith("/status")) {

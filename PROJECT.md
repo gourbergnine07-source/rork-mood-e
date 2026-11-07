@@ -49,13 +49,16 @@
 - Funzioni presenti (verificate nel codice): vedi `README.md` e l'elenco in `SOCIAL.md`.
 - Problemi risolti in passato: `app-ads.txt`, crash del deep link all'avvio a freddo, notifiche push non cliccabili, link affiliati Amazon che aprivano la pagina sbagliata.
 - Fix 07/11/2026: la sincronizzazione non elimina più dal cloud i check-in del diario assenti sul dispositivo (prima un apparecchio cancellava quelli creati sull'altro, e con molti check-in la query falliva e bloccava la sync).
+- 07/11/2026: le 2 funzioni AI (analisi testo umore, scan poster) passano dal Worker `functions/` (`POST /ai/mood`, `POST /ai/poster`) con limiti giornalieri; l'app non contiene più la chiave del Toolkit. **In attesa**: impostare `TOOLKIT_SECRET_KEY` e `TOOLKIT_URL` (server-only) nelle env del progetto — finché mancano, gli endpoint rispondono 503 e le 2 funzioni AI mostrano l'errore generico. Poi test end-to-end ed eliminazione di `EXPO_PUBLIC_RORK_TOOLKIT_SECRET_KEY` / `EXPO_PUBLIC_TOOLKIT_URL`.
 - In corso: marketing (Reddit, Google Ads, Apple Search Ads, social).
 
 ## Decisioni (data — decisione — motivo)
 - 2026 — Prezzo Premium €1/mese e €6/anno — prezzo basso per convertire di più.
 - 2026 — Avviso aggiornamento remoto via Supabase — cambiare messaggio senza nuova build né revisione.
+- 07/11/2026 — Chiamate AI solo via Worker con quota per dispositivo e per IP (mood 30/giorno, poster 10/giorno; tetto globale 5000/1000, costanti in `functions/ai-usage.ts`) — la chiave nel binario era estraibile e usabile da chiunque. IP salvato solo come hash SHA-256 con sale giornaliero casuale.
 - 2026 — Prima di aggiungere contenuti (es. quiz), verificare quelli esistenti — evitare doppioni.
 
 ## Changelog
+- 07/11/2026 — Proxy AI: nuovi `functions/ai.ts` (validazione, prompt e modelli lato server) e `functions/ai-usage.ts` (Durable Object contatori); rotte in `functions/index.ts`. iOS: `MoodTextAnalyzer` e `PosterScanService` chiamano il Worker senza chiave; 429 → messaggio `ai.limit.*` (6 lingue, `scripts/add_ai_limit_strings.py`).
 - 07/11/2026 — `CloudSyncService.pushAllRows`: rimosso `deleteMissing` per `diary_check_ins` (upsert-only; le altre tabelle invariato) — evitate cancellazioni incrociate multi-dispositivo e query troppo lunghe.
 - 05/11/2026 — Creati `PROJECT.md` e `SOCIAL.md` (memoria del progetto per le IA).

@@ -6,10 +6,15 @@
 import Foundation
 
 /// Sends the user's free-form "how I feel" text to a small, fast language
-/// model (google/gemini-3.1-flash-lite via the Rork Toolkit proxy) and maps
-/// it to the closest of the 12 moods and, when clear enough, the closest of
-/// the 10 viewing goals. The raw text is used only for this single call and
-/// is never stored or logged.
+/// model through the app's backend (POST /ai/mood — the model, prompt and
+/// API key live server-side) and maps it to the closest of the 12 moods and,
+/// when clear enough, the closest of the 10 viewing goals. The raw text is
+/// used only for this single call and is never stored or logged.
+nonisolated enum MoodTextAnalyzerError: Error {
+    /// Daily per-device analysis limit reached (HTTP 429).
+    case limitReached
+}
+
 final class MoodTextAnalyzer {
     static let shared = MoodTextAnalyzer()
     private init() {}
@@ -31,44 +36,32 @@ final class MoodTextAnalyzer {
     }
 
     func analyze(_ text: String) async throws -> Interpretation {
-        guard let url = URL(string: Config.EXPO_PUBLIC_TOOLKIT_URL + "/v2/vercel/v1/chat/completions") else {
+        guard !Config.EXPO_PUBLIC_RORK_FUNCTIONS_URL.isEmpty,
+              let url = URL(string: Config.EXPO_PUBLIC_RORK_FUNCTIONS_URL + "/ai/mood") else {
             throw URLError(.badURL)
         }
 
-        let moods = Mood.allCases.map(\.rawValue).joined(separator: ", ")
-        let goals = ViewingGoal.allCases.map(\.rawValue).joined(separator: ", ")
-        let system = """
-        You classify how a person feels based on a short free-form text \
-        (any language) about their day or mood, to recommend a movie.
-
-        Pick exactly one mood id from this list: \(moods).
-        If the text also implies what they want from the movie tonight, pick \
-        one goal id from this list: \(goals). Otherwise use null.
-
-        Reply with ONLY a minified JSON object, no markdown, no explanation:
-        {"mood":"<mood id>","goal":"<goal id or null>"}
-        """
-
-        let systemMessage: [String: String] = ["role": "system", "content": system]
-        let userMessage: [String: String] = ["role": "user", "content": String(text.prefix(500))]
-        var body: [String: Any] = [:]
-        body["model"] = "google/gemini-3.1-flash-lite"
-        body["temperature"] = 0
-        body["max_tokens"] = 2000
-        body["messages"] = [systemMessage, userMessage]
+        // Max 500 Unicode scalars: the server counts code points the same
+        // way, so emoji-heavy text never gets rejected.
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let limited = String(String.UnicodeScalarView(trimmed.unicodeScalars.prefix(500)))
+        let body: [String: String] = [
+            "deviceId": CommunityService.shared.deviceId,
+            "text": limited
+        ]
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.timeoutInterval = 25
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue(
-            "Bearer \(Config.EXPO_PUBLIC_RORK_TOOLKIT_SECRET_KEY)",
-            forHTTPHeaderField: "Authorization"
-        )
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
         let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+        guard let http = response as? HTTPURLResponse else {
+            throw URLError(.badServerResponse)
+        }
+        if http.statusCode == 429 { throw MoodTextAnalyzerError.limitReached }
+        guard (200...299).contains(http.statusCode) else {
             throw URLError(.badServerResponse)
         }
 

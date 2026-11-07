@@ -36,6 +36,8 @@ struct MoodFlowView: View {
     @State private var isAnalyzing: Bool = false
     @State private var interpretation: MoodInterpretation?
     @State private var analysisFailed: Bool = false
+    /// True when the failure was the daily AI limit (HTTP 429).
+    @State private var analysisLimitReached: Bool = false
     /// Session-only dismissal: the quiz banner returns at every app launch.
     @State private var quizBannerHidden: Bool = false
 
@@ -96,7 +98,7 @@ struct MoodFlowView: View {
         .alert(L("common.oops"), isPresented: $analysisFailed) {
             Button(L("common.ok"), role: .cancel) {}
         } message: {
-            Text(L("flow.freetext.error"))
+            Text(L(analysisLimitReached ? "ai.limit.msg" : "flow.freetext.error"))
         }
         .sheet(item: $interpretation) { interp in
             MoodInterpretationSheet(interpretation: interp) { mood, goal in
@@ -524,6 +526,7 @@ struct MoodFlowView: View {
                 interpretation = MoodInterpretation(mood: result.mood, goal: result.goal)
             } catch {
                 print("MoodFlow: free-text analysis failed: \(error.localizedDescription)")
+                analysisLimitReached = error is MoodTextAnalyzerError
                 analysisFailed = true
                 // Right after an error the app stays quiet about ratings.
                 ReviewPrompter.noteNegativeMoment()

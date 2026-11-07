@@ -37,6 +37,8 @@ struct PosterScanView: View {
 
         enum FailReason: Equatable {
             case generic
+            /// Daily scan limit reached (HTTP 429).
+            case limit
             case tvSeries(String)
             case notInDatabase(String)
         }
@@ -256,6 +258,9 @@ struct PosterScanView: View {
                 if outcome.isConfident, let first = outcome.movies.first {
                     path = [first]
                 }
+            } catch PosterScanError.limitReached {
+                AnalyticsService.shared.log("poster_scan_limit")
+                phase = .failed(.limit)
             } catch PosterScanError.tvSeries(let title) {
                 AnalyticsService.shared.log("poster_scan_tv_series")
                 phase = .failed(.tvSeries(title))
@@ -346,6 +351,10 @@ struct PosterScanView: View {
             emoji = "\u{1F3AC}"
             title = L("scan.failed.title")
             message = L("scan.failed.msg")
+        case .limit:
+            emoji = "\u{23F3}"
+            title = L("ai.limit.title")
+            message = L("ai.limit.msg")
         case .tvSeries(let name):
             emoji = "\u{1F4FA}"
             title = L("scan.tv.title")

@@ -61,6 +61,8 @@
   "advice.suggest.send": "Vorschlag senden",
   "advice.suggest.title": "Film vorschlagen",
   "advice.title": "Rat",
+  "ai.limit.msg": "Du hast alle heutigen KI-Analysen verbraucht. Versuch es morgen wieder – bis dahin kannst du manuell wählen.",
+  "ai.limit.title": "Tageslimit erreicht",
   "app.tagline": "Der richtige Film für jede Emotion",
   "appearance.dark": "Dunkel",
   "appearance.light": "Hell",

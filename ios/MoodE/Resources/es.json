@@ -61,6 +61,8 @@
   "advice.suggest.send": "Enviar consejo",
   "advice.suggest.title": "Recomienda una película",
   "advice.title": "Consejos",
+  "ai.limit.msg": "Has usado todos los análisis con IA de hoy. Vuelve a intentarlo mañana; mientras tanto, puedes elegir manualmente.",
+  "ai.limit.title": "Límite diario alcanzado",
   "app.tagline": "La película perfecta para cada emoción",
   "appearance.dark": "Oscuro",
   "appearance.light": "Claro",

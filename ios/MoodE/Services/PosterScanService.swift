@@ -20,6 +20,8 @@ nonisolated struct PosterCandidate: Codable {
 /// Errors surfaced by the poster recognition flow.
 nonisolated enum PosterScanError: LocalizedError {
     case missingKey
+    /// Daily per-device scan limit reached (HTTP 429).
+    case limitReached
     case imageTooLarge
     case badResponse
     case notRecognized
@@ -49,8 +51,8 @@ struct PosterScanOutcome {
     let tvSeriesTitle: String?
 }
 
-/// "Scansiona un poster": sends the photo to the Rork Toolkit AI proxy
-/// (Gemini 3.6 Flash, vision) to extract title/year candidates, then
+/// "Scansiona un poster": sends the photo to the app's backend (POST
+/// /ai/poster — vision model, prompt and API key live server-side) to extract title/year candidates, then
 /// matches each candidate against TMDB so only real movies are shown.
 /// Privacy: the photo is transmitted only for this one analysis, is never
 /// stored by the app or linked to personal data, and is discarded after
@@ -124,55 +126,30 @@ enum PosterScanService {
     // MARK: - Vision call
 
     private static func recognize(base64: String) async throws -> [PosterCandidate] {
-        let toolkitURL = Config.EXPO_PUBLIC_TOOLKIT_URL
-        let secret = Config.EXPO_PUBLIC_RORK_TOOLKIT_SECRET_KEY
-        guard !toolkitURL.isEmpty, !secret.isEmpty,
-              let url = URL(string: "\(toolkitURL)/v2/vercel/v1/chat/completions") else {
+        let functionsURL = Config.EXPO_PUBLIC_RORK_FUNCTIONS_URL
+        guard !functionsURL.isEmpty,
+              let url = URL(string: "\(functionsURL)/ai/poster") else {
             throw PosterScanError.missingKey
         }
 
-        let prompt = """
-        You identify posters of movies and TV series. The photo may be blurry, tilted, partially cropped, taken at an angle, or a photo of a screen/monitor — do your best anyway using the artwork, typography, actors and any readable text.
-        Reply ONLY with minified JSON, no markdown, in this exact shape:
-        {"candidates":[{"title":"<title>","year":<first release year or null>,"type":"movie|tv","confidence":"high|medium|low"}]}
-        Rules:
-        - "type" MUST be "tv" when the poster is for a TV/streaming series (Netflix, Apple TV+, HBO, etc.), "movie" for feature films. Many series posters look like movie posters — check carefully.
-        - Return 1 candidate with confidence "high" ONLY if you are absolutely certain; otherwise ALWAYS return 2-3 plausible candidates ordered from most to least likely.
-        - Use the original or best-known international title so it can be found on TMDB.
-        - If the image is clearly not a movie or TV series poster, reply {"candidates":[]}.
-        """
-
-        let body: [String: Any] = [
-            "model": "google/gemini-3-flash",
-            "temperature": 0,
-            "max_tokens": 2000,
-            "reasoning_effort": "low",
-            "messages": [
-                [
-                    "role": "user",
-                    "content": [
-                        ["type": "text", "text": prompt],
-                        [
-                            "type": "image_url",
-                            "image_url": ["url": "data:image/jpeg;base64,\(base64)"]
-                        ]
-                    ]
-                ]
-            ]
+        let body: [String: String] = [
+            "deviceId": CommunityService.shared.deviceId,
+            "image": base64
         ]
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("Bearer \(secret)", forHTTPHeaderField: "Authorization")
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         request.timeoutInterval = 45
 
         let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
-            let status = (response as? HTTPURLResponse)?.statusCode ?? -1
-            let snippet = String(data: data.prefix(300), encoding: .utf8) ?? ""
-            print("PosterScan: HTTP \(status) — \(snippet)")
+        guard let http = response as? HTTPURLResponse else {
+            throw PosterScanError.badResponse
+        }
+        if http.statusCode == 429 { throw PosterScanError.limitReached }
+        guard (200...299).contains(http.statusCode) else {
+            print("PosterScan: HTTP \(http.statusCode)")
             throw PosterScanError.badResponse
         }
 
