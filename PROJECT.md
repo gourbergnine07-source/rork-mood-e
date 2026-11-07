@@ -48,6 +48,7 @@
 - Versione nel codice: **1.6** (ultimo aggiornamento del repo: 16/10/2026).
 - Funzioni presenti (verificate nel codice): vedi `README.md` e l'elenco in `SOCIAL.md`.
 - Problemi risolti in passato: `app-ads.txt`, crash del deep link all'avvio a freddo, notifiche push non cliccabili, link affiliati Amazon che aprivano la pagina sbagliata.
+- Fix 07/11/2026: la sincronizzazione non elimina più dal cloud i check-in del diario assenti sul dispositivo (prima un apparecchio cancellava quelli creati sull'altro, e con molti check-in la query falliva e bloccava la sync).
 - In corso: marketing (Reddit, Google Ads, Apple Search Ads, social).
 
 ## Decisioni (data — decisione — motivo)
@@ -56,4 +57,5 @@
 - 2026 — Prima di aggiungere contenuti (es. quiz), verificare quelli esistenti — evitare doppioni.
 
 ## Changelog
+- 07/11/2026 — `CloudSyncService.pushAllRows`: rimosso `deleteMissing` per `diary_check_ins` (upsert-only; le altre tabelle invariato) — evitate cancellazioni incrociate multi-dispositivo e query troppo lunghe.
 - 05/11/2026 — Creati `PROJECT.md` e `SOCIAL.md` (memoria del progetto per le IA).

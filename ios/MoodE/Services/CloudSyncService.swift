@@ -169,10 +169,9 @@ final class CloudSyncService {
                 .upsert(checkIns.map { RemoteCheckIn(from: $0, userId: userId) })
                 .execute()
         }
-        try await deleteMissing(
-            table: "diary_check_ins", column: "id",
-            keep: checkIns.map { $0.id.uuidString }, userId: userId
-        )
+        // No deleteMissing for diary_check_ins: the app never deletes a single
+        // check-in (only full account deletion does), so pruning here would
+        // wipe check-ins created on the user's other devices.
 
         let entries = library.entries
         if !entries.isEmpty {
