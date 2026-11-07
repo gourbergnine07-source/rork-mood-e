@@ -11,6 +11,7 @@
 - Video **senza voce**: tutto il messaggio va nelle scritte a schermo. Sotto ogni copione in inglese, la traduzione italiana.
 - Da altri creator si copia solo il **formato/l'idea**, mai voce, musica, immagini o testi.
 - Innovare sempre: niente post ripetuti sugli stessi temi (vedi «Idee già usate»).
+- Musica dei video: brani a licenza libera per uso commerciale presi da GitHub (es. `tannerhelland/free-music`, CC BY 4.0), verificando il file LICENSE; con CC BY il credito va sempre nella didascalia (es. «🎵 Music: "Daybreak" by Tanner Helland (CC BY 4.0) – tannerhelland.com/music»). Mai cover o remix di brani protetti.
 - Media dei post: sito GitHub `gourbergnine07-source.github.io`, cartella `social/mood-e/` (non mescolare con le altre app).
 
 ## Brand
@@ -31,7 +32,8 @@
 - Dove guardarlo (piattaforme streaming), trailer, condivisione
 - Liste: visti / da vedere; programmare la visione di un film
 - Serie TV: seguire una serie e avviso del prossimo episodio
-- Scansione di un poster per trovare il film
+- Scansione di un poster per trovare il film — **solo Premium** (lucchetto in `HomeView.swift`, `PosterScanView.swift`): nei post dirlo sempre («With Premium…»)
+- Nessun account obbligatorio: il login serve solo per il backup cloud e gli amici
 - Diario dell'umore: check-in, statistiche, streak, badge, ricordi «un anno fa oggi», resoconto mensile
 - Amici con codice amico, inviti con link, bacheca consigli della community, sfide mensili, eventi live
 - Quiz (hub quiz, quiz del giorno, storico)
@@ -43,7 +45,10 @@
 - Video che mostrano il **flusso completo** dell'app (scartato il formato breve «in 3 passi»: non mostra abbastanza dettagli).
 
 ## Idee già usate (non ripetere)
-- gg/mm — ...
+- 01/12/2026 — Video promo 19 s «Another night scrolling… and nothing to watch?» (emozione → film → scansiona il poster → logo), musica «Daybreak» di Tanner Helland; programmato alle 18:00 su TikTok, Instagram Reel, Facebook Reel e YouTube Short
 
 ## Risultati
 - gg/mm — post — visualizzazioni / like / download
+
+## Changelog
+- 07/11/2026 — Promo del 01/12 montato con OpenMontage (musica «Daybreak», CC BY 4.0) e programmato su Metricool dopo il «sì» di Rodrigue; testo corretto perché la scansione del poster è Premium. Aggiunta la regola sulla musica da GitHub con credito in didascalia.
