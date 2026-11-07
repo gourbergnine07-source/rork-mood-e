@@ -104,26 +104,46 @@ async function callModel(
   kind: AIKind,
   cors: Record<string, string>,
 ): Promise<Response> {
+  // Tolerate common env typos: spaces, missing scheme, trailing slash.
+  let base = (env.TOOLKIT_URL ?? "").trim().replace(/\/+$/, "");
+  if (!/^https?:\/\//i.test(base)) base = `https://${base}`;
+  const secret = (env.TOOLKIT_SECRET_KEY ?? "").trim();
+
   let upstream: Response;
   try {
-    upstream = await fetch(`${env.TOOLKIT_URL}/v2/vercel/v1/chat/completions`, {
+    upstream = await fetch(`${base}/v2/vercel/v1/chat/completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${env.TOOLKIT_SECRET_KEY}`,
+        Authorization: `Bearer ${secret}`,
       },
       body: JSON.stringify(payload),
       signal: AbortSignal.timeout(timeoutMs),
     });
   } catch (error) {
     const timedOut = error instanceof Error && error.name === "TimeoutError";
-    console.warn(`ai/${kind}: upstream ${timedOut ? "timeout" : "fetch failed"}`);
+    // Host + error message only: never the key or the user's input.
+    let host = "invalid-url";
+    try {
+      host = new URL(base).host;
+    } catch {}
+    const reason = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+    console.warn(`ai/${kind}: upstream ${timedOut ? "timeout" : "fetch failed"} host=${host} ${reason}`);
     return json({ error: timedOut ? "timeout" : "upstream" }, timedOut ? 504 : 502, cors);
   }
 
   if (!upstream.ok) {
-    // Status only: the upstream body may echo the user's input.
-    console.warn(`ai/${kind}: upstream HTTP ${upstream.status}`);
+    // Status only: the upstream body may echo the user's input. Auth
+    // errors (401/403) never contain it, so a short reason is logged.
+    let detail = "";
+    if (upstream.status === 401 || upstream.status === 403) {
+      detail = (await upstream.text().catch(() => "")).slice(0, 160);
+    }
+    let host = "invalid-url";
+    try {
+      host = new URL(base).host;
+    } catch {}
+    console.warn(`ai/${kind}: upstream HTTP ${upstream.status} host=${host} ${detail}`);
     return json({ error: "upstream" }, 502, cors);
   }
 
