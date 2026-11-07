@@ -47,8 +47,11 @@
 ## Idee già usate (non ripetere)
 - 01/12/2026 — Video promo 19 s «Another night scrolling… and nothing to watch?» (emozione → film → scansiona il poster → logo), musica «Daybreak» di Tanner Helland; programmato alle 18:00 su TikTok, Instagram Reel, Facebook Reel e YouTube Short
 
+- 02/12/2026 — Promo 19 s «Everyone's watching something new… but is it for you?» (Trending → trailer → scegli per umore → lista), musica «Find You» di Tanner Helland; 18:00 su tutti e 4
+- 03/12/2026 — Promo 19 s «Bad day? Don't scroll for an hour.» (12 emozioni → obiettivo laugh/cry/relax → già visto non torna), musica «A Memory Away» di Tanner Helland; 18:00 su tutti e 4
 ## Risultati
 - gg/mm — post — visualizzazioni / like / download
 
 ## Changelog
 - 07/11/2026 — Promo del 01/12 montato con OpenMontage (musica «Daybreak», CC BY 4.0) e programmato su Metricool dopo il «sì» di Rodrigue; testo corretto perché la scansione del poster è Premium. Aggiunta la regola sulla musica da GitHub con credito in didascalia.
+- 07/11/2026 — Creati e programmati i promo del 02/12 (trending) e 03/12 (bad day), stesso stile del promo del 01/12, dopo il «Programma» di Rodrigue.
