@@ -53,6 +53,7 @@
 
 ## Risultati
 - gg/mm — post — visualizzazioni / like / download
+- 20/11 — Test «curiosità» senza voce vs voce IA (film tristi). Senza voce 17/11 (dati di 3 giorni): IG 2 visualizzazioni / 1 copertura; FB 205 vis. / 1 s medio; TikTok 739 vis. / 677 copertura / 11 like / 3 condivisioni; YouTube 35 vis. / 2 s / 1 like. Voce IA 19/11 (dati di circa 1 giorno): IG 1 / 1; FB 3; TikTok 521 vis. / 4 like / 0 condiv.; YouTube non ancora nei dati. Esito: troppo presto per decidere. Su TikTok la voce IA in 1 giorno è già vicina al video senza voce dopo 3 giorni; su IG entrambi i video quasi non sono stati mostrati (problema di distribuzione dell'account, non della voce: la roulette del 18/11 ha avuto 95 vis.). Da ricontrollare tra una settimana.
 
 ## Changelog
 - 07/11/2026 — Approvato il formato «curiosità» (senza voce e con voce IA) e la curiosità 1 sui film tristi; creato il doc «Mood-E · Promo video e Metricool».
