@@ -3,7 +3,8 @@ import type { AIKind } from "./ai-usage";
 /**
  * Server-side AI proxy for the iOS app (POST /ai/mood, POST /ai/poster).
  *
- * The Rork Toolkit secret lives only here (env.TOOLKIT_SECRET_KEY); the
+ * The Rork Toolkit secret lives only here (env.TOOLKIT_SECRET_KEY, or the
+ * Rork-managed EXPO_PUBLIC_RORK_TOOLKIT_SECRET_KEY); the
  * app sends just its anonymous deviceId plus the text or the JPEG. Model,
  * sampling parameters and system prompts are fixed server-side.
  * The response keeps the OpenAI-style shape the app already parses:
@@ -17,6 +18,9 @@ export type AIEnv = {
   DO: Fetcher;
   TOOLKIT_SECRET_KEY?: string;
   TOOLKIT_URL?: string;
+  // Managed by Rork: the platform propagates it into the Worker's env with
+  // the real key value, which is never revealed. Used as a fallback.
+  EXPO_PUBLIC_RORK_TOOLKIT_SECRET_KEY?: string;
 };
 
 const MAX_DEVICE_ID = 64;
@@ -107,7 +111,9 @@ async function callModel(
   // Tolerate common env typos: spaces, missing scheme, trailing slash.
   let base = (env.TOOLKIT_URL ?? "").trim().replace(/\/+$/, "");
   if (!/^https?:\/\//i.test(base)) base = `https://${base}`;
-  const secret = (env.TOOLKIT_SECRET_KEY ?? "").trim();
+  // TOOLKIT_SECRET_KEY when set (server-only env), otherwise the Rork-managed
+  // key (same value the app builds receive; never shown in the envs UI).
+  const secret = (env.TOOLKIT_SECRET_KEY || env.EXPO_PUBLIC_RORK_TOOLKIT_SECRET_KEY || "").trim();
 
   let upstream: Response;
   try {
@@ -168,7 +174,9 @@ export async function handleAI(
   if (request.method !== "POST") {
     return json({ error: "method" }, 405, cors);
   }
-  if (!env.TOOLKIT_SECRET_KEY || !env.TOOLKIT_URL) {
+  const configured = ((env.TOOLKIT_SECRET_KEY || env.EXPO_PUBLIC_RORK_TOOLKIT_SECRET_KEY) ?? "").trim()
+    && (env.TOOLKIT_URL ?? "").trim();
+  if (!configured) {
     console.error("ai: TOOLKIT_SECRET_KEY / TOOLKIT_URL not configured");
     return json({ error: "unavailable" }, 503, cors);
   }
