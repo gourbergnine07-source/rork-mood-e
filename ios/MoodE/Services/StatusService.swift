@@ -156,14 +156,18 @@ final class StatusService {
     /// registers the same code, a mutual friendship is created and the two
     /// start seeing each other's statuses. Fire-and-forget: a failure never
     /// blocks the Duo/Challenge flow itself.
-    func registerFriendCode(_ code: String) {
+    /// `role`: `.host` when this device created the session/pairing,
+    /// `.guest` when it joined one (the server links a guest only with the
+    /// single open host of that code).
+    func registerFriendCode(_ code: String, role: DuoRole) {
         let trimmed = code.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed.count >= 4 else { return }
         Task {
             let _: OkOnly? = try? await post("/status/friend/register", body: [
                 "deviceId": deviceId,
                 "nickname": nickname,
-                "code": trimmed
+                "code": trimmed,
+                "role": role == .host ? "host" : "guest"
             ])
             AnalyticsService.shared.log("status_friend_code_registered")
         }

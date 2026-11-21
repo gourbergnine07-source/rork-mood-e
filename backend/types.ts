@@ -188,6 +188,21 @@ export type Database = {
         }
         Relationships: []
       }
+      friend_code_attempts: {
+        Row: {
+          attempted_at: string
+          user_id: string
+        }
+        Insert: {
+          attempted_at?: string
+          user_id: string
+        }
+        Update: {
+          attempted_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       friend_stats: {
         Row: {
           avatar: string | null

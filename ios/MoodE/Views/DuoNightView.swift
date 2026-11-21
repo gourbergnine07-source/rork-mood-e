@@ -481,7 +481,7 @@ struct DuoNightView: View {
                 AnalyticsService.shared.log("duo_session", meta: ["role": "host"])
                 // Duo codes also link the two people as "amici": from now on
                 // they see each other's Stato Mood (friends-only visibility).
-                StatusService.shared.registerFriendCode(code)
+                StatusService.shared.registerFriendCode(code, role: .host)
                 withAnimation { phase = .picking }
             } catch {
                 errorMessage = message(for: error)
@@ -505,7 +505,7 @@ struct DuoNightView: View {
                 AnalyticsService.shared.log("duo_session", meta: ["role": "guest"])
                 // Joining a Duo code links the two people as "amici" for
                 // the friends-only Stato Mood visibility.
-                StatusService.shared.registerFriendCode(row.code)
+                StatusService.shared.registerFriendCode(row.code, role: .guest)
                 withAnimation { phase = .picking }
             } catch {
                 errorMessage = message(for: error)

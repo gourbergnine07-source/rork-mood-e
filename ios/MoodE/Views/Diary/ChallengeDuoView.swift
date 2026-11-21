@@ -373,7 +373,7 @@ struct ChallengeDuoView: View {
             AnalyticsService.shared.log("challenge_duo_created")
             // Challenge codes also link the two people as "amici" for the
             // friends-only Stato Mood visibility.
-            StatusService.shared.registerFriendCode(code)
+            StatusService.shared.registerFriendCode(code, role: .host)
             await refresh()
         } catch {
             errorText = errorMessage(for: error)
@@ -395,7 +395,7 @@ struct ChallengeDuoView: View {
             pairedMonth = challenge.id
             AnalyticsService.shared.log("challenge_duo_joined")
             // Joining links the two people as "amici" for Stato Mood.
-            StatusService.shared.registerFriendCode(joined.code)
+            StatusService.shared.registerFriendCode(joined.code, role: .guest)
             await refresh()
         } catch {
             errorText = errorMessage(for: error)
