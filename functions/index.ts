@@ -164,7 +164,15 @@ export default {
 
     if (url.pathname.startsWith("/status")) {
       // Ephemeral "Stato Mood" board (personalized reads, no edge cache).
-      const response = await fetchFromBoard(env, request.url, request, "MoodStatusBoard");
+      // The friend-code endpoint is rate limited per IP too: forward the
+      // Cloudflare client IP (always overwritten, so it can't be spoofed).
+      // The board only stores a salted SHA-256 of it, never the raw IP.
+      let forwarded: Request = request;
+      if (url.pathname === "/status/friend/register") {
+        forwarded = new Request(request);
+        forwarded.headers.set("X-Mood-Client-IP", request.headers.get("CF-Connecting-IP") ?? "");
+      }
+      const response = await fetchFromBoard(env, request.url, forwarded, "MoodStatusBoard");
       const withCors = new Response(response.body, response);
       for (const [key, value] of Object.entries(CORS)) {
         withCors.headers.set(key, value);

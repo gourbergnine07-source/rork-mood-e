@@ -26,6 +26,10 @@ const ALLOWED_MOODS = new Set([
   "felice", "triste", "stressato", "annoiato", "innamorato", "nostalgico",
   "arrabbiato", "motivato", "malinconico", "spensierato", "curioso", "impaurito",
 ]);
+/** Friend-code registrations allowed per hour (anti code-guessing). */
+const FRIEND_REGISTER_PER_DEVICE_HOUR = 10;
+const FRIEND_REGISTER_PER_IP_HOUR = 15;
+const HOUR_MS = 60 * 60 * 1000;
 /** Hour of day (UTC) at which the nightly purge alarm fires. */
 const MAINTENANCE_HOUR_UTC = 4;
 
@@ -59,6 +63,17 @@ type CommentRow = {
   text: string;
   created_at: number;
 };
+
+function randomHex(bytes: number): string {
+  const buf = new Uint8Array(bytes);
+  crypto.getRandomValues(buf);
+  return Array.from(buf, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function sha256Hex(input: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(input));
+  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
+}
 
 function bad(message: string, code = "invalid", status = 400): Response {
   return Response.json({ error: message, code }, { status });
@@ -143,6 +158,29 @@ export class MoodStatusBoard extends DurableObject<Env> {
         created_at INTEGER NOT NULL,
         PRIMARY KEY (device_id, friend_device_id)
       );
+      -- Host-side codes for role-aware pairing (role = "host"): one open
+      -- host per code; a single guest consumes it (used_at set), after
+      -- which nobody else can link with that code. Expires after 24h.
+      CREATE TABLE IF NOT EXISTS friend_code_hosts (
+        code TEXT PRIMARY KEY,
+        device_id TEXT NOT NULL,
+        nickname TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        used_at INTEGER
+      );
+      -- Anti-guessing rate limit for /status/friend/register. Keys are
+      -- "dev:<deviceId>" or "ip:<sha256(ip|daily salt)>"; the raw IP is
+      -- never stored. Old hours and old salts are purged.
+      CREATE TABLE IF NOT EXISTS friend_rate_salts (
+        day TEXT PRIMARY KEY,
+        salt TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS friend_rate_counters (
+        hour INTEGER NOT NULL,
+        key TEXT NOT NULL,
+        count INTEGER NOT NULL,
+        PRIMARY KEY (hour, key)
+      );
     `);
     // Migration: mood tag column added after the initial release.
     try {
@@ -186,7 +224,10 @@ export class MoodStatusBoard extends DurableObject<Env> {
         return this.deleteContent(await request.json());
       }
       if (method === "POST" && path === "/status/friend/register") {
-        return this.registerFriendCode(await request.json());
+        return await this.registerFriendCode(
+          await request.json(),
+          request.headers.get("X-Mood-Client-IP") ?? "",
+        );
       }
       if (method === "GET" && path === "/status/friends") {
         return this.listFriends(url);
@@ -235,6 +276,9 @@ export class MoodStatusBoard extends DurableObject<Env> {
       sql.exec("DELETE FROM statuses WHERE expires_at < ?", now);
       // Pending friend-code registrations are only valid for 24h.
       sql.exec("DELETE FROM friend_codes WHERE created_at < ?", now - STATUS_TTL_MS);
+      sql.exec("DELETE FROM friend_code_hosts WHERE created_at < ?", now - STATUS_TTL_MS);
+      sql.exec("DELETE FROM friend_rate_counters WHERE hour < ?", Math.floor(now / HOUR_MS));
+      sql.exec("DELETE FROM friend_rate_salts WHERE day < ?", new Date(now).toISOString().slice(0, 10));
       const remaining = sql.exec<{ n: number }>("SELECT COUNT(*) AS n FROM statuses").one().n;
       console.log(`MoodStatusBoard maintenance done: ${remaining} active statuses`);
     } finally {
@@ -262,15 +306,34 @@ export class MoodStatusBoard extends DurableObject<Env> {
    * registered the same code (within 24h), a mutual friendship is created
    * — from then on the two see each other's Stato Mood, WhatsApp-style.
    * Stores only nickname + first-connection date, preserving anonymity.
+   *
+   * Anti-guessing:
+   * - every call is rate limited (10/hour per device, 15/hour per hashed
+   *   IP) and answers 429 {"error":"limit"} beyond that;
+   * - optional `role`: "host" opens the code, "guest" links ONLY with that
+   *   single open host and consumes the code. Unknown and used codes give
+   *   the same {"ok":true,"linked":0}, so guessers learn nothing.
+   * - no `role` (app versions already installed): legacy behavior below.
    */
-  private registerFriendCode(body: unknown): Response {
-    const { deviceId, nickname, code } = (body ?? {}) as Record<string, string>;
+  private async registerFriendCode(body: unknown, clientIp: string): Promise<Response> {
+    const { deviceId, nickname, code, role } = (body ?? {}) as Record<string, string>;
     if (!deviceId || !nickname || !code) return bad("missing fields");
     if (nickname.length > MAX_NICKNAME) return bad("nickname too long");
+    if (role !== undefined && role !== null && role !== "host" && role !== "guest") return bad("invalid role");
     const cleanCode = code.trim().toUpperCase().slice(0, 16);
     if (cleanCode.length < 4) return bad("invalid code");
 
+    // Hash first (the only await): the check-and-write below then runs
+    // atomically inside this single-threaded object.
     const now = Date.now();
+    const ipHash = await sha256Hex(`${clientIp || "unknown"}|${this.friendRateSalt(now)}`);
+    if (!this.consumeFriendRate(now, deviceId, ipHash)) {
+      return Response.json({ error: "limit" }, { status: 429 });
+    }
+
+    if (role === "host") return this.registerHostCode(cleanCode, deviceId, nickname, now);
+    if (role === "guest") return this.joinHostCode(cleanCode, deviceId, nickname, now);
+
     const sql = this.ctx.storage.sql;
     sql.exec(
       `INSERT INTO friend_codes (code, device_id, nickname, created_at) VALUES (?, ?, ?, ?)
@@ -296,8 +359,113 @@ export class MoodStatusBoard extends DurableObject<Env> {
         other.device_id, deviceId, nickname, now,
       );
     }
+    // An old-version guest that paired with a role-aware host consumes the
+    // host code too, so no later guest can link with it.
+    if (others.length > 0) {
+      sql.exec(
+        "UPDATE friend_code_hosts SET used_at = ? WHERE code = ? AND used_at IS NULL AND device_id != ?",
+        now, cleanCode, deviceId,
+      );
+    }
 
     return Response.json({ ok: true, linked: others.length });
+  }
+
+  /** Today's (UTC) random salt for IP hashing; rotating it purges old data. */
+  private friendRateSalt(now: number): string {
+    const day = new Date(now).toISOString().slice(0, 10);
+    const sql = this.ctx.storage.sql;
+    const row = sql.exec<{ salt: string }>("SELECT salt FROM friend_rate_salts WHERE day = ?", day).toArray()[0];
+    if (row) return row.salt;
+    const salt = randomHex(32);
+    sql.exec("INSERT INTO friend_rate_salts (day, salt) VALUES (?, ?)", day, salt);
+    sql.exec("DELETE FROM friend_rate_salts WHERE day < ?", day);
+    sql.exec("DELETE FROM friend_rate_counters WHERE hour < ?", Math.floor(now / HOUR_MS));
+    return salt;
+  }
+
+  /** Hourly (clock-aligned) limits; rejected calls are not counted. */
+  private consumeFriendRate(now: number, deviceId: string, ipHash: string): boolean {
+    const hour = Math.floor(now / HOUR_MS);
+    const sql = this.ctx.storage.sql;
+    const count = (key: string): number =>
+      sql.exec<{ count: number }>("SELECT count FROM friend_rate_counters WHERE hour = ? AND key = ?", hour, key)
+        .toArray()[0]?.count ?? 0;
+    const deviceKey = `dev:${deviceId}`;
+    const ipKey = `ip:${ipHash}`;
+    if (count(deviceKey) >= FRIEND_REGISTER_PER_DEVICE_HOUR || count(ipKey) >= FRIEND_REGISTER_PER_IP_HOUR) {
+      return false;
+    }
+    for (const key of [deviceKey, ipKey]) {
+      sql.exec(
+        `INSERT INTO friend_rate_counters (hour, key, count) VALUES (?, ?, 1)
+         ON CONFLICT (hour, key) DO UPDATE SET count = count + 1`,
+        hour, key,
+      );
+    }
+    return true;
+  }
+
+  /**
+   * role = "host": opens the code. A code already held by another device
+   * (open or used, within 24h) is never taken over. The host is also kept
+   * in friend_codes so guests on old app versions can still pair.
+   */
+  private registerHostCode(code: string, deviceId: string, nickname: string, now: number): Response {
+    const sql = this.ctx.storage.sql;
+    const existing = sql.exec<{ device_id: string; created_at: number }>(
+      "SELECT device_id, created_at FROM friend_code_hosts WHERE code = ?", code,
+    ).toArray()[0];
+    const fresh = existing && existing.created_at > now - STATUS_TTL_MS;
+    if (fresh && existing.device_id !== deviceId) {
+      return Response.json({ ok: true, linked: 0 });
+    }
+    if (fresh) {
+      sql.exec("UPDATE friend_code_hosts SET nickname = ? WHERE code = ?", nickname, code);
+    } else {
+      sql.exec(
+        `INSERT INTO friend_code_hosts (code, device_id, nickname, created_at, used_at) VALUES (?, ?, ?, ?, NULL)
+         ON CONFLICT (code) DO UPDATE SET device_id = excluded.device_id, nickname = excluded.nickname,
+         created_at = excluded.created_at, used_at = NULL`,
+        code, deviceId, nickname, now,
+      );
+    }
+    sql.exec(
+      `INSERT INTO friend_codes (code, device_id, nickname, created_at) VALUES (?, ?, ?, ?)
+       ON CONFLICT (code, device_id) DO UPDATE SET nickname = excluded.nickname`,
+      code, deviceId, nickname, now,
+    );
+    return Response.json({ ok: true, linked: 0 });
+  }
+
+  /**
+   * role = "guest": links only with the single open host of this code,
+   * then marks it used and drops its legacy registration. Guests are never
+   * stored, so another guest can't link with them. Missing, used, expired
+   * and own codes all return the same {"ok":true,"linked":0}.
+   */
+  private joinHostCode(code: string, deviceId: string, nickname: string, now: number): Response {
+    const sql = this.ctx.storage.sql;
+    const host = sql.exec<{ device_id: string; nickname: string }>(
+      `SELECT device_id, nickname FROM friend_code_hosts
+       WHERE code = ? AND used_at IS NULL AND created_at > ? AND device_id != ?`,
+      code, now - STATUS_TTL_MS, deviceId,
+    ).toArray()[0];
+    if (!host) return Response.json({ ok: true, linked: 0 });
+
+    for (const [owner, friend, friendNickname] of [
+      [deviceId, host.device_id, host.nickname],
+      [host.device_id, deviceId, nickname],
+    ]) {
+      sql.exec(
+        `INSERT INTO friends (device_id, friend_device_id, friend_nickname, created_at) VALUES (?, ?, ?, ?)
+         ON CONFLICT (device_id, friend_device_id) DO UPDATE SET friend_nickname = excluded.friend_nickname`,
+        owner, friend, friendNickname, now,
+      );
+    }
+    sql.exec("UPDATE friend_code_hosts SET used_at = ? WHERE code = ?", now, code);
+    sql.exec("DELETE FROM friend_codes WHERE code = ?", code);
+    return Response.json({ ok: true, linked: 1 });
   }
 
   /** Anonymous friends of a device: nickname + first-connection date only. */
