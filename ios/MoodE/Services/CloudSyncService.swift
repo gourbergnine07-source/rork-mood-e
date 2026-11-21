@@ -35,6 +35,10 @@ final class CloudSyncService {
     private var uploadTask: Task<Void, Never>?
 
     private static let lastSyncKey = "cloudSync.lastSync"
+    /// Rows soft-deleted longer than this are removed for good (daily purge).
+    private static let softDeleteRetention: TimeInterval = 60 * 24 * 60 * 60
+    /// Soft deletes / restores are sent in `.in()` batches of this size.
+    private static let batchSize = 100
 
     private init() {
         let stored = UserDefaults.standard.double(forKey: Self.lastSyncKey)
@@ -62,6 +66,21 @@ final class CloudSyncService {
             guard !Task.isCancelled else { return }
             await self?.pushOnly()
         }
+    }
+
+    /// Records ids the user just deleted on this device ("suppressionsEnAttente").
+    /// They are marked `deleted_at` in the cloud on the next push. No-op when
+    /// signed out: without an account there is no cloud copy to update.
+    func noteLocalDeletions(_ table: SyncTable, ids: [String]) {
+        guard let userId = auth?.user?.id, !ids.isEmpty else { return }
+        PendingDeletions.add(table, ids: ids, userId: userId)
+        print("CloudSync: queued \(ids.count) deletion(s) for \(table.rawValue)")
+    }
+
+    /// A library movie was added again: it must not be soft-deleted anymore.
+    func noteLocalRestores(_ table: SyncTable, ids: [String]) {
+        guard let userId = auth?.user?.id, !ids.isEmpty else { return }
+        PendingDeletions.remove(table, ids: ids, userId: userId)
     }
 
     /// Cancels pending uploads (e.g. right after sign-out).
@@ -114,20 +133,47 @@ final class CloudSyncService {
                 .from("planner_memories").select().eq("user_id", value: userId)
                 .execute().value
 
+            // Deletions: drop rows this device deleted (pending) or that
+            // another device soft-deleted, before the usual union merge.
+            let libraryPrep = Self.prepareLibrary(
+                remote: remoteEntries,
+                local: library.entries,
+                pending: Set(PendingDeletions.all(.library, userId: userId).keys)
+            )
+            let scheduledPrep = Self.prepareById(
+                remote: remoteScheduled.map { ($0.asLocal, $0.deletedAt) },
+                local: planner.scheduled,
+                pending: Set(PendingDeletions.all(.scheduled, userId: userId).keys),
+                key: { $0.id.uuidString }
+            )
+            let memoriesPrep = Self.prepareById(
+                remote: remoteMemories.map { ($0.asLocal, $0.deletedAt) },
+                local: planner.memories,
+                pending: Set(PendingDeletions.all(.memories, userId: userId).keys),
+                key: { $0.id.uuidString }
+            )
+            print("CloudSync: library ignored(pending)=\(libraryPrep.ignored) removedLocally=\(libraryPrep.removed) toRestore=\(libraryPrep.restore.count)")
+            print("CloudSync: planner_scheduled ignored(pending)=\(scheduledPrep.ignored) removedLocally=\(scheduledPrep.removed)")
+            print("CloudSync: planner_memories ignored(pending)=\(memoriesPrep.ignored) removedLocally=\(memoriesPrep.removed)")
+
             // Merge (union by identity; the freshest state wins on conflicts)
             let mergedCheckIns = Self.mergeCheckIns(local: diary.checkIns, remote: remoteCheckIns.map(\.asLocal))
-            let mergedEntries = Self.mergeLibrary(local: library.entries, remote: remoteEntries.compactMap(\.asLocal))
-            let mergedScheduled = Self.mergeById(local: planner.scheduled, remote: remoteScheduled.map(\.asLocal))
-            let mergedMemories = Self.mergeById(local: planner.memories, remote: remoteMemories.map(\.asLocal))
+            let mergedEntries = Self.mergeLibrary(local: libraryPrep.local, remote: libraryPrep.remote)
+            let mergedScheduled = Self.mergeById(local: scheduledPrep.local, remote: scheduledPrep.remote)
+            let mergedMemories = Self.mergeById(local: memoriesPrep.local, remote: memoriesPrep.remote)
 
             // Apply locally without re-triggering the upload hook
             isApplyingRemote = true
             diary.replaceAll(mergedCheckIns)
             library.replaceAll(mergedEntries)
             planner.replaceAll(scheduled: mergedScheduled, memories: mergedMemories)
+            // Auto-removals done at launch (before sign-in was known) are
+            // recorded now, so they become soft deletes too.
+            library.pruneExpiredWatched()
             isApplyingRemote = false
 
-            try await pushAllRows(userId: userId)
+            try await pushAllRows(userId: userId, libraryRestores: libraryPrep.restore)
+            await purgeExpiredDeletionsIfNeeded(userId: userId)
 
             markSynced()
         } catch {
@@ -157,9 +203,11 @@ final class CloudSyncService {
         }
     }
 
-    /// Upserts the full local state and prunes remote rows that no longer
-    /// exist locally, so deletions propagate to the cloud.
-    private func pushAllRows(userId: String) async throws {
+    /// Upserts the full local state, then marks the ids the user deleted on
+    /// this device ("suppressionsEnAttente") with `deleted_at`. Rows are never
+    /// pruned by "missing locally" anymore: a device that simply hasn't seen
+    /// a row yet can no longer erase it from the cloud.
+    private func pushAllRows(userId: String, libraryRestores: [String] = []) async throws {
         guard let diary, let library, let planner else { return }
         let supabase = SupabaseService.client
 
@@ -179,10 +227,17 @@ final class CloudSyncService {
                 .upsert(entries.map { RemoteLibraryEntry(from: $0, userId: userId) })
                 .execute()
         }
-        try await deleteMissing(
-            table: "library_entries", column: "movie_id",
-            keep: entries.map { String($0.id) }, userId: userId, quoted: false
-        )
+        var deletionError: Error?
+        if !libraryRestores.isEmpty {
+            do {
+                try await updateDeletedAt(.library, ids: libraryRestores, value: nil, userId: userId)
+                print("CloudSync: library restored \(libraryRestores.count) row(s) (deleted_at cleared)")
+            } catch {
+                print("CloudSync: library restore failed: \(error.localizedDescription)")
+                deletionError = error
+            }
+        }
+        do { try await softDeletePending(.library, userId: userId) } catch { deletionError = error }
 
         let scheduled = planner.scheduled
         if !scheduled.isEmpty {
@@ -190,10 +245,7 @@ final class CloudSyncService {
                 .upsert(scheduled.map { RemoteScheduled(from: $0, userId: userId) })
                 .execute()
         }
-        try await deleteMissing(
-            table: "planner_scheduled", column: "id",
-            keep: scheduled.map { $0.id.uuidString }, userId: userId
-        )
+        do { try await softDeletePending(.scheduled, userId: userId) } catch { deletionError = error }
 
         let memories = planner.memories
         if !memories.isEmpty {
@@ -201,34 +253,143 @@ final class CloudSyncService {
                 .upsert(memories.map { RemoteMemory(from: $0, userId: userId) })
                 .execute()
         }
-        try await deleteMissing(
-            table: "planner_memories", column: "id",
-            keep: memories.map { $0.id.uuidString }, userId: userId
-        )
+        do { try await softDeletePending(.memories, userId: userId) } catch { deletionError = error }
+
+        // Failed batches stay in the pending list and are retried next sync.
+        if let deletionError { throw deletionError }
     }
 
-    /// Deletes the user's remote rows whose key is not in `keep`.
-    private func deleteMissing(
-        table: String,
-        column: String,
-        keep: [String],
-        userId: String,
-        quoted: Bool = true
-    ) async throws {
-        let supabase = SupabaseService.client
-        if keep.isEmpty {
-            try await supabase.from(table)
-                .delete()
-                .eq("user_id", value: userId)
-                .execute()
-            return
+    // MARK: - Soft delete (deleted_at)
+
+    /// Marks every pending id of `table` as deleted (`deleted_at = now`),
+    /// in batches. Only the ids of successful batches leave the list.
+    private func softDeletePending(_ table: SyncTable, userId: String) async throws {
+        let ids = Array(PendingDeletions.all(table, userId: userId).keys)
+        guard !ids.isEmpty else { return }
+        let now = ISO8601DateFormatter().string(from: Date())
+        var done = 0
+        var lastError: Error?
+        for start in stride(from: 0, to: ids.count, by: Self.batchSize) {
+            let batch = Array(ids[start..<min(start + Self.batchSize, ids.count)])
+            do {
+                try await updateDeletedAt(table, ids: batch, value: now, userId: userId)
+                PendingDeletions.remove(table, ids: batch, userId: userId)
+                done += batch.count
+            } catch {
+                print("CloudSync: soft delete batch failed for \(table.rawValue): \(error.localizedDescription)")
+                lastError = error
+            }
         }
-        let list = "(" + keep.map { quoted ? "\"\($0)\"" : $0 }.joined(separator: ",") + ")"
-        try await supabase.from(table)
-            .delete()
-            .eq("user_id", value: userId)
-            .not(column, operator: .in, value: list)
-            .execute()
+        print("CloudSync: \(table.rawValue) soft-deleted \(done)/\(ids.count), still pending \(ids.count - done)")
+        if let lastError { throw lastError }
+    }
+
+    /// Sets (ISO date) or clears (nil) `deleted_at` on the given ids,
+    /// in `.in()` batches of 100.
+    private func updateDeletedAt(_ table: SyncTable, ids: [String], value: String?, userId: String) async throws {
+        let supabase = SupabaseService.client
+        for start in stride(from: 0, to: ids.count, by: Self.batchSize) {
+            let batch = Array(ids[start..<min(start + Self.batchSize, ids.count)])
+            try await supabase.from(table.rawValue)
+                .update(DeletedAtPatch(deletedAt: value))
+                .eq("user_id", value: userId)
+                .in(table.keyColumn, values: batch)
+                .execute()
+        }
+    }
+
+    /// Once a day, permanently removes the user's rows soft-deleted more
+    /// than 60 days ago (date filter, never a list of ids). Non-blocking.
+    private func purgeExpiredDeletionsIfNeeded(userId: String) async {
+        let key = "cloudSync.lastPurge.\(userId)"
+        let last = UserDefaults.standard.double(forKey: key)
+        guard Date().timeIntervalSince1970 - last >= 24 * 60 * 60 else { return }
+        let cutoff = ISO8601DateFormatter().string(from: Date().addingTimeInterval(-Self.softDeleteRetention))
+        let supabase = SupabaseService.client
+        var succeeded = true
+        for table in SyncTable.allCases {
+            do {
+                try await supabase.from(table.rawValue)
+                    .delete()
+                    .eq("user_id", value: userId)
+                    .lt("deleted_at", value: cutoff)
+                    .execute()
+            } catch {
+                succeeded = false
+                print("CloudSync: purge failed for \(table.rawValue): \(error.localizedDescription)")
+            }
+        }
+        if succeeded {
+            UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: key)
+            print("CloudSync: purge done (deleted_at < \(cutoff))")
+        }
+    }
+
+    // MARK: - Deletion-aware pre-merge
+
+    /// Library rows are keyed by movie id, which can be added again later.
+    /// A soft-deleted row is dropped (and removed locally) only when neither
+    /// copy has activity newer than `deleted_at`; otherwise it was re-added
+    /// after the deletion, so it stays and `deleted_at` is cleared.
+    private static func prepareLibrary(
+        remote: [RemoteLibraryEntry],
+        local: [LibraryEntry],
+        pending: Set<String>
+    ) -> (remote: [LibraryEntry], local: [LibraryEntry], restore: [String], ignored: Int, removed: Int) {
+        func activity(_ entry: LibraryEntry) -> Date {
+            max(entry.addedDate, entry.watchedDate ?? .distantPast)
+        }
+        var localById: [Int: LibraryEntry] = [:]
+        for entry in local { localById[entry.id] = entry }
+
+        var keptRemote: [LibraryEntry] = []
+        var removeLocally = Set<Int>()
+        var restore: [String] = []
+        var ignored = 0
+        for row in remote {
+            guard let entry = row.asLocal else { continue }
+            let key = String(entry.id)
+            if pending.contains(key) { ignored += 1; continue }
+            guard let deletedAt = row.deletedAt else {
+                keptRemote.append(entry)
+                continue
+            }
+            let remoteAlive = activity(entry) > deletedAt
+            let localAlive = localById[entry.id].map { activity($0) > deletedAt } ?? false
+            if remoteAlive || localAlive {
+                if remoteAlive { keptRemote.append(entry) }
+                restore.append(key)
+            } else {
+                removeLocally.insert(entry.id)
+            }
+        }
+        let keptLocal = local.filter { !removeLocally.contains($0.id) && !pending.contains(String($0.id)) }
+        return (keptRemote, keptLocal, restore, ignored, local.count - keptLocal.count)
+    }
+
+    /// Planner rows use fresh UUIDs, so a soft-deleted id is gone for good:
+    /// it is removed locally and never sent back. Local rows the cloud has
+    /// never seen are kept (and uploaded), never deleted.
+    private static func prepareById<T: Identifiable>(
+        remote: [(T, Date?)],
+        local: [T],
+        pending: Set<String>,
+        key: (T) -> String
+    ) -> (remote: [T], local: [T], ignored: Int, removed: Int) {
+        var keptRemote: [T] = []
+        var deletedKeys = Set<String>()
+        var ignored = 0
+        for (item, deletedAt) in remote {
+            let itemKey = key(item)
+            if pending.contains(itemKey) { ignored += 1; continue }
+            if deletedAt != nil { deletedKeys.insert(itemKey); continue }
+            keptRemote.append(item)
+        }
+        let keptLocal = local.filter {
+            let itemKey = key($0)
+            return !deletedKeys.contains(itemKey) && !pending.contains(itemKey)
+        }
+        return (keptRemote, keptLocal, ignored, local.count - keptLocal.count)
     }
 
     // MARK: - Account deletion (App Store guideline 5.1.1(v))
@@ -276,6 +437,23 @@ final class CloudSyncService {
     }
 
     // MARK: - Merge helpers (shared with ICloudSyncService)
+
+    /// `{ "deleted_at": <ISO date> | null }`, with an explicit null so a
+    /// restore really clears the column.
+    private nonisolated struct DeletedAtPatch: Encodable, Sendable {
+        let deletedAt: String?
+
+        enum CodingKeys: String, CodingKey { case deletedAt = "deleted_at" }
+
+        func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            if let deletedAt {
+                try container.encode(deletedAt, forKey: .deletedAt)
+            } else {
+                try container.encodeNil(forKey: .deletedAt)
+            }
+        }
+    }
 
     static func mergeCheckIns(local: [MoodCheckIn], remote: [MoodCheckIn]) -> [MoodCheckIn] {
         var byId: [UUID: MoodCheckIn] = [:]

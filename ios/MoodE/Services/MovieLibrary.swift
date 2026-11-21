@@ -143,6 +143,7 @@ final class MovieLibrary {
         if let index = entries.firstIndex(where: { $0.id == movie.id }) {
             if entries[index].status == .toWatch {
                 entries.remove(at: index)
+                CloudSyncService.shared.noteLocalDeletions(.library, ids: [String(movie.id)])
             } else {
                 entries[index].status = .toWatch
                 entries[index].addedDate = Date()
@@ -151,6 +152,7 @@ final class MovieLibrary {
             }
         } else {
             entries.insert(makeEntry(from: movie, status: .toWatch), at: 0)
+            CloudSyncService.shared.noteLocalRestores(.library, ids: [String(movie.id)])
             AnalyticsService.shared.log("watchlist_added")
         }
         persist()
@@ -162,6 +164,7 @@ final class MovieLibrary {
         if let index = entries.firstIndex(where: { $0.id == movie.id }) {
             if entries[index].status == .watched {
                 entries.remove(at: index)
+                CloudSyncService.shared.noteLocalDeletions(.library, ids: [String(movie.id)])
             } else {
                 entries[index].status = .watched
                 entries[index].watchedDate = Date()
@@ -172,6 +175,7 @@ final class MovieLibrary {
             var entry = makeEntry(from: movie, status: .watched)
             entry.watchedDate = Date()
             entries.insert(entry, at: 0)
+            CloudSyncService.shared.noteLocalRestores(.library, ids: [String(movie.id)])
             bumpLifetimeWatched()
             AnalyticsService.shared.log("movie_watched")
         }
@@ -202,18 +206,24 @@ final class MovieLibrary {
     func removeEntry(_ entryID: Int) {
         let before = entries.count
         entries.removeAll { $0.id == entryID }
-        if entries.count != before { persist() }
+        if entries.count != before {
+            CloudSyncService.shared.noteLocalDeletions(.library, ids: [String(entryID)])
+            persist()
+        }
     }
 
     /// Drops watched movies older than one week when auto-removal is enabled.
     func pruneExpiredWatched() {
         guard autoRemoveWatchedAfterWeek else { return }
         let cutoff = Date().addingTimeInterval(-Self.watchedRetention)
-        let before = entries.count
-        entries.removeAll { entry in
+        let expired = entries.filter { entry in
             entry.status == .watched && (entry.watchedDate ?? .distantPast) < cutoff
         }
-        if entries.count != before { persist() }
+        guard !expired.isEmpty else { return }
+        let expiredIds = Set(expired.map(\.id))
+        entries.removeAll { expiredIds.contains($0.id) }
+        CloudSyncService.shared.noteLocalDeletions(.library, ids: expiredIds.map(String.init))
+        persist()
     }
 
     private func makeEntry(from movie: TMDBMovie, status: LibraryStatus) -> LibraryEntry {

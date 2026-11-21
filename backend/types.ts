@@ -251,6 +251,7 @@ export type Database = {
       library_entries: {
         Row: {
           added_date: string
+          deleted_at: string | null
           movie_id: number
           poster_path: string | null
           status: string
@@ -261,6 +262,7 @@ export type Database = {
         }
         Insert: {
           added_date: string
+          deleted_at?: string | null
           movie_id: number
           poster_path?: string | null
           status: string
@@ -271,6 +273,7 @@ export type Database = {
         }
         Update: {
           added_date?: string
+          deleted_at?: string | null
           movie_id?: number
           poster_path?: string | null
           status?: string
@@ -292,6 +295,7 @@ export type Database = {
       planner_memories: {
         Row: {
           comment: string | null
+          deleted_at: string | null
           genre_ids: Json | null
           id: string
           movie_id: number
@@ -304,6 +308,7 @@ export type Database = {
         }
         Insert: {
           comment?: string | null
+          deleted_at?: string | null
           genre_ids?: Json | null
           id: string
           movie_id: number
@@ -316,6 +321,7 @@ export type Database = {
         }
         Update: {
           comment?: string | null
+          deleted_at?: string | null
           genre_ids?: Json | null
           id?: string
           movie_id?: number
@@ -339,6 +345,7 @@ export type Database = {
       planner_scheduled: {
         Row: {
           day: string
+          deleted_at: string | null
           genre_ids: Json | null
           id: string
           movie_id: number
@@ -349,6 +356,7 @@ export type Database = {
         }
         Insert: {
           day: string
+          deleted_at?: string | null
           genre_ids?: Json | null
           id: string
           movie_id: number
@@ -359,6 +367,7 @@ export type Database = {
         }
         Update: {
           day?: string
+          deleted_at?: string | null
           genre_ids?: Json | null
           id?: string
           movie_id?: number

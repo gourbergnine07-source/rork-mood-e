@@ -121,7 +121,9 @@ final class MoviePlanner {
     func schedule(movieId: Int, title: String, posterPath: String?, genreIds: [Int]?, on day: Date) {
         let calendar = Calendar.current
         let start = calendar.startOfDay(for: day)
-        scheduled.removeAll { calendar.isDate($0.day, inSameDayAs: start) }
+        let replaced = scheduled.filter { calendar.isDate($0.day, inSameDayAs: start) }.map(\.id)
+        scheduled.removeAll { replaced.contains($0.id) }
+        CloudSyncService.shared.noteLocalDeletions(.scheduled, ids: replaced.map(\.uuidString))
         scheduled.append(
             ScheduledMovie(
                 id: UUID(),
@@ -139,7 +141,11 @@ final class MoviePlanner {
     func move(_ id: UUID, to day: Date) {
         let calendar = Calendar.current
         let start = calendar.startOfDay(for: day)
-        scheduled.removeAll { $0.id != id && calendar.isDate($0.day, inSameDayAs: start) }
+        let replaced = scheduled
+            .filter { $0.id != id && calendar.isDate($0.day, inSameDayAs: start) }
+            .map(\.id)
+        scheduled.removeAll { replaced.contains($0.id) }
+        CloudSyncService.shared.noteLocalDeletions(.scheduled, ids: replaced.map(\.uuidString))
         guard let index = scheduled.firstIndex(where: { $0.id == id }) else { return }
         scheduled[index].day = start
         persistScheduled()
@@ -149,7 +155,10 @@ final class MoviePlanner {
     func removeSchedule(_ id: UUID) {
         let before = scheduled.count
         scheduled.removeAll { $0.id == id }
-        if scheduled.count != before { persistScheduled() }
+        if scheduled.count != before {
+            CloudSyncService.shared.noteLocalDeletions(.scheduled, ids: [id.uuidString])
+            persistScheduled()
+        }
     }
 
     // MARK: - Memories
@@ -161,6 +170,7 @@ final class MoviePlanner {
     func markWatched(_ id: UUID, rating: Int, comment: String?) -> MovieMemory? {
         guard let index = scheduled.firstIndex(where: { $0.id == id }) else { return nil }
         let plan = scheduled.remove(at: index)
+        CloudSyncService.shared.noteLocalDeletions(.scheduled, ids: [plan.id.uuidString])
 
         let calendar = Calendar.current
         let watchedDate = plan.day < calendar.startOfDay(for: Date()) ? plan.day : Date()
@@ -186,7 +196,10 @@ final class MoviePlanner {
     func removeMemory(_ id: UUID) {
         let before = memories.count
         memories.removeAll { $0.id == id }
-        if memories.count != before { persistMemories() }
+        if memories.count != before {
+            CloudSyncService.shared.noteLocalDeletions(.memories, ids: [id.uuidString])
+            persistMemories()
+        }
     }
 
     // MARK: - Monthly recap

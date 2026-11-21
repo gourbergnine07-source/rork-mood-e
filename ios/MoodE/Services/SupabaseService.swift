@@ -87,6 +87,9 @@ nonisolated struct RemoteLibraryEntry: Codable, Sendable {
     let status: String
     let addedDate: Date
     let watchedDate: Date?
+    /// Soft-delete marker. Always nil when pushing (synthesized encoding
+    /// omits it), so upserts never touch the cloud value.
+    var deletedAt: Date? = nil
 
     enum CodingKeys: String, CodingKey {
         case title, status
@@ -95,6 +98,7 @@ nonisolated struct RemoteLibraryEntry: Codable, Sendable {
         case posterPath = "poster_path"
         case addedDate = "added_date"
         case watchedDate = "watched_date"
+        case deletedAt = "deleted_at"
     }
 
     init(from entry: LibraryEntry, userId: String) {
@@ -129,6 +133,8 @@ nonisolated struct RemoteScheduled: Codable, Sendable {
     let posterPath: String?
     let genreIds: [Int]?
     let day: Date
+    /// Soft-delete marker (omitted when pushing, see RemoteLibraryEntry).
+    var deletedAt: Date? = nil
 
     enum CodingKeys: String, CodingKey {
         case id, title, day
@@ -136,6 +142,7 @@ nonisolated struct RemoteScheduled: Codable, Sendable {
         case movieId = "movie_id"
         case posterPath = "poster_path"
         case genreIds = "genre_ids"
+        case deletedAt = "deleted_at"
     }
 
     init(from plan: ScheduledMovie, userId: String) {
@@ -171,6 +178,8 @@ nonisolated struct RemoteMemory: Codable, Sendable {
     let watchedDate: Date
     let rating: Int
     let comment: String?
+    /// Soft-delete marker (omitted when pushing, see RemoteLibraryEntry).
+    var deletedAt: Date? = nil
 
     enum CodingKeys: String, CodingKey {
         case id, title, rating, comment
@@ -179,6 +188,7 @@ nonisolated struct RemoteMemory: Codable, Sendable {
         case posterPath = "poster_path"
         case genreIds = "genre_ids"
         case watchedDate = "watched_date"
+        case deletedAt = "deleted_at"
     }
 
     init(from memory: MovieMemory, userId: String) {
