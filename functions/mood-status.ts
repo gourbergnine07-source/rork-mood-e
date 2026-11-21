@@ -625,7 +625,9 @@ export class MoodStatusBoard extends DurableObject<Env> {
     const mood = rawMood && ALLOWED_MOODS.has(rawMood) ? rawMood : null;
     if (nickname.length > MAX_NICKNAME) return bad("nickname too long");
     const trimmed = rawText.trim().slice(0, MAX_STATUS_TEXT);
-    if (!isCleanText(trimmed) || !isCleanText(nickname) || !isCleanText(movieTitle)) {
+    // Movie titles come from the TMDB catalog and are never filtered
+    // (real titles like "Moby Dick" or "Porco Rosso" must pass).
+    if (!isCleanText(trimmed) || !isCleanText(nickname)) {
       return bad("offensive content", "offensive");
     }
 

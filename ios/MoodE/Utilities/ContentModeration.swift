@@ -13,7 +13,7 @@ nonisolated enum ContentModeration {
         let words = [
             // Italian
             "cazzo", "merda", "stronzo", "stronza", "vaffanculo", "puttana", "troia",
-            "coglione", "bastardo", "porca", "porco", "negro", "frocio", "mignotta",
+            "coglione", "bastardo", "negro", "frocio", "mignotta",
             "zoccola", "pompino", "culo",
             // English
             "fuck", "shit", "bitch", "asshole", "bastard", "cunt", "dick", "faggot",
